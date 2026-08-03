@@ -1,5 +1,11 @@
 [build]
   publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/read-profile"
+  to = "/.netlify/functions/read-profile"
+  status = 200
 
 [[headers]]
   for = "/*"
