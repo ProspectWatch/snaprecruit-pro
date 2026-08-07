@@ -6,107 +6,188 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MainStage">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/ms-icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/splash/splash-750x1334.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1170x2532.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1179x2556.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/splash/splash-1290x2796.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/splash/splash-1620x2160.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/splash/splash-1668x2388.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/splash/splash-2048x2732.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/splash/splash-2160x1620.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/splash/splash-2388x1668.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/splash/splash-2732x2048.png">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/tokens.css">
 <title>MainStage Athletes</title>
 <style>
-:root{--bg:#0A0A0A;--s1:#11100E;--s2:#171614;--s3:#211F1B;--line:#37332B;--line2:#2A2722;--text:#F3F0EA;--text2:#B8B2A8;--muted:#8F897E;--gold:#E3B54A;--gold2:#C9962F;--gold3:#8C6716;--ok:#5E8A6C;--danger:#A15656}
-*{box-sizing:border-box}
-html{background:#0A0A0A}
-html,body{margin:0;min-height:100%}
-body{min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;padding:calc(env(safe-area-inset-top) + 26px) 18px calc(env(safe-area-inset-bottom) + 26px);-webkit-text-size-adjust:100%}
-main{width:min(100%,620px);margin:auto}
-.wordmark{text-align:center;margin-bottom:8px}
-.wm1{font-size:38px;font-weight:900;font-style:italic;letter-spacing:-1px;line-height:1}
-.wm2{margin-top:6px;font-size:15px;font-weight:800;letter-spacing:9px;color:var(--gold);text-indent:9px}
-.wmRule{width:120px;height:3px;margin:14px auto 0;border-radius:2px;background:linear-gradient(90deg,var(--gold3),var(--gold),var(--gold3))}
-.intro{text-align:center;color:var(--muted);font-size:14px;line-height:1.5;margin:16px 0 26px}
-.tile{display:block;text-decoration:none;color:inherit;background:linear-gradient(180deg,var(--s2),var(--s1));border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:14px}
-.eyebrow{color:var(--gold);font-size:11px;font-weight:850;letter-spacing:.14em}
-.tile h2{margin:8px 0 6px;font-size:24px;font-style:italic;font-weight:900;letter-spacing:.02em}
-.tile p{margin:0;color:var(--text2);font-size:14px;line-height:1.5}
-.cta{display:block;text-align:center;text-decoration:none;margin-top:16px;border-radius:14px;padding:15px;background:linear-gradient(135deg,var(--gold3),var(--gold2));color:#140E02;font-weight:900;letter-spacing:.06em;font-size:15px}
-.cta.quiet{background:var(--s3);color:var(--text2);border:1px solid var(--line);font-weight:750}
-.session{display:none;margin-top:16px;border-top:1px solid var(--line2);padding-top:16px}
-.sessLabel{color:var(--text2);font-size:12px;font-weight:800;letter-spacing:.1em;margin-bottom:10px}
-.bar{height:6px;background:#0D0C0A;border:1px solid var(--line2);border-radius:99px;overflow:hidden;margin-bottom:12px}
-.fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold3),var(--gold2))}
-.counts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.count{background:var(--s1);border:1px solid var(--line2);border-radius:12px;padding:10px 6px;text-align:center}
-.count strong{display:block;font-size:19px}
-.count span{color:var(--muted);font-size:10px;letter-spacing:.06em}
-.count.add strong{color:var(--gold)}
-.count.ok strong{color:var(--ok)}
-.count.no strong{color:var(--danger)}
-.future{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.future .tile{margin:0;opacity:.75}
-.chip{display:inline-block;margin-top:12px;border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:var(--muted);font-size:10px;letter-spacing:.1em;font-weight:800}
-.utility{display:block;text-align:center;margin-top:20px;color:var(--muted);font-size:13px;text-decoration:none}
-.utility b{color:var(--text2)}
-footer{text-align:center;margin-top:26px}
-.buildTag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:7px 12px;color:var(--gold2);font-size:11px;letter-spacing:.14em}
-.addr{color:var(--muted);font-size:12px;margin-top:12px}
-@media(min-width:740px){.wm1{font-size:46px}.tile{padding:24px}}
+.home{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;max-width:560px;margin:auto;padding:calc(env(safe-area-inset-top) + 18px) 22px calc(env(safe-area-inset-bottom) + 0px)}
+/* Upper brand zone — doubles as the launch view */
+.brandZone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;min-height:180px}
+.brandZone .ms-mark{width:96px;height:96px}
+.wm{text-align:center}
+.wm .m{font-family:var(--f-brand);font-weight:800;font-size:34px;letter-spacing:.05em;color:var(--ms-gold-bright);line-height:1}
+.wm .a{font-size:11px;font-weight:600;letter-spacing:.44em;text-indent:.44em;color:var(--ms-gold);margin-top:8px}
+.wm .tag{font-size:10px;font-weight:700;letter-spacing:.28em;text-indent:.28em;color:var(--ms-gold);margin-top:14px;opacity:.85}
+/* Session variant: compressed brand row */
+body.hasSession .brandZone{flex:0 0 auto;flex-direction:row;gap:16px;padding:20px 0 22px;min-height:0}
+body.hasSession .brandZone .ms-mark{width:56px;height:56px}
+body.hasSession .wm .m{font-size:24px}
+body.hasSession .wm .a{margin-top:5px}
+body.hasSession .wm .tag{display:none}
+body.hasSession .sessionSpace{flex:1;display:flex;flex-direction:column;justify-content:center}
+.sessionSpace{display:none}
+body.hasSession .sessionSpace{display:flex}
+/* Lower zone */
+.lower{padding-bottom:34px;display:flex;flex-direction:column;gap:12px;visibility:hidden}
+body.booted .lower{visibility:visible}
+.toolsEyebrow{padding-left:2px}
+.toolCard{border-radius:18px;background:var(--ms-surface);border:1px solid var(--ms-gold);padding:16px 16px 14px}
+.toolRow{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.toolChip{width:40px;height:40px;border-radius:12px;background:var(--ms-surface-2);border:1px solid var(--ms-border);display:flex;align-items:center;justify-content:center;color:var(--ms-gold)}
+.toolT{font-size:16px;font-weight:700}
+.toolS{font-size:11.5px;color:var(--ms-muted);margin-top:2px}
+.tileRow{display:flex;gap:10px}
+.tile{flex:1;border-radius:16px;background:var(--ms-surface);border:1px solid var(--ms-border);padding:13px 13px 14px;color:inherit}
+.tile .toolChip{width:32px;height:32px;border-radius:10px;margin-bottom:9px}
+.tileT{font-size:13px;font-weight:700}
+.tileS{font-size:10.5px;line-height:1.4;color:var(--ms-muted);margin-top:3px}
+.utilRow{display:flex;gap:12px}
+.utilRow button{flex:1;height:50px;border-radius:14px;background:var(--ms-surface);border:1px solid var(--ms-border);font-size:12px;font-weight:600;letter-spacing:.1em;color:var(--ms-text-2)}
+.foot{font-size:11px;color:var(--ms-muted);text-align:center;margin:4px 0 0}
+/* Session card */
+.sessionCard{border-radius:20px;background:var(--ms-surface);border:1px solid var(--ms-border);padding:20px;display:flex;flex-direction:column;gap:16px;margin-bottom:14px}
+.scHead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.scWhen{font-size:11px;color:var(--ms-muted)}
+.scStat{display:flex;align-items:baseline;gap:10px}
+.scNum{font-size:46px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.scLabel{font-size:14px;color:var(--ms-text-2)}
+.scCounts{display:flex;gap:18px;font-size:12px;color:var(--ms-text-2)}
+.scCounts b{font-weight:700}
+.scCounts .ok b{color:var(--ms-success)}
+.scCounts .warn b{color:var(--ms-warn)}
+.scCounts .mut b{color:var(--ms-muted)}
+@media(min-width:768px){.home{max-width:620px;padding-left:28px;padding-right:28px}}
 </style>
-</head><body><main>
-<header class="wordmark">
-  <div class="wm1">MAINSTAGE</div>
-  <div class="wm2">ATHLETES</div>
-  <div class="wmRule"></div>
-</header>
-<p class="intro">Recruiting workflow tools. Sessions are saved on this device.</p>
-
-<section class="tile" id="snapTile">
-  <div class="eyebrow">PRIMARY TOOL</div>
-  <h2>SNAPRECRUIT</h2>
-  <p>Upload Instagram screenshots, let Claude read each profile, then copy a likely handle and open Snapchat — one tap per athlete.</p>
-  <div class="session" id="session">
-    <div class="sessLabel">SAVED SESSION — <span id="remaining">0</span> ATHLETES REMAINING</div>
-    <div class="bar"><div class="fill" id="fill"></div></div>
-    <div class="counts">
-      <div class="count add"><strong id="cAdded">0</strong><span>ADDED</span></div>
-      <div class="count no"><strong id="cNot">0</strong><span>NOT FOUND</span></div>
-      <div class="count"><strong id="cSkip">0</strong><span>SKIPPED</span></div>
-      <div class="count ok"><strong id="cDone">0</strong><span>DONE</span></div>
+</head><body>
+<main class="home">
+  <div class="brandZone">
+    <img class="ms-mark" src="/icons/mainstage-mark-256.png" alt="MainStage">
+    <div class="wm">
+      <div class="m">MAINSTAGE</div>
+      <div class="a">ATHLETES</div>
+      <div class="tag">ATHLETE MEDIA · RECRUITING TOOLS</div>
     </div>
-    <a class="cta" id="resumeCta" href="/snaprecruit/review">RESUME SESSION</a>
-    <a class="cta quiet" href="/snaprecruit/new">Start New Session</a>
   </div>
-  <a class="cta" id="startCta" href="/snaprecruit/new">START NEW SESSION</a>
-</section>
 
-<div class="future">
-  <div class="tile"><div class="eyebrow">FUTURE</div><h2>SUBMISSIONS</h2><p>Not yet available.</p><span class="chip">COMING SOON</span></div>
-  <div class="tile"><div class="eyebrow">FUTURE</div><h2>MEDIA</h2><p>Not yet available.</p><span class="chip">COMING SOON</span></div>
+  <div class="sessionSpace">
+    <section class="sessionCard" id="sessionCard">
+      <div class="scHead"><span class="eyebrow gold">SNAPRECRUIT · IN PROGRESS</span><span class="scWhen" id="scWhen"></span></div>
+      <div class="scStat"><span class="scNum" id="scRemaining">0</span><span class="scLabel">athletes remaining of <span id="scTotal">0</span></span></div>
+      <div class="bar"><div class="fill" id="scFill"></div></div>
+      <div class="scCounts">
+        <span class="ok"><b id="scAdded">0</b> Added</span>
+        <span class="warn"><b id="scNot">0</b> Not found</span>
+        <span class="mut"><b id="scSkip">0</b> Skipped</span>
+      </div>
+      <a class="btn btn-gold" id="resumeBtn" href="/snaprecruit/review">RESUME SESSION</a>
+    </section>
+  </div>
+
+  <div class="lower" id="lower">
+    <div class="eyebrow toolsEyebrow" id="toolsEyebrow">TOOLS</div>
+
+    <section class="toolCard" id="toolCard">
+      <div class="toolRow">
+        <span class="toolChip"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="9" r="2.6" fill="currentColor"/></svg></span>
+        <div><div class="toolT">SnapRecruit</div><div class="toolS">Screenshot → Snapchat, in one tap</div></div>
+      </div>
+      <a class="btn btn-gold" id="startNewBtn" href="/snaprecruit/new">START NEW SESSION</a>
+    </section>
+
+    <a class="btn btn-outline" id="startNewOutline" href="/snaprecruit/new" style="display:none">START NEW SESSION</a>
+
+    <div class="tileRow" id="tileRow">
+      <a class="tile" href="/submissions">
+        <span class="toolChip"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+        <div class="tileT">Submissions</div><div class="tileS">Feature requests in queue</div>
+      </a>
+      <a class="tile" href="/media">
+        <span class="toolChip"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.4"/><rect x="7.9" y="1.5" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.4"/><rect x="1.5" y="7.9" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.4"/><rect x="7.9" y="7.9" width="4.6" height="4.6" rx="1.2" fill="currentColor"/></svg></span>
+        <div class="tileT">Media</div><div class="tileS">Photos &amp; clips library</div>
+      </a>
+    </div>
+
+    <div class="utilRow"><button type="button">HISTORY</button><button type="button">SETTINGS</button></div>
+    <p class="foot">Sessions are saved on this device.</p>
+  </div>
+</main>
+
+<!-- The only confirm dialog in the app: discarding a saved session -->
+<div class="scrim" id="confirmScrim" hidden>
+  <div class="sheet gold">
+    <h3>Start a new session?</h3>
+    <p id="confirmMsg">Your current session will be discarded. This can't be undone.</p>
+    <button class="btn btn-gold" id="confirmDiscard">DISCARD &amp; START NEW</button>
+    <button class="btn btn-secondary" id="confirmKeep">KEEP CURRENT SESSION</button>
+  </div>
 </div>
 
-<a class="utility" href="/mainstage-finder.html">List tool: <b>Athlete Finder</b> — paste names, generate handles</a>
-
-<footer>
-  <div class="buildTag">MAINSTAGE ATHLETES • BUILD 017</div>
-  <p class="addr">snaprecruitpro.netlify.app</p>
-</footer>
-</main>
 <script>
 (function(){
   function openDB(){return new Promise(function(res,rej){var r=indexedDB.open('snaprecruit-v12',1);r.onupgradeneeded=function(){r.result.createObjectStore('session')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
   function load(){return openDB().then(function(db){return new Promise(function(res,rej){var r=db.transaction('session').objectStore('session').get('current');r.onsuccess=function(){res(r.result||null)};r.onerror=function(){rej(r.error)}})})}
+  function clearSaved(){return openDB().then(function(db){return new Promise(function(res){var tx=db.transaction('session','readwrite');tx.objectStore('session').delete('current');tx.oncomplete=res})})}
+  function fmtWhen(ts){
+    if(!ts)return '';
+    var d=new Date(ts),now=new Date();
+    var t=d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+    if(d.toDateString()===now.toDateString())return 'Today, '+t;
+    var y=new Date(now);y.setDate(now.getDate()-1);
+    if(d.toDateString()===y.toDateString())return (d.getHours()>=18?'Last night, ':'Yesterday, ')+t;
+    return d.toLocaleDateString([], {weekday:'short'})+', '+t;
+  }
+  var remaining=0;
   load().then(function(saved){
-    if(!saved||!saved.items||!saved.items.length)return;
-    var total=saved.items.length;
-    var decided=saved.items.filter(function(x){return x.outcome}).length;
-    if(!decided&&saved.index>0)decided=Math.min(saved.index,total);
-    var remaining=total-decided;
-    if(remaining<=0)return;
-    document.getElementById('remaining').textContent=remaining;
-    document.getElementById('fill').style.width=(decided/total*100)+'%';
-    document.getElementById('cAdded').textContent=saved.added||0;
-    document.getElementById('cNot').textContent=saved.notFound||0;
-    document.getElementById('cSkip').textContent=saved.skipped||0;
-    document.getElementById('cDone').textContent=decided;
-    document.getElementById('session').style.display='block';
-    document.getElementById('startCta').style.display='none';
-  }).catch(function(){});
+    if(saved&&saved.items&&saved.items.length){
+      var total=saved.items.length;
+      var decided=saved.items.filter(function(x){return x.outcome}).length;
+      if(!decided&&saved.index>0)decided=Math.min(saved.index,total);
+      remaining=total-decided;
+      if(remaining>0){
+        document.body.classList.add('hasSession');
+        document.getElementById('scRemaining').textContent=remaining;
+        document.getElementById('scTotal').textContent=total;
+        document.getElementById('scFill').style.width=(decided/total*100)+'%';
+        document.getElementById('scAdded').textContent=saved.added||0;
+        document.getElementById('scNot').textContent=saved.notFound||0;
+        document.getElementById('scSkip').textContent=saved.skipped||0;
+        document.getElementById('scWhen').textContent=fmtWhen(saved.savedAt);
+        document.getElementById('toolCard').style.display='none';
+        document.getElementById('toolsEyebrow').style.display='none';
+        document.getElementById('tileRow').style.display='none';
+        document.getElementById('startNewOutline').style.display='flex';
+      }
+    }
+  }).catch(function(){}).then(function(){document.body.classList.add('booted')});
+
+  // Confirm before discarding a saved session — the app's only confirm.
+  var pendingHref=null;
+  function guard(e){
+    if(remaining>0){
+      e.preventDefault();
+      pendingHref=e.currentTarget.getAttribute('href');
+      document.getElementById('confirmMsg').textContent='Your current session ('+remaining+' athletes remaining) will be discarded. This can’t be undone.';
+      document.getElementById('confirmScrim').hidden=false;
+    }
+  }
+  document.getElementById('startNewBtn').addEventListener('click',guard);
+  document.getElementById('startNewOutline').addEventListener('click',guard);
+  document.getElementById('confirmKeep').onclick=function(){document.getElementById('confirmScrim').hidden=true;pendingHref=null};
+  document.getElementById('confirmScrim').addEventListener('click',function(e){if(e.target===this){this.hidden=true;pendingHref=null}});
+  document.getElementById('confirmDiscard').onclick=function(){clearSaved().then(function(){location.href=pendingHref||'/snaprecruit/new'})};
+
   if('serviceWorker' in navigator)addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});
 })();
 </script>
