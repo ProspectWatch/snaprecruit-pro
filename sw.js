@@ -1,11 +1,17 @@
 // MainStage Athletes — minimal shell service worker.
 // Network-first for everything it touches; never caches /api/* or non-GET.
 // IndexedDB remains the only source of truth for session data.
-const CACHE = 'mainstage-shell-v1';
+const CACHE = 'mainstage-shell-v2';
 const SHELL = [
-  '/', '/index.html', '/snaprecruit.html', '/js/snaprecruit-core.mjs',
-  '/manifest.webmanifest', '/ms-icon.svg',
-  '/icon-192.png', '/icon-512.png', '/icon-512-maskable.png', '/apple-touch-icon.png'
+  '/', '/index.html', '/snaprecruit.html', '/submissions.html', '/media.html',
+  '/js/snaprecruit-core.mjs',
+  '/css/tokens.css', '/css/fonts.css',
+  '/fonts/archivo-800.woff2', '/fonts/inter-400.woff2', '/fonts/inter-500.woff2',
+  '/fonts/inter-600.woff2', '/fonts/inter-700.woff2',
+  '/fonts/ibmplexmono-400.woff2', '/fonts/ibmplexmono-500.woff2',
+  '/manifest.webmanifest',
+  '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-512-maskable.png',
+  '/icons/mainstage-mark-256.png', '/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', e => {
@@ -28,7 +34,11 @@ self.addEventListener('fetch', e => {
 
   e.respondWith(
     fetch(e.request).then(res => {
-      if (res.ok && (SHELL.includes(url.pathname) || url.pathname.startsWith('/snaprecruit'))) {
+      const cacheable = SHELL.includes(url.pathname)
+        || url.pathname.startsWith('/snaprecruit')
+        || url.pathname.startsWith('/submissions')
+        || url.pathname.startsWith('/media');
+      if (res.ok && cacheable) {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
       }
@@ -37,8 +47,10 @@ self.addEventListener('fetch', e => {
       const hit = await caches.match(e.request);
       if (hit) return hit;
       if (e.request.mode === 'navigate') {
-        const shell = url.pathname.startsWith('/snaprecruit')
-          ? await caches.match('/snaprecruit.html')
+        const p = url.pathname;
+        const shell = p.startsWith('/snaprecruit') ? await caches.match('/snaprecruit.html')
+          : p.startsWith('/submissions') ? await caches.match('/submissions.html')
+          : p.startsWith('/media') ? await caches.match('/media.html')
           : await caches.match('/index.html');
         if (shell) return shell;
       }

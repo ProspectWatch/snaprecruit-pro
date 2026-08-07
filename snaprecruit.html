@@ -6,235 +6,288 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MainStage">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/ms-icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/tokens.css">
 <title>SnapRecruit — MainStage Athletes</title>
 <style>
-:root{--bg:#0A0A0A;--s1:#11100E;--s2:#171614;--s3:#211F1B;--line:#37332B;--line2:#2A2722;--text:#F3F0EA;--text2:#B8B2A8;--muted:#8F897E;--gold:#E3B54A;--gold2:#C9962F;--gold3:#8C6716;--ok:#5E8A6C;--okEdge:#3E6B58;--warn:#B08D3E;--danger:#A15656}
-*{box-sizing:border-box}
-html{background:#0A0A0A}
-html,body{margin:0;min-height:100%}
-body{min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;-webkit-text-size-adjust:100%}
-button{font:inherit;color:inherit;background:none;border:0;padding:0;-webkit-tap-highlight-color:transparent}
-.app{max-width:640px;margin:auto;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 24px)}
+.app{max-width:560px;margin:auto;padding:calc(env(safe-area-inset-top) + 10px) 22px calc(env(safe-area-inset-bottom) + 22px)}
 .view{display:none}
 .view.active{display:block}
-/* shared header */
-.head{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px;margin-bottom:14px}
-.iconBtn{width:44px;height:44px;border-radius:13px;border:1px solid var(--line);background:var(--s2);color:var(--text);font-size:21px;display:flex;align-items:center;justify-content:center;text-decoration:none}
-.headMid{text-align:center;min-width:0}
-.eyebrow{color:var(--gold);font-size:10px;font-weight:850;letter-spacing:.16em}
-.headTitle{font-size:17px;font-weight:900;font-style:italic;letter-spacing:.02em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.headSub{color:var(--muted);font-size:11px;margin-top:2px}
-/* cards + buttons */
-.card{background:linear-gradient(180deg,var(--s2),var(--s1));border:1px solid var(--line);border-radius:18px;padding:17px;margin-bottom:13px}
-.btn{display:block;width:100%;text-align:center;text-decoration:none;border-radius:14px;padding:15px;font-weight:900;letter-spacing:.05em;font-size:15px}
-.btn.gold{background:linear-gradient(135deg,var(--gold3),var(--gold2));color:#140E02}
-.btn.quiet{background:var(--s3);color:var(--text2);border:1px solid var(--line);font-weight:750}
-.btn.line{background:var(--s1);color:var(--text2);border:1px solid var(--line)}
-.btn+.btn{margin-top:10px}
-.btn[disabled]{opacity:.45}
-.note{color:var(--muted);font-size:12px;line-height:1.5;margin-top:11px;text-align:center}
-.sectionTitle{color:var(--text2);font-size:12px;font-weight:850;letter-spacing:.14em;margin:19px 0 10px}
-.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:13px 0}
-.stat{background:var(--s1);border:1px solid var(--line2);border-radius:12px;padding:11px 6px;text-align:center}
-.stat strong{display:block;font-size:20px}
-.stat span{color:var(--muted);font-size:10px;letter-spacing:.06em}
-.stat.add strong{color:var(--gold)}
-.stat.no strong{color:var(--danger)}
-.stat.ok strong{color:var(--ok)}
-.bar{height:6px;background:#0D0C0A;border:1px solid var(--line2);border-radius:99px;overflow:hidden}
-.fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold3),var(--gold2));transition:width .25s}
-.errCard{border-color:#5A3A3A;background:linear-gradient(180deg,#1D1412,#150F0E)}
-.errCard h3{margin:0 0 7px;color:#D89090;font-size:14px;letter-spacing:.1em}
-.errCard p{margin:0 0 13px;color:var(--text2);font-size:14px;line-height:1.5}
-/* upload */
-.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:7px;margin-top:13px}
-.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:9px;border:1px solid var(--line2);background:#000}
-.pickCount{color:var(--text2);font-size:13px;font-weight:750;margin-top:13px}
+/* ---- shared header ---- */
+.head{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px;padding:6px 0 12px}
+.headMid{min-width:0}
+.crumb{font-size:9px;font-weight:700;letter-spacing:.24em;text-transform:uppercase}
+.crumb .dim{color:var(--ms-muted)}
+.crumb .lit{color:var(--ms-gold-bright)}
+.screenTitle{font-size:22px;font-weight:700;letter-spacing:-.01em;margin-top:3px}
+/* ---- review header ---- */
+.rhead{position:sticky;top:0;z-index:30;background:rgba(10,10,10,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);margin:calc(-1*(env(safe-area-inset-top) + 10px)) -22px 0;padding:calc(env(safe-area-inset-top) + 8px) 22px 0}
+.rheadRow{display:grid;grid-template-columns:44px 1fr minmax(44px,auto);align-items:center;gap:10px;height:54px}
+.rright{display:flex;justify-content:flex-end}
+.rTitle{text-align:center;font-size:13px;font-weight:600}
+.rSub{text-align:center;font-size:11px;color:var(--ms-muted);margin-top:1px}
+.rProgress{height:3px;background:var(--ms-well);margin:6px -22px 0}
+.rProgress .fill{height:100%;background:var(--grad-fill);transition:width 240ms ease-out}
+.doneBtn{display:none;width:auto;height:36px;padding:0 14px;border-radius:11px;border:1px solid var(--ms-gold);color:var(--ms-gold-bright);font-size:12px;font-weight:700;letter-spacing:.1em}
+.editing .doneBtn{display:flex;align-items:center}
+.editing #homeBtn{display:none}
+/* ---- copied banner ---- */
+.copied{display:flex;align-items:center;gap:9px;background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:13px;padding:11px 14px;font-size:13px;color:var(--ms-text-2);margin:12px 0 0}
+.copied b{color:var(--ms-gold-bright);font-family:var(--f-mono);font-weight:500}
+.copied .tick{color:var(--ms-success);font-weight:700}
+/* ---- work area ---- */
+.work{padding-top:13px}
+.viewer{position:relative;margin-bottom:13px}
+.viewer img{width:100%;max-height:38vh;object-fit:contain;background:#0C0B0A;border:1px solid var(--ms-border);border-radius:16px}
+.viewerToggle{position:absolute;top:10px;right:10px;height:28px;padding:0 11px;border-radius:9px;background:rgba(23,22,20,.88);border:1px solid var(--ms-border-strong);font-size:11px;font-weight:600;color:var(--ms-text-2)}
+.viewer.collapsed img{max-height:64px;object-fit:cover;object-position:top}
+.editing .viewer{display:none}
+/* profile card */
+.pcard{background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:20px;padding:2px 16px;margin-bottom:16px}
+.fieldRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--ms-border);min-height:44px;width:100%;text-align:left}
+.fieldRow:last-child{border-bottom:0}
+.fieldRow .fl{font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--ms-muted);flex:0 0 auto}
+.fieldRow .fv{font-size:15px;font-weight:700;overflow-wrap:anywhere;text-align:right}
+.fieldRow .fv.mono{font-family:var(--f-mono);font-weight:500}
+.fieldRow .fv.name{font-size:17px}
+.fieldRow .fv.gold{color:var(--ms-gold-bright)}
+.fieldRow .fv.empty{color:var(--ms-muted);font-weight:400}
+/* edit state */
+.editCard{display:none;margin-bottom:16px}
+.editing .editCard{display:block}
+.editing .pcard{display:none}
+.efield{margin-bottom:14px}
+.efield label{display:block;font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--ms-muted);margin-bottom:7px}
+.efield input{width:100%;height:44px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:10px;color:var(--ms-text);font-size:15px;padding:0 13px;font-family:var(--f-ui)}
+.efield input.mono{font-family:var(--f-mono);font-weight:500}
+.efield input:focus{outline:none;border-color:var(--ms-gold)}
+.editHint{font-size:11px;color:var(--ms-muted);margin:-6px 0 14px}
+/* handle list */
+.searchHead{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 10px}
+.searchHead .eyebrow{color:var(--ms-gold)}
+.searchMeta{font-size:11px;color:var(--ms-muted)}
+.hrow{position:relative;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;background:var(--ms-surface);border:1px solid var(--ms-border);border-left:3px solid var(--ms-gold-deep);border-radius:14px;padding:9px 16px;margin-bottom:9px;text-align:left;transition:background 120ms}
+.hrow:active{background:var(--ms-surface-2)}
+.hrow .htext{font-family:var(--f-mono);font-size:16px;font-weight:500;color:var(--ms-text);overflow-wrap:anywhere}
+.hrow .hsub{display:block;font-size:9px;font-weight:700;letter-spacing:.18em;color:var(--ms-muted);margin-top:3px}
+.hrow .hact{flex:0 0 auto;font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--ms-gold)}
+.hrow .hbadge{display:table;background:var(--ms-gold);color:#0A0A0A;font-size:9px;font-weight:700;letter-spacing:.18em;border-radius:6px;padding:3px 8px;margin-bottom:6px}
+.hrow.detected{min-height:68px;background:var(--ms-surface-2);border:1px solid var(--ms-gold);border-left:3px solid var(--ms-gold)}
+.hrow.searched .htext{color:var(--ms-muted)}
+.hrow.searched .hact{display:none}
+.hrow .hpill{display:none;flex:0 0 auto;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-muted);font-size:9px;font-weight:700;letter-spacing:.16em;border-radius:999px;padding:5px 10px}
+.hrow.searched .hpill{display:inline-block}
+.noSuggest{font-size:13px;line-height:1.5;color:var(--ms-muted);background:var(--ms-surface);border:1px dashed var(--ms-border);border-radius:14px;padding:14px 16px}
+/* prev / open-only + action bar */
+.rowCtl{display:flex;align-items:center;justify-content:space-between;margin:4px 0 8px}
+.rowCtl button{height:44px;font-size:12px;font-weight:600;color:var(--ms-muted);padding:0 4px}
+.rowCtl button[disabled]{opacity:.35}
+.actionbar{position:sticky;bottom:0;z-index:30;display:grid;grid-template-columns:1.3fr 1fr .75fr;gap:9px;padding:10px 0 calc(env(safe-area-inset-bottom) + 10px);background:linear-gradient(180deg,rgba(10,10,10,0),rgba(10,10,10,.97) 30%)}
+.actionbar button{height:56px;border-radius:14px;font-size:13px;font-weight:700;letter-spacing:.08em}
+.abAdded{background:var(--grad-btn);color:#0A0A0A}
+.abNot{background:var(--ms-surface);border:1px solid var(--ms-border);color:var(--ms-text-2)}
+.abSkip{background:var(--ms-surface);border:1px solid var(--ms-border);color:var(--ms-muted)}
+.actionbar.decided button{opacity:.5}
+.actionbar.decided button.chosen{opacity:1;box-shadow:0 0 0 2px var(--ms-gold-bright)}
+/* ---- upload ---- */
+.dropPanel{display:block;background:var(--ms-surface);border:1px dashed var(--ms-border);border-radius:20px;padding:34px 20px;text-align:center;cursor:pointer}
+.dropPanel .plus{width:44px;height:44px;border-radius:13px;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-gold);font-size:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.dropPanel .dt{font-size:16px;font-weight:700}
+.dropPanel .ds{font-size:12px;color:var(--ms-muted);margin-top:6px}
 #files{display:none}
-/* scanning */
-.scanWrap{text-align:center;padding:36px 0 10px}
-.scanCounter{font-size:44px;font-weight:900;font-style:italic;margin:20px 0 4px}
-.scanCounter span{color:var(--muted);font-size:20px;font-style:normal;font-weight:750}
-.scanStatus{color:var(--text2);font-size:14px;margin:14px 0 6px;min-height:20px}
-.scanNote{color:var(--muted);font-size:12px;line-height:1.5}
-/* review */
-.rhead{position:sticky;top:0;z-index:20;background:rgba(10,10,10,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:calc(env(safe-area-inset-top) + 8px) 0 8px;margin:calc(-1*(env(safe-area-inset-top) + 12px)) 0 0;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px}
-.pos{text-align:center}
-.posMain{font-size:14px;font-weight:900;letter-spacing:.1em}
-.posMain b{color:var(--gold)}
-.posSub{color:var(--muted);font-size:11px;margin-top:2px;letter-spacing:.06em}
-.thinbar{position:sticky;top:calc(env(safe-area-inset-top) + 60px);z-index:19;height:3px;background:#151310;border-radius:99px;overflow:hidden;margin:2px 0 13px}
-.thinbar .fill{transition:width .2s}
-.shotWrap{margin-bottom:13px}
-.shot{display:block;width:100%;max-height:44vh;object-fit:contain;background:#060505;border:1px solid var(--line2);border-radius:16px}
-.fieldRow{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line2)}
-.fieldRow:last-of-type{border-bottom:0}
-.fieldRow label{color:var(--muted);font-size:11px;font-weight:850;letter-spacing:.1em}
-.fieldRow .val{font-size:17px;font-weight:750;overflow-wrap:anywhere}
-.fieldRow .val.empty{color:var(--muted);font-weight:500}
-.outcomeChip{display:inline-block;margin-top:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;font-weight:850;letter-spacing:.1em;color:var(--text2)}
-.outcomeChip.added{color:var(--gold);border-color:var(--gold3)}
-.outcomeChip.notFound{color:#D89090;border-color:#5A3A3A}
-.editBtn{margin-top:13px}
-.editField{margin-bottom:12px}
-.editField label{display:block;color:var(--muted);font-size:11px;font-weight:850;letter-spacing:.1em;margin-bottom:6px}
-.editField input{width:100%;background:#0D0C0A;border:1px solid var(--line);border-radius:12px;color:var(--text);font-size:18px;font-weight:720;padding:12px}
-.srow{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--s2);border:1px solid var(--line2);border-radius:14px;padding:13px 15px;margin-bottom:9px;text-align:left}
-.srow:active{background:var(--s3)}
-.srow .main{min-width:0}
-.srow .rlabel{display:block;font-size:9px;font-weight:850;letter-spacing:.14em;color:var(--muted);margin-bottom:3px}
-.srow .rhandle{font-size:17px;font-weight:850;overflow-wrap:anywhere}
-.srow .raction{font-size:11px;font-weight:850;letter-spacing:.08em;color:var(--gold2);white-space:nowrap}
-.srow.prime{border-color:var(--gold3)}
-.srow.prime .rlabel{color:var(--gold)}
-.srow.searched{box-shadow:inset 3px 0 0 var(--okEdge)}
-.srow.searched .raction{color:var(--ok)}
-.plainRow{width:100%;background:var(--s1);border:1px solid var(--line2);color:var(--text2);border-radius:14px;padding:13px;font-size:14px;margin-top:2px}
-.noSuggest{color:var(--muted);font-size:13px;line-height:1.5;padding:6px 2px}
-.actionbar{position:sticky;bottom:0;z-index:20;display:grid;grid-template-columns:1.25fr 1fr .8fr;gap:8px;margin-top:15px;padding:9px 0 calc(env(safe-area-inset-bottom) + 9px);background:linear-gradient(180deg,rgba(10,10,10,0),rgba(10,10,10,.96) 26%)}
-.actionbar button{border-radius:14px;padding:15px 6px;font-size:14px;font-weight:900;letter-spacing:.04em}
-.abAdded{background:linear-gradient(135deg,var(--gold3),var(--gold2));color:#140E02}
-.abNot{background:var(--s2);border:1px solid #5A3A3A;color:#D89090}
-.abSkip{background:var(--s1);border:1px solid var(--line2);color:var(--muted)}
-/* complete */
-.doneWrap{text-align:center;padding:44px 0 10px}
-.doneWrap h2{font-size:30px;font-style:italic;font-weight:900;margin:14px 0 4px}
-.doneWrap .sub{color:var(--text2);font-size:15px;margin-bottom:6px}
-/* wider screens */
-@media(min-width:700px){.app{max-width:720px}.shot{max-height:52vh}}
-@media(min-width:1000px){
-  .app.wide{max-width:1160px}
-  #view-review .work{display:grid;grid-template-columns:minmax(320px,44%) 1fr;gap:22px;align-items:start}
-  #view-review .shotWrap{position:sticky;top:calc(env(safe-area-inset-top) + 78px);margin-bottom:0}
-  #view-review .shot{max-height:calc(100vh - 210px)}
-  #view-review .actionbar{grid-template-columns:1.25fr 1fr .8fr}
+.pickRow{display:flex;align-items:baseline;justify-content:space-between;margin:16px 0 10px}
+.pickRow .pc{font-size:13px;font-weight:700}
+.pickRow .clear{font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--ms-gold-bright)}
+.thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.thumb{position:relative;aspect-ratio:3/4;border-radius:12px;overflow:hidden;border:1px solid var(--ms-border);background:var(--ms-surface-2)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb .rm{position:absolute;top:5px;right:5px;width:24px;height:24px;border-radius:8px;background:rgba(10,10,10,.75);border:1px solid var(--ms-border-strong);color:var(--ms-text-2);font-size:13px;display:flex;align-items:center;justify-content:center}
+.thumb.more{display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--ms-text-2)}
+.uploadNote{font-size:11px;color:var(--ms-muted);text-align:center;margin:16px 0 12px}
+.uploadFoot{position:sticky;bottom:0;padding:10px 0 calc(env(safe-area-inset-bottom) + 6px);background:linear-gradient(180deg,rgba(10,10,10,0),rgba(10,10,10,.97) 30%)}
+.cancelRow{display:flex;justify-content:center;margin-top:6px}
+/* ---- scanning ---- */
+.scanWrap{text-align:center;padding-top:40px}
+.scanWrap .ms-mark{width:96px;height:96px;margin:0 auto 30px;animation:srpulse 2s ease-in-out infinite}
+.scanCounter{margin:14px 0 20px}
+.scanCounter .big{font-size:44px;font-weight:700;letter-spacing:-.03em}
+.scanCounter .of{font-size:20px;color:var(--ms-muted);font-weight:500;margin-left:8px}
+.scanBarWrap{max-width:300px;margin:0 auto 26px}
+.scanLog{max-width:340px;margin:0 auto;text-align:left;font-family:var(--f-mono);font-size:13px;line-height:2;color:var(--ms-text-2);min-height:80px}
+.scanLog .ok{color:var(--ms-success)}
+.scanLog .fail{color:var(--ms-error)}
+.scanLog .cur{color:var(--ms-text)}
+.scanNote{font-size:11px;color:var(--ms-muted);margin:30px 0 14px}
+/* ---- complete ---- */
+.doneWrap{text-align:center;padding-top:44px}
+.doneBadge{width:88px;height:88px;border-radius:50%;border:1px solid var(--ms-gold);color:var(--ms-gold-bright);font-size:34px;display:flex;align-items:center;justify-content:center;margin:0 auto 26px}
+.doneWrap h2{font-size:26px;font-weight:700;letter-spacing:-.01em;margin:12px 0 30px}
+.doneStats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.dstat{background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:16px;padding:18px 8px}
+.dstat b{display:block;font-size:46px;font-weight:700;letter-spacing:-.03em}
+.dstat span{display:block;font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--ms-muted);margin-top:6px}
+.dstat.ok b{color:var(--ms-success)}
+.dstat.warn b{color:var(--ms-warn)}
+.dstat.mut b{color:var(--ms-muted)}
+.doneDur{font-size:12px;color:var(--ms-muted);margin-bottom:26px}
+/* ---- fullscreen viewer ---- */
+.fs{position:fixed;inset:0;z-index:80;background:#0A0A0A;display:flex;align-items:center;justify-content:center}
+.fs img{max-width:100%;max-height:100%;object-fit:contain}
+/* ---- responsive ---- */
+@media(min-width:768px){
+  .app{max-width:720px;padding-left:28px;padding-right:28px}
+  .viewer img{max-height:46vh}
+  .rhead{margin-left:-28px;margin-right:-28px;padding-left:28px;padding-right:28px}
+  .rProgress{margin-left:-28px;margin-right:-28px}
+  .thumbs{grid-template-columns:repeat(6,1fr)}
+}
+@media(min-width:1024px) and (orientation:landscape){
+  .app.wide{max-width:1400px;padding-left:32px;padding-right:32px}
+  .app.wide .rhead{margin-left:-32px;margin-right:-32px;padding-left:32px;padding-right:32px}
+  .app.wide .rProgress{margin-left:-32px;margin-right:-32px}
+  #view-review .work{display:grid;grid-template-columns:46fr 54fr;gap:28px;align-items:start}
+  #view-review .paneLeft{position:sticky;top:calc(env(safe-area-inset-top) + 76px)}
+  #view-review .viewer{margin-bottom:0}
+  #view-review .viewer img{max-height:calc(100vh - 140px)}
+  .editing #view-review .viewer,.editing .viewer{display:block}
+  #view-review .actionbar{position:static;background:none;padding-bottom:0}
 }
 </style>
 </head><body>
 <main class="app" id="appRoot">
 
-<section class="view" id="view-home">
-  <header class="head">
-    <a class="iconBtn" href="/" aria-label="MainStage home">‹</a>
-    <div class="headMid"><div class="eyebrow">MAINSTAGE ATHLETES</div><div class="headTitle">SNAPRECRUIT</div></div>
-    <span></span>
-  </header>
-  <div class="card" id="homeResume" style="display:none">
-    <div class="eyebrow">SAVED SESSION</div>
-    <div class="statgrid">
-      <div class="stat add"><strong id="hAdded">0</strong><span>ADDED</span></div>
-      <div class="stat no"><strong id="hNot">0</strong><span>NOT FOUND</span></div>
-      <div class="stat"><strong id="hSkip">0</strong><span>SKIPPED</span></div>
-      <div class="stat ok"><strong id="hRemain">0</strong><span>REMAINING</span></div>
-    </div>
-    <div class="bar"><div class="fill" id="hFill"></div></div>
-    <button class="btn gold" id="homeResumeBtn" style="margin-top:14px">RESUME SESSION</button>
-    <button class="btn quiet" id="homeNewBtn2">Start New Session</button>
-  </div>
-  <div class="card" id="homeFresh">
-    <p style="margin:2px 0 14px;color:var(--text2);font-size:14px;line-height:1.55">Upload Instagram screenshots, let Claude read each profile, then copy a likely handle and open Snapchat — one tap per athlete.</p>
-    <button class="btn gold" id="homeNewBtn">START NEW SESSION</button>
-  </div>
-  <p class="note">Sessions and screenshots stay saved on this device.</p>
-</section>
-
+<!-- ============ NEW SESSION / UPLOAD ============ -->
 <section class="view" id="view-new">
   <header class="head">
-    <button class="iconBtn" id="newBack" aria-label="Back">‹</button>
-    <div class="headMid"><div class="eyebrow">SNAPRECRUIT</div><div class="headTitle">NEW SESSION</div></div>
+    <a class="chipbtn" href="/" aria-label="MainStage home">‹</a>
+    <div class="headMid">
+      <div class="crumb"><span class="dim">MAINSTAGE</span> <span class="dim">·</span> <span class="lit">SNAPRECRUIT</span></div>
+      <div class="screenTitle">New Session</div>
+    </div>
     <span></span>
   </header>
-  <div class="card">
-    <label class="btn line" for="files" style="cursor:pointer">CHOOSE INSTAGRAM SCREENSHOTS</label>
-    <input id="files" type="file" accept="image/*" multiple>
-    <div class="pickCount" id="pickCount" style="display:none"></div>
-    <div class="thumbs" id="thumbs"></div>
-    <button class="btn quiet" id="clearPick" style="display:none;margin-top:12px">Clear Selection</button>
+
+  <label class="dropPanel" for="files">
+    <span class="plus">+</span>
+    <div class="dt">Choose Instagram Screenshots</div>
+    <div class="ds">Select all of tonight’s screenshots at once.</div>
+  </label>
+  <input id="files" type="file" accept="image/*" multiple>
+
+  <div class="pickRow" id="pickRow" style="display:none">
+    <span class="pc" id="pickCount"></span>
+    <button class="clear" id="clearPick" type="button">CLEAR</button>
   </div>
-  <div class="card errCard" id="newError" style="display:none"><h3 id="newErrorTitle">NO SCREENSHOTS SELECTED</h3><p id="newErrorMsg">Choose at least one Instagram profile screenshot to start scanning.</p></div>
-  <button class="btn gold" id="scanBtn">SCAN PROFILES</button>
-  <button class="btn quiet" id="newCancel">Cancel</button>
-  <p class="note">Screenshots and progress remain saved on this device.</p>
+  <div class="thumbs" id="thumbs"></div>
+
+  <p class="uploadNote">Screenshots and progress are saved on this device.</p>
+  <div class="uploadFoot">
+    <button class="btn btn-gold" id="scanBtn" disabled>SCAN SCREENSHOTS</button>
+    <div class="cancelRow"><a class="btn-text" href="/">Cancel</a></div>
+  </div>
 </section>
 
+<!-- ============ SCANNING ============ -->
 <section class="view" id="view-scanning">
-  <header class="head">
-    <span></span>
-    <div class="headMid"><div class="eyebrow">SNAPRECRUIT · SCANNING</div></div>
-    <span></span>
-  </header>
-  <div class="scanWrap" id="scanWrap">
-    <div class="scanCounter"><span id="scanX">0</span><span> of </span><span id="scanY">0</span></div>
-    <div class="bar" style="max-width:340px;margin:18px auto 0"><div class="fill" id="scanFill"></div></div>
-    <div class="scanStatus" id="scanStatus">Reading Instagram profile with Claude vision…</div>
-    <p class="scanNote">Keep this screen open. Progress is saved after each profile —<br>nothing is lost if a read fails.</p>
-  </div>
-  <div class="card errCard" id="scanError" style="display:none">
-    <h3 id="scanErrorTitle">READER ERROR</h3>
-    <p id="scanErrorMsg"></p>
-    <button class="btn gold" id="retryBtn">RETRY</button>
-    <button class="btn quiet" id="skipProfileBtn">Skip This Profile</button>
-    <button class="btn quiet" id="returnBtn">Return to Session</button>
+  <div class="scanWrap">
+    <img class="ms-mark" src="/icons/mainstage-mark-256.png" alt="">
+    <div class="eyebrow gold">SNAPRECRUIT · SCANNING</div>
+    <div class="scanCounter"><span class="big" id="scanX">1</span><span class="of">of <span id="scanY">1</span></span></div>
+    <div class="scanBarWrap"><div class="bar"><div class="fill" id="scanFill"></div></div></div>
+    <div class="scanLog" id="scanLog"></div>
+    <p class="scanNote">Completed profiles are saved as they finish.</p>
+    <button class="btn btn-secondary" id="cancelScan">Cancel scan</button>
   </div>
 </section>
 
+<!-- ============ ATHLETE REVIEW ============ -->
 <section class="view" id="view-review">
   <header class="rhead">
-    <button class="iconBtn" id="prevBtn" aria-label="Previous athlete">‹</button>
-    <div class="pos">
-      <div class="posMain">ATHLETE <b id="posX">1</b> OF <span id="posY">1</span></div>
-      <div class="posSub"><span id="posRemain">0</span> REMAINING</div>
+    <div class="rheadRow">
+      <a class="chipbtn" id="backHome" href="/" aria-label="MainStage home">‹</a>
+      <div>
+        <div class="rTitle">Athlete <span id="posX">1</span> of <span id="posY">1</span></div>
+        <div class="rSub" id="rSub">0 remaining</div>
+      </div>
+      <span class="rright"><a class="chipbtn" id="homeBtn" href="/" aria-label="Home">⌂</a><button class="doneBtn" id="editDone" type="button">DONE</button></span>
     </div>
-    <button class="iconBtn" id="sessionBtn" aria-label="Session home">⌂</button>
+    <div class="rProgress"><div class="fill" id="reviewFill"></div></div>
   </header>
-  <div class="thinbar"><div class="fill" id="reviewFill"></div></div>
+
+  <div class="copied" id="copiedBanner" hidden><span class="tick">✓</span><span>Copied <b id="copiedHandle"></b> · back from Snapchat</span></div>
+
   <div class="work">
-    <div class="shotWrap"><img class="shot" id="shot" alt="Instagram profile screenshot"></div>
-    <div class="details">
-      <div class="card" id="fieldsView">
-        <div class="fieldRow"><label>INSTAGRAM</label><div class="val" id="vIg"></div></div>
-        <div class="fieldRow"><label>FULL NAME</label><div class="val" id="vName"></div></div>
-        <div class="fieldRow"><label>SNAPCHAT</label><div class="val" id="vSnap"></div></div>
-        <span class="outcomeChip" id="outcomeChip" style="display:none"></span>
-        <button class="btn quiet editBtn" id="editBtn">EDIT PROFILE</button>
+    <div class="paneLeft">
+      <div class="viewer" id="viewer">
+        <img id="shot" alt="Instagram profile screenshot">
+        <button class="viewerToggle" id="viewerToggle" type="button">Collapse ⌃</button>
       </div>
-      <div class="card" id="fieldsEdit" style="display:none">
-        <div class="editField"><label>INSTAGRAM</label><input id="ig" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
-        <div class="editField"><label>FULL NAME</label><input id="name" autocomplete="off" spellcheck="false"></div>
-        <div class="editField"><label>SNAPCHAT</label><input id="snap" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Not detected"></div>
-        <button class="btn gold" id="doneEditBtn">DONE</button>
+    </div>
+    <div class="paneRight">
+      <div class="pcard" id="fieldsView">
+        <button class="fieldRow" data-edit="ig" type="button"><span class="fl">INSTAGRAM</span><span class="fv mono" id="vIg"></span></button>
+        <button class="fieldRow" data-edit="name" type="button"><span class="fl">FULL NAME</span><span class="fv name" id="vName"></span></button>
+        <button class="fieldRow" data-edit="snap" type="button"><span class="fl">SNAPCHAT</span><span class="fv mono" id="vSnap"></span></button>
       </div>
-      <div class="sectionTitle">SNAPCHAT SEARCH</div>
+
+      <div class="editCard" id="editCard">
+        <div class="efield"><label for="ig">INSTAGRAM</label><input id="ig" class="mono" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+        <div class="efield"><label for="name">FULL NAME</label><input id="name" autocomplete="off" spellcheck="false"></div>
+        <p class="editHint">Suggestions update as you type.</p>
+        <div class="efield"><label for="snap">SNAPCHAT</label><input id="snap" class="mono" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Not detected — add manually"></div>
+      </div>
+
+      <div class="searchHead"><span class="eyebrow">SNAPCHAT SEARCH</span><span class="searchMeta" id="searchMeta">tap a row → copy + open</span></div>
       <div id="options"></div>
-      <button class="plainRow" id="openOnly">Open Snapchat without copying</button>
-      <div class="actionbar">
-        <button class="abAdded" id="addedBtn">ADDED</button>
-        <button class="abNot" id="notFoundBtn">NOT FOUND</button>
-        <button class="abSkip" id="skipBtn">SKIP</button>
+
+      <div class="rowCtl">
+        <button id="prevBtn" type="button">‹ Previous athlete</button>
+        <button id="openOnly" type="button">Open Snapchat only</button>
+      </div>
+      <div class="actionbar" id="actionbar">
+        <button class="abAdded" id="addedBtn" type="button">ADDED</button>
+        <button class="abNot" id="notFoundBtn" type="button">NOT FOUND</button>
+        <button class="abSkip" id="skipBtn" type="button">SKIP</button>
       </div>
     </div>
   </div>
 </section>
 
+<!-- ============ SESSION COMPLETE ============ -->
 <section class="view" id="view-complete">
   <div class="doneWrap">
-    <div class="eyebrow">SNAPRECRUIT</div>
-    <h2>SESSION COMPLETE</h2>
-    <div class="sub"><span id="doneTotal">0</span> athletes processed</div>
+    <div class="doneBadge">✓</div>
+    <div class="eyebrow gold">SESSION COMPLETE</div>
+    <h2><span id="doneTotal">0</span> athletes processed</h2>
   </div>
-  <div class="statgrid">
-    <div class="stat add"><strong id="dAdded">0</strong><span>ADDED</span></div>
-    <div class="stat no"><strong id="dNot">0</strong><span>NOT FOUND</span></div>
-    <div class="stat"><strong id="dSkip">0</strong><span>SKIPPED</span></div>
-    <div class="stat ok"><strong id="dTotal2">0</strong><span>TOTAL</span></div>
+  <div class="doneStats">
+    <div class="dstat ok"><b id="dAdded">0</b><span>ADDED</span></div>
+    <div class="dstat warn"><b id="dNot">0</b><span>NOT FOUND</span></div>
+    <div class="dstat mut"><b id="dSkip">0</b><span>SKIPPED</span></div>
   </div>
-  <button class="btn gold" id="doneNewBtn">START NEW SESSION</button>
-  <a class="btn quiet" href="/">RETURN HOME</a>
+  <p class="doneDur" id="doneDur" style="text-align:center"></p>
+  <button class="btn btn-gold" id="doneNewBtn" type="button">START NEW SESSION</button>
+  <div class="cancelRow" style="margin-top:10px"><a class="btn btn-secondary" href="/">Return home</a></div>
 </section>
 
 </main>
+
+<!-- shared bottom sheet: reader errors, offline, limits -->
+<div class="scrim" id="sheetScrim" hidden>
+  <div class="sheet error">
+    <div class="sicon">!</div>
+    <h3 id="sheetTitle"></h3>
+    <p id="sheetMsg"></p>
+    <button class="btn btn-gold" id="retryBtn" type="button">RETRY</button>
+    <button class="btn btn-secondary" id="skipProfileBtn" type="button">Skip this profile</button>
+    <div class="cancelRow"><button class="btn-text" id="returnBtn" type="button">Return to session</button></div>
+  </div>
+</div>
+
+<div class="fs" id="fsOverlay" hidden><img id="fsImg" alt=""></div>
+
 <script type="module">
 import {cleanHandle, cleanName, buildSuggestions} from '/js/snaprecruit-core.mjs';
 
@@ -248,7 +301,8 @@ async function save(){
   const db=await openDB(),tx=db.transaction(STORE,'readwrite');
   tx.objectStore(STORE).put({
     items:state.items.map(x=>({file:x.file,ig:x.ig,name:x.name,snap:x.snap,read:!!x.read,outcome:x.outcome||null,searched:x.searched||[]})),
-    index:state.index,added:c.added,notFound:c.notFound,skipped:c.skipped,legacyBase:state.legacyBase
+    index:state.index,added:c.added,notFound:c.notFound,skipped:c.skipped,
+    legacyBase:state.legacyBase,startedAt:state.startedAt||null,savedAt:Date.now()
   },'current');
   return new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=()=>j(tx.error)});
 }
@@ -256,8 +310,8 @@ async function load(){const db=await openDB();return new Promise((res,rej)=>{con
 async function clearSaved(){const db=await openDB(),tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete('current');return new Promise(r=>tx.oncomplete=r)}
 
 /* ---------- state ---------- */
-const state={items:[],index:0,legacyBase:{added:0,notFound:0,skipped:0}};
-let completeTotals=null,scanning=false,scanFailIndex=-1,lastShotUrl=null;
+const state={items:[],index:0,legacyBase:{added:0,notFound:0,skipped:0},startedAt:null};
+let completeTotals=null,scanning=false,cancelScan=false,pendingFails=[],lastShotUrl=null,lastCopied=null,editSnapshot=null;
 
 function hydrate(saved){
   state.items=(saved.items||[]).map(x=>({
@@ -267,6 +321,7 @@ function hydrate(saved){
     searched:Array.isArray(x.searched)?x.searched:[]
   }));
   state.legacyBase=saved.legacyBase||{added:0,notFound:0,skipped:0};
+  state.startedAt=saved.startedAt||null;
   const anyOutcome=state.items.some(x=>x.outcome);
   const savedIdx=Math.min(saved.index||0,state.items.length);
   if(!anyOutcome&&!saved.legacyBase&&savedIdx>0){
@@ -290,92 +345,92 @@ const decidedCount=()=>state.items.filter(x=>x.outcome).length;
 const firstUndecided=()=>state.items.findIndex(x=>!x.outcome);
 function nextUndecidedAfter(i){for(let k=i+1;k<state.items.length;k++)if(!state.items[k].outcome)return k;for(let k=0;k<state.items.length;k++)if(!state.items[k].outcome)return k;return -1}
 
-/* ---------- routing ---------- */
-const PATHS={home:'/snaprecruit/',new:'/snaprecruit/new',scanning:'/snaprecruit/scanning',review:'/snaprecruit/review',complete:'/snaprecruit/complete'};
-function showView(name){
+/* ---------- routing — replace-only, so browser Back always exits to Home ---------- */
+const PATHS={new:'/snaprecruit/new',scanning:'/snaprecruit/scanning',review:'/snaprecruit/review',complete:'/snaprecruit/complete'};
+function show(view){
+  history.replaceState(null,'',PATHS[view]);
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  $('#view-'+name).classList.add('active');
-  $('#appRoot').classList.toggle('wide',name==='review');
+  $('#view-'+view).classList.add('active');
+  $('#appRoot').classList.toggle('wide',view==='review');
   scrollTo(0,0);
+  if(view==='new')renderUpload();
+  if(view==='review')renderReview();
+  if(view==='complete')renderComplete();
 }
-function go(name,{replace=false,skipHistory=false}={}){
-  if(!skipHistory){
-    const st=name==='review'?{v:'review',i:state.index}:{v:name};
-    history[replace?'replaceState':'pushState'](st,'',PATHS[name]);
-  }
-  showView(name);
-  if(name==='home')renderHome();
-  if(name==='new')renderUpload();
-  if(name==='review')renderReview();
-  if(name==='complete')renderComplete();
+function routeEntry(){
+  const anyRead=state.items.some(x=>x.read);
+  const unread=state.items.filter(x=>!x.read).length;
+  if(state.items.length&&anyRead&&unread>0){show('scanning');runScan();return}
+  if(state.items.length&&anyRead&&firstUndecided()>=0){show('review');return}
+  show('new');
 }
-function pushAthlete(){history.pushState({v:'review',i:state.index},'',PATHS.review)}
-addEventListener('popstate',e=>{
-  const st=e.state;
-  if(st&&st.v==='review'&&state.items.length){state.index=Math.min(st.i||0,state.items.length-1);showView('review');$('#appRoot').classList.add('wide');renderReview();return}
-  if(st&&st.v&&PATHS[st.v]){go(st.v,{skipHistory:true});return}
-  route(location.pathname,{replace:true});
-});
-function route(path,{replace=true}={}){
+function route(path){
   const p=path.replace(/\/+$/,'')||'/snaprecruit';
-  if(p==='/snaprecruit/new')return go('new',{replace});
+  const anyRead=state.items.some(x=>x.read);
+  const unread=state.items.filter(x=>!x.read).length;
+  if(p==='/snaprecruit/new')return show('new');
   if(p==='/snaprecruit/scanning'){
-    if(state.items.length&&state.items.some(x=>!x.read)){go('scanning',{replace});runScan();return}
-    if(state.items.length)return go(firstUndecided()>=0?'review':'home',{replace});
-    return go('new',{replace});
+    if(state.items.length&&unread>0){show('scanning');runScan();return}
+    return routeEntry();
   }
   if(p==='/snaprecruit/review'){
-    if(!state.items.length)return go('home',{replace});
-    if(state.items.some(x=>!x.read)){go('scanning',{replace});runScan();return}
-    return go('review',{replace});
+    if(!state.items.length)return location.replace('/');
+    if(unread===state.items.length)return show('new');
+    if(unread>0){show('scanning');runScan();return}
+    return show('review');
   }
-  if(p==='/snaprecruit/complete')return completeTotals?go('complete',{replace}):go('home',{replace});
-  return go('home',{replace});
+  if(p==='/snaprecruit/complete')return completeTotals?show('complete'):routeEntry();
+  return routeEntry();
 }
 
-/* ---------- home ---------- */
-function renderHome(){
-  const total=state.items.length,decided=decidedCount(),remaining=total-decided;
-  const has=total>0&&remaining>0;
-  $('#homeResume').style.display=has?'block':'none';
-  $('#homeFresh').style.display=has?'none':'block';
-  if(has){
-    const c=counts();
-    $('#hAdded').textContent=c.added;$('#hNot').textContent=c.notFound;$('#hSkip').textContent=c.skipped;
-    $('#hRemain').textContent=remaining;
-    $('#hFill').style.width=(decided/total*100)+'%';
-  }
+/* ---------- bottom sheet ---------- */
+function showSheet({title,msg,retry=true,skip=0,ret=true}){
+  $('#sheetTitle').textContent=title;
+  $('#sheetMsg').textContent=msg;
+  $('#retryBtn').style.display=retry?'flex':'none';
+  $('#skipProfileBtn').style.display=skip?'flex':'none';
+  $('#skipProfileBtn').textContent=skip>1?`Skip these ${skip} profiles`:'Skip this profile';
+  $('#returnBtn').style.display=ret?'inline-block':'none';
+  $('#sheetScrim').hidden=false;
 }
-$('#homeResumeBtn').onclick=()=>{if(state.items.some(x=>!x.read)){go('scanning');runScan()}else go('review')};
-$('#homeNewBtn').onclick=()=>go('new');
-$('#homeNewBtn2').onclick=()=>go('new');
+function hideSheet(){$('#sheetScrim').hidden=true}
 
 /* ---------- upload ---------- */
 function renderUpload(){
   const n=state.items.length;
-  $('#pickCount').style.display=n?'block':'none';
-  $('#clearPick').style.display=n?'block':'none';
+  $('#pickRow').style.display=n?'flex':'none';
   $('#pickCount').textContent=n?`${n} screenshot${n===1?'':'s'} selected`:'';
+  $('#scanBtn').disabled=!n;
   const t=$('#thumbs');
   t.querySelectorAll('img').forEach(img=>URL.revokeObjectURL(img.src));
   t.innerHTML='';
-  state.items.forEach(x=>{const img=document.createElement('img');img.loading='lazy';img.src=URL.createObjectURL(x.file);t.appendChild(img)});
-  $('#newError').style.display='none';
+  const MAX=11;
+  state.items.slice(0,MAX).forEach((x,i)=>{
+    const d=document.createElement('div');d.className='thumb';
+    const img=document.createElement('img');img.loading='lazy';img.src=URL.createObjectURL(x.file);
+    const rm=document.createElement('button');rm.className='rm';rm.type='button';rm.textContent='✕';rm.dataset.i=i;
+    d.append(img,rm);t.appendChild(d);
+  });
+  if(n>MAX){const d=document.createElement('div');d.className='thumb more';d.textContent=`+${n-MAX}`;t.appendChild(d)}
 }
 $('#files').onchange=async e=>{
   state.items=[...e.target.files].map(file=>({file,ig:'',name:'',snap:'',read:false,outcome:null,searched:[]}));
-  state.index=0;state.legacyBase={added:0,notFound:0,skipped:0};completeTotals=null;
+  state.index=0;state.legacyBase={added:0,notFound:0,skipped:0};state.startedAt=Date.now();completeTotals=null;
   await save();
   renderUpload();
 };
+$('#thumbs').onclick=async e=>{
+  const rm=e.target.closest('.rm');
+  if(!rm)return;
+  state.items.splice(+rm.dataset.i,1);
+  if(state.items.length)await save();else{$('#files').value='';await clearSaved()}
+  renderUpload();
+};
 $('#clearPick').onclick=async()=>{state.items=[];$('#files').value='';await clearSaved();renderUpload()};
-$('#newBack').onclick=()=>go('home');
-$('#newCancel').onclick=()=>go('home');
-function newError(title,msg){$('#newErrorTitle').textContent=title;$('#newErrorMsg').textContent=msg;$('#newError').style.display='block'}
 $('#scanBtn').onclick=()=>{
-  if(!state.items.length)return newError('NO SCREENSHOTS SELECTED','Choose at least one Instagram profile screenshot to start scanning.');
-  if(!navigator.onLine)return newError('YOU’RE OFFLINE','Scanning needs a network connection. Your selected screenshots are saved on this device.');
-  go('scanning');runScan();
+  if(!state.items.length)return;
+  if(!navigator.onLine)return showSheet({title:'You’re offline',msg:'Scanning needs a network connection. Your screenshots are saved on this device.',retry:true,skip:0,ret:false});
+  show('scanning');runScan();
 };
 
 /* ---------- scan engine (locked: downsize + /api/read-profile contract from scanner-v14) ---------- */
@@ -393,94 +448,163 @@ async function readProfile(file){
 }
 function scanUI(){
   const total=state.items.length,done=state.items.filter(x=>x.read).length;
-  $('#scanX').textContent=Math.min(done+1,total);$('#scanY').textContent=total;
+  $('#scanX').textContent=Math.min(done+1,total);
+  $('#scanY').textContent=total;
   $('#scanFill').style.width=(total?done/total*100:0)+'%';
 }
-function showScanError(e){
-  let title='READER ERROR',msg=e.message||'The vision reader failed.';
-  if(e.kind==='network'||!navigator.onLine){title='NETWORK UNAVAILABLE';msg='SnapRecruit couldn’t reach the reader. Check your connection and retry — your batch and completed reads are saved.'}
-  else if(e.status===429||e.status===529){title='READER LIMIT REACHED';msg='The vision reader is rate-limited right now. Wait a moment and retry — your batch and completed reads are saved.'}
-  else if(e.status===402){title='READER LIMIT REACHED';msg='The vision reader account is out of credit. Your batch is saved — retry once it’s topped up.'}
-  else{msg=`${msg} Your batch and completed reads are saved.`}
-  $('#scanErrorTitle').textContent=title;$('#scanErrorMsg').textContent=msg;
-  $('#scanError').style.display='block';$('#scanWrap').style.display='none';
-  $('#skipProfileBtn').style.display=scanFailIndex>=0?'block':'none';
+function logRow(kind,text){
+  const log=$('#scanLog');
+  const div=document.createElement('div');
+  div.className=kind;
+  div.textContent=(kind==='ok'?'✓ ':kind==='fail'?'✗ ':'▸ ')+text;
+  log.appendChild(div);
+  while(log.children.length>6)log.removeChild(log.firstChild);
 }
-function hideScanError(){$('#scanError').style.display='none';$('#scanWrap').style.display='block'}
+function sheetFor(e,failCount){
+  if(e&&(e.kind==='network'||!navigator.onLine))return{title:'Network unavailable',msg:'SnapRecruit couldn’t reach the reader. Your batch and completed profiles are saved on this device.',retry:true,skip:0,ret:true};
+  if(e&&(e.status===429||e.status===529))return{title:'Provider limit reached',msg:'The vision reader is rate-limited right now. Wait a moment and retry — your batch is saved.',retry:true,skip:failCount,ret:true};
+  if(e&&e.status===402)return{title:'Provider limit reached',msg:'The vision reader account is out of credit. Your batch is saved — retry once it’s topped up.',retry:true,skip:failCount,ret:true};
+  const n=failCount||1,total=state.items.length;
+  return{title:n>1?`Couldn’t read ${n} screenshots`:'Couldn’t read this screenshot',msg:`${n>1?`${n} of ${total} profiles`:`One of ${total} profiles`} failed. The rest of your batch is safe and the session is saved on this device.`,retry:true,skip:n,ret:true};
+}
 async function runScan(){
   if(scanning)return;
-  scanning=true;hideScanError();
-  try{
-    const total=state.items.length;
-    for(let i=0;i<total;i++){
-      const x=state.items[i];
-      if(x.read)continue;
-      scanFailIndex=i;scanUI();
-      $('#scanStatus').textContent='Reading Instagram profile with Claude vision…';
+  scanning=true;cancelScan=false;pendingFails=[];
+  hideSheet();
+  $('#scanLog').innerHTML='';
+  const total=state.items.length;
+  let lastError=null;
+  for(let i=0;i<total;i++){
+    if(cancelScan)break;
+    const x=state.items[i];
+    if(x.read)continue;
+    scanUI();
+    logRow('cur',`Reading screenshot ${i+1}…`);
+    try{
       const data=await readProfile(x.file);
       x.ig=cleanHandle(data.instagram);x.name=cleanName(data.full_name);x.snap=cleanHandle(data.snapchat);
       x.read=true;
       await save();
+      $('#scanLog').lastChild.remove();
+      logRow('ok',x.name||x.ig||`Screenshot ${i+1}`);
       scanUI();
+    }catch(e){
+      $('#scanLog').lastChild.remove();
+      lastError=e;
+      if(e.kind==='network'||!navigator.onLine)break;
+      pendingFails.push(i);
+      logRow('fail',`Screenshot ${i+1} — couldn’t read`);
     }
-    scanFailIndex=-1;
-    const first=firstUndecided();
-    state.index=first>=0?first:0;
-    await save();
-    scanning=false;
-    go('review',{replace:true});
-    return;
-  }catch(e){
-    scanning=false;
-    showScanError(e);
   }
+  scanning=false;
+  if(cancelScan){show('new');return}
+  if(lastError&&(lastError.kind==='network'||!navigator.onLine)){showSheet(sheetFor(lastError,0));return}
+  if(pendingFails.length){showSheet(sheetFor(lastError,pendingFails.length));return}
+  finishScan();
 }
-$('#retryBtn').onclick=()=>runScan();
+async function finishScan(){
+  const first=firstUndecided();
+  state.index=first>=0?first:0;
+  await save();
+  show('review');
+}
+$('#cancelScan').onclick=()=>{if(scanning){cancelScan=true}else show('new')};
+$('#retryBtn').onclick=()=>{
+  hideSheet();
+  const unread=state.items.filter(x=>!x.read).length;
+  if(unread>0){show('scanning');runScan()}
+};
 $('#skipProfileBtn').onclick=async()=>{
-  if(scanFailIndex>=0&&state.items[scanFailIndex]){state.items[scanFailIndex].read=true;await save()}
-  scanFailIndex=-1;runScan();
+  for(const i of pendingFails)if(state.items[i])state.items[i].read=true;
+  pendingFails=[];
+  hideSheet();
+  await save();
+  if(state.items.some(x=>!x.read)){show('scanning');runScan()}
+  else finishScan();
 };
 $('#returnBtn').onclick=()=>{
-  if(state.items.some(x=>x.read)){state.index=Math.max(firstUndecided(),0);go('review',{replace:true})}
-  else go('home',{replace:true});
+  hideSheet();
+  if(state.items.some(x=>x.read))finishScan();
+  else show('new');
 };
 
 /* ---------- review ---------- */
 function renderReview(){
-  if(!state.items.length)return go('home',{replace:true});
+  if(!state.items.length)return location.replace('/');
   const total=state.items.length,decided=decidedCount();
   const x=state.items[state.index];
   $('#posX').textContent=state.index+1;$('#posY').textContent=total;
-  $('#posRemain').textContent=total-decided;
+  $('#rSub').textContent=`${total-decided} remaining`;
   $('#reviewFill').style.width=(decided/total*100)+'%';
   if(lastShotUrl)URL.revokeObjectURL(lastShotUrl);
   lastShotUrl=URL.createObjectURL(x.file);
   $('#shot').src=lastShotUrl;
-  setVal('#vIg',x.ig,v=>'@'+v);setVal('#vName',x.name);setVal('#vSnap',x.snap,null,'Not detected');
-  const chip=$('#outcomeChip');
-  if(x.outcome){
-    chip.style.display='inline-block';
-    chip.className='outcomeChip '+(x.outcome==='added'?'added':x.outcome==='notFound'?'notFound':'');
-    chip.textContent=x.outcome==='added'?'MARKED: ADDED':x.outcome==='notFound'?'MARKED: NOT FOUND':x.outcome==='skip'?'MARKED: SKIPPED':'REVIEWED EARLIER';
-  }else chip.style.display='none';
+  setVal('#vIg',x.ig);setVal('#vName',x.name);setVal('#vSnap',x.snap,'Not detected');
+  $('#vSnap').classList.toggle('gold',!!x.snap);
   $('#ig').value=x.ig;$('#name').value=x.name;$('#snap').value=x.snap;
+  const ab=$('#actionbar');
+  ab.classList.toggle('decided',!!x.outcome&&x.outcome!=='legacy');
+  ab.querySelectorAll('button').forEach(b=>b.classList.remove('chosen'));
+  if(x.outcome==='added')$('#addedBtn').classList.add('chosen');
+  if(x.outcome==='notFound')$('#notFoundBtn').classList.add('chosen');
+  if(x.outcome==='skip')$('#skipBtn').classList.add('chosen');
+  $('#prevBtn').disabled=state.index===0;
   setEditing(false);
   renderOptions();
 }
-function setVal(sel,v,fmt,emptyText){const el=$(sel);if(v){el.textContent=fmt?fmt(v):v;el.classList.remove('empty')}else{el.textContent=emptyText||'—';el.classList.add('empty')}}
-function setEditing(on){$('#fieldsEdit').style.display=on?'block':'none';$('#fieldsView').style.display=on?'none':'block'}
-$('#editBtn').onclick=()=>setEditing(true);
-$('#doneEditBtn').onclick=()=>{const x=state.items[state.index];setVal('#vIg',x.ig,v=>'@'+v);setVal('#vName',x.name);setVal('#vSnap',x.snap,null,'Not detected');setEditing(false)};
+function setVal(sel,v,emptyText){const el=$(sel);if(v){el.textContent=v;el.classList.remove('empty')}else{el.textContent=emptyText||'—';el.classList.add('empty')}}
+function setEditing(on){
+  $('#view-review').classList.toggle('editing',on);
+  document.body.classList.toggle('editing',on);
+  $('#rSub').textContent=on?'Editing profile':`${state.items.length-decidedCount()} remaining`;
+}
+$('#fieldsView').onclick=e=>{
+  const row=e.target.closest('[data-edit]');
+  if(!row)return;
+  const x=state.items[state.index];
+  editSnapshot={ig:x.ig,name:x.name,snap:x.snap};
+  setEditing(true);
+  $('#'+(row.dataset.edit==='ig'?'ig':row.dataset.edit==='name'?'name':'snap')).focus();
+};
+function commitEdit(){
+  const x=state.items[state.index];
+  setVal('#vIg',x.ig);setVal('#vName',x.name);setVal('#vSnap',x.snap,'Not detected');
+  $('#vSnap').classList.toggle('gold',!!x.snap);
+  editSnapshot=null;
+  setEditing(false);
+}
+$('#editDone').onclick=commitEdit;
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&$('#view-review').classList.contains('editing')){
+    if(editSnapshot){
+      const x=state.items[state.index];
+      Object.assign(x,editSnapshot);
+      $('#ig').value=x.ig;$('#name').value=x.name;$('#snap').value=x.snap;
+      renderOptions();save();
+    }
+    commitEdit();
+  }
+});
+['ig','name','snap'].forEach(id=>$('#'+id).addEventListener('input',async()=>{
+  const x=state.items[state.index];
+  x[id]=$('#'+id).value;
+  renderOptions();
+  await save();
+}));
 function renderOptions(){
   const x=state.items[state.index];
   const opts=buildSuggestions({name:x.name,instagram:x.ig,snapchat:x.snap});
-  const LABELS={snapchat:'DETECTED SNAPCHAT',instagram:'INSTAGRAM HANDLE'};
+  const searched=x.searched||[];
+  $('#searchMeta').textContent=searched.length?`${searched.length} searched`:'tap a row → copy + open';
   $('#options').innerHTML=opts.length?opts.map(o=>{
-    const searched=(x.searched||[]).includes(o.handle);
-    return `<button class="srow${o.type==='snapchat'?' prime':''}${searched?' searched':''}" data-h="${o.handle}">`
-      +`<span class="main">${LABELS[o.type]?`<span class="rlabel">${LABELS[o.type]}</span>`:''}<span class="rhandle">${o.handle}</span></span>`
-      +`<span class="raction">${searched?'SEARCHED ✓':'COPY + OPEN ↗'}</span></button>`;
-  }).join(''):'<div class="noSuggest">No usable handle yet. Use EDIT PROFILE to correct the fields and suggestions will appear.</div>';
+    const isS=searched.includes(o.handle);
+    const cls=['hrow',o.type==='snapchat'?'detected':'',o.type==='instagram'?'igfall':'',isS?'searched':''].filter(Boolean).join(' ');
+    return `<button type="button" class="${cls}" data-h="${o.handle}">`
+      +`<span class="hmain">${o.type==='snapchat'?'<span class="hbadge">DETECTED SNAPCHAT</span>':''}`
+      +`<span class="htext">${o.handle}</span>`
+      +`${o.type==='instagram'?'<span class="hsub">INSTAGRAM HANDLE</span>':''}</span>`
+      +`<span class="hact">COPY + OPEN</span><span class="hpill">✓ SEARCHED</span></button>`;
+  }).join(''):'<div class="noSuggest">No usable handle yet. Tap a field above to correct it — suggestions appear as you type.</div>';
 }
 /* locked: one tap = copy to clipboard + open Snapchat, no confirmation */
 async function launchSnapchat(handle){if(handle)await navigator.clipboard.writeText(handle);const a=document.createElement('a');a.href='snapchat://';a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove()}
@@ -488,52 +612,69 @@ $('#options').onclick=e=>{
   const b=e.target.closest('[data-h]');
   if(!b)return;
   const x=state.items[state.index],h=b.dataset.h;
-  // Clipboard + deep link must run first, inside the tap's user-activation
-  // window (Safari), exactly like scanner-v14. Bookkeeping happens after.
+  // Clipboard + deep link run first, inside the tap's user-activation window
+  // (Safari), exactly like scanner-v14. Bookkeeping happens after.
   launchSnapchat(h);
+  lastCopied=h;
+  $('#copiedBanner').hidden=true;
   if(!(x.searched||[]).includes(h)){x.searched=[...(x.searched||[]),h];renderOptions();save()}
 };
 $('#openOnly').onclick=()=>launchSnapchat('');
-['ig','name','snap'].forEach(id=>$('#'+id).addEventListener('input',async()=>{
-  const x=state.items[state.index];
-  x[id]=$('#'+id).value;
-  renderOptions();
-  await save();
-}));
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&lastCopied&&$('#view-review').classList.contains('active')){
+    $('#copiedHandle').textContent=lastCopied;
+    $('#copiedBanner').hidden=false;
+    lastCopied=null;
+    setTimeout(()=>{$('#copiedBanner').hidden=true},4000);
+  }
+});
+$('#viewerToggle').onclick=()=>{
+  const v=$('#viewer');
+  v.classList.toggle('collapsed');
+  $('#viewerToggle').textContent=v.classList.contains('collapsed')?'Expand ⌄':'Collapse ⌃';
+};
+$('#shot').onclick=()=>{$('#fsImg').src=$('#shot').src;$('#fsOverlay').hidden=false};
+$('#fsOverlay').onclick=()=>{$('#fsOverlay').hidden=true};
 async function decide(type){
   const x=state.items[state.index];
   x.outcome=type;
   await save();
   const n=nextUndecidedAfter(state.index);
   if(n===-1){
-    completeTotals={...counts(),total:state.items.length};
+    const c=counts();
+    completeTotals={...c,total:state.items.length,duration:state.startedAt?Date.now()-state.startedAt:null};
     await clearSaved();
-    state.items=[];state.index=0;state.legacyBase={added:0,notFound:0,skipped:0};
-    go('complete');
+    state.items=[];state.index=0;state.legacyBase={added:0,notFound:0,skipped:0};state.startedAt=null;
+    show('complete');
   }else{
     state.index=n;
-    pushAthlete();
     renderReview();
   }
 }
 $('#addedBtn').onclick=()=>decide('added');
 $('#notFoundBtn').onclick=()=>decide('notFound');
 $('#skipBtn').onclick=()=>decide('skip');
-$('#prevBtn').onclick=()=>{if(state.index>0){state.index--;pushAthlete();renderReview()}};
-$('#sessionBtn').onclick=()=>go('home');
+$('#prevBtn').onclick=()=>{if(state.index>0){state.index--;renderReview()}};
 
 /* ---------- complete ---------- */
-function renderComplete(){
-  const t=completeTotals||{added:0,notFound:0,skipped:0,total:0};
-  $('#doneTotal').textContent=t.total;$('#dTotal2').textContent=t.total;
-  $('#dAdded').textContent=t.added;$('#dNot').textContent=t.notFound;$('#dSkip').textContent=t.skipped;
+function fmtDuration(ms){
+  if(!ms||ms<60000)return 'Session length: under a minute';
+  const m=Math.round(ms/60000);
+  if(m<60)return `Session length: ${m} min`;
+  return `Session length: ${Math.floor(m/60)} hr ${m%60} min`;
 }
-$('#doneNewBtn').onclick=()=>go('new');
+function renderComplete(){
+  const t=completeTotals||{added:0,notFound:0,skipped:0,total:0,duration:null};
+  $('#doneTotal').textContent=t.total;
+  $('#dAdded').textContent=t.added;$('#dNot').textContent=t.notFound;$('#dSkip').textContent=t.skipped;
+  $('#doneDur').textContent=fmtDuration(t.duration);
+}
+$('#doneNewBtn').onclick=()=>show('new');
 
 /* ---------- boot ---------- */
 (async()=>{
   try{const saved=await load();if(saved&&saved.items&&saved.items.length)hydrate(saved)}catch{}
-  route(location.pathname,{replace:true});
+  route(location.pathname);
 })();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 </script>

@@ -17,6 +17,16 @@
   to = "/snaprecruit.html"
   status = 200
 
+[[redirects]]
+  from = "/submissions"
+  to = "/submissions.html"
+  status = 200
+
+[[redirects]]
+  from = "/media"
+  to = "/media.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
@@ -28,3 +38,8 @@
   for = "/sw.js"
   [headers.values]
     Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
