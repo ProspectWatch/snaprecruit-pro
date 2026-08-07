@@ -1,0 +1,538 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MainStage">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/ms-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>SnapRecruit — MainStage Athletes</title>
+<style>
+:root{--bg:#0A0A0A;--s1:#11100E;--s2:#171614;--s3:#211F1B;--line:#37332B;--line2:#2A2722;--text:#F3F0EA;--text2:#B8B2A8;--muted:#8F897E;--gold:#E3B54A;--gold2:#C9962F;--gold3:#8C6716;--ok:#5E8A6C;--okEdge:#3E6B58;--warn:#B08D3E;--danger:#A15656}
+*{box-sizing:border-box}
+html{background:#0A0A0A}
+html,body{margin:0;min-height:100%}
+body{min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;-webkit-tap-highlight-color:transparent}
+.app{max-width:640px;margin:auto;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 24px)}
+.view{display:none}
+.view.active{display:block}
+/* shared header */
+.head{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px;margin-bottom:14px}
+.iconBtn{width:44px;height:44px;border-radius:13px;border:1px solid var(--line);background:var(--s2);color:var(--text);font-size:21px;display:flex;align-items:center;justify-content:center;text-decoration:none}
+.headMid{text-align:center;min-width:0}
+.eyebrow{color:var(--gold);font-size:10px;font-weight:850;letter-spacing:.16em}
+.headTitle{font-size:17px;font-weight:900;font-style:italic;letter-spacing:.02em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.headSub{color:var(--muted);font-size:11px;margin-top:2px}
+/* cards + buttons */
+.card{background:linear-gradient(180deg,var(--s2),var(--s1));border:1px solid var(--line);border-radius:18px;padding:17px;margin-bottom:13px}
+.btn{display:block;width:100%;text-align:center;text-decoration:none;border-radius:14px;padding:15px;font-weight:900;letter-spacing:.05em;font-size:15px}
+.btn.gold{background:linear-gradient(135deg,var(--gold3),var(--gold2));color:#140E02}
+.btn.quiet{background:var(--s3);color:var(--text2);border:1px solid var(--line);font-weight:750}
+.btn.line{background:var(--s1);color:var(--text2);border:1px solid var(--line)}
+.btn+.btn{margin-top:10px}
+.btn[disabled]{opacity:.45}
+.note{color:var(--muted);font-size:12px;line-height:1.5;margin-top:11px;text-align:center}
+.sectionTitle{color:var(--text2);font-size:12px;font-weight:850;letter-spacing:.14em;margin:19px 0 10px}
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:13px 0}
+.stat{background:var(--s1);border:1px solid var(--line2);border-radius:12px;padding:11px 6px;text-align:center}
+.stat strong{display:block;font-size:20px}
+.stat span{color:var(--muted);font-size:10px;letter-spacing:.06em}
+.stat.add strong{color:var(--gold)}
+.stat.no strong{color:var(--danger)}
+.stat.ok strong{color:var(--ok)}
+.bar{height:6px;background:#0D0C0A;border:1px solid var(--line2);border-radius:99px;overflow:hidden}
+.fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold3),var(--gold2));transition:width .25s}
+.errCard{border-color:#5A3A3A;background:linear-gradient(180deg,#1D1412,#150F0E)}
+.errCard h3{margin:0 0 7px;color:#D89090;font-size:14px;letter-spacing:.1em}
+.errCard p{margin:0 0 13px;color:var(--text2);font-size:14px;line-height:1.5}
+/* upload */
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:7px;margin-top:13px}
+.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:9px;border:1px solid var(--line2);background:#000}
+.pickCount{color:var(--text2);font-size:13px;font-weight:750;margin-top:13px}
+#files{display:none}
+/* scanning */
+.scanWrap{text-align:center;padding:36px 0 10px}
+.scanCounter{font-size:44px;font-weight:900;font-style:italic;margin:20px 0 4px}
+.scanCounter span{color:var(--muted);font-size:20px;font-style:normal;font-weight:750}
+.scanStatus{color:var(--text2);font-size:14px;margin:14px 0 6px;min-height:20px}
+.scanNote{color:var(--muted);font-size:12px;line-height:1.5}
+/* review */
+.rhead{position:sticky;top:0;z-index:20;background:rgba(10,10,10,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:calc(env(safe-area-inset-top) + 8px) 0 8px;margin:calc(-1*(env(safe-area-inset-top) + 12px)) 0 0;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px}
+.pos{text-align:center}
+.posMain{font-size:14px;font-weight:900;letter-spacing:.1em}
+.posMain b{color:var(--gold)}
+.posSub{color:var(--muted);font-size:11px;margin-top:2px;letter-spacing:.06em}
+.thinbar{position:sticky;top:calc(env(safe-area-inset-top) + 60px);z-index:19;height:3px;background:#151310;border-radius:99px;overflow:hidden;margin:2px 0 13px}
+.thinbar .fill{transition:width .2s}
+.shotWrap{margin-bottom:13px}
+.shot{display:block;width:100%;max-height:44vh;object-fit:contain;background:#060505;border:1px solid var(--line2);border-radius:16px}
+.fieldRow{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line2)}
+.fieldRow:last-of-type{border-bottom:0}
+.fieldRow label{color:var(--muted);font-size:11px;font-weight:850;letter-spacing:.1em}
+.fieldRow .val{font-size:17px;font-weight:750;overflow-wrap:anywhere}
+.fieldRow .val.empty{color:var(--muted);font-weight:500}
+.outcomeChip{display:inline-block;margin-top:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;font-weight:850;letter-spacing:.1em;color:var(--text2)}
+.outcomeChip.added{color:var(--gold);border-color:var(--gold3)}
+.outcomeChip.notFound{color:#D89090;border-color:#5A3A3A}
+.editBtn{margin-top:13px}
+.editField{margin-bottom:12px}
+.editField label{display:block;color:var(--muted);font-size:11px;font-weight:850;letter-spacing:.1em;margin-bottom:6px}
+.editField input{width:100%;background:#0D0C0A;border:1px solid var(--line);border-radius:12px;color:var(--text);font-size:18px;font-weight:720;padding:12px}
+.srow{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--s2);border:1px solid var(--line2);border-radius:14px;padding:13px 15px;margin-bottom:9px;text-align:left}
+.srow:active{background:var(--s3)}
+.srow .main{min-width:0}
+.srow .rlabel{display:block;font-size:9px;font-weight:850;letter-spacing:.14em;color:var(--muted);margin-bottom:3px}
+.srow .rhandle{font-size:17px;font-weight:850;overflow-wrap:anywhere}
+.srow .raction{font-size:11px;font-weight:850;letter-spacing:.08em;color:var(--gold2);white-space:nowrap}
+.srow.prime{border-color:var(--gold3)}
+.srow.prime .rlabel{color:var(--gold)}
+.srow.searched{box-shadow:inset 3px 0 0 var(--okEdge)}
+.srow.searched .raction{color:var(--ok)}
+.plainRow{width:100%;background:var(--s1);border:1px solid var(--line2);color:var(--text2);border-radius:14px;padding:13px;font-size:14px;margin-top:2px}
+.noSuggest{color:var(--muted);font-size:13px;line-height:1.5;padding:6px 2px}
+.actionbar{position:sticky;bottom:0;z-index:20;display:grid;grid-template-columns:1.25fr 1fr .8fr;gap:8px;margin-top:15px;padding:9px 0 calc(env(safe-area-inset-bottom) + 9px);background:linear-gradient(180deg,rgba(10,10,10,0),rgba(10,10,10,.96) 26%)}
+.actionbar button{border-radius:14px;padding:15px 6px;font-size:14px;font-weight:900;letter-spacing:.04em}
+.abAdded{background:linear-gradient(135deg,var(--gold3),var(--gold2));color:#140E02}
+.abNot{background:var(--s2);border:1px solid #5A3A3A;color:#D89090}
+.abSkip{background:var(--s1);border:1px solid var(--line2);color:var(--muted)}
+/* complete */
+.doneWrap{text-align:center;padding:44px 0 10px}
+.doneWrap h2{font-size:30px;font-style:italic;font-weight:900;margin:14px 0 4px}
+.doneWrap .sub{color:var(--text2);font-size:15px;margin-bottom:6px}
+/* wider screens */
+@media(min-width:700px){.app{max-width:720px}.shot{max-height:52vh}}
+@media(min-width:1000px){
+  .app.wide{max-width:1160px}
+  #view-review .work{display:grid;grid-template-columns:minmax(320px,44%) 1fr;gap:22px;align-items:start}
+  #view-review .shotWrap{position:sticky;top:calc(env(safe-area-inset-top) + 78px);margin-bottom:0}
+  #view-review .shot{max-height:calc(100vh - 210px)}
+  #view-review .actionbar{grid-template-columns:1.25fr 1fr .8fr}
+}
+</style>
+</head><body>
+<main class="app" id="appRoot">
+
+<section class="view" id="view-home">
+  <header class="head">
+    <a class="iconBtn" href="/" aria-label="MainStage home">‹</a>
+    <div class="headMid"><div class="eyebrow">MAINSTAGE ATHLETES</div><div class="headTitle">SNAPRECRUIT</div></div>
+    <span></span>
+  </header>
+  <div class="card" id="homeResume" style="display:none">
+    <div class="eyebrow">SAVED SESSION</div>
+    <div class="statgrid">
+      <div class="stat add"><strong id="hAdded">0</strong><span>ADDED</span></div>
+      <div class="stat no"><strong id="hNot">0</strong><span>NOT FOUND</span></div>
+      <div class="stat"><strong id="hSkip">0</strong><span>SKIPPED</span></div>
+      <div class="stat ok"><strong id="hRemain">0</strong><span>REMAINING</span></div>
+    </div>
+    <div class="bar"><div class="fill" id="hFill"></div></div>
+    <button class="btn gold" id="homeResumeBtn" style="margin-top:14px">RESUME SESSION</button>
+    <button class="btn quiet" id="homeNewBtn2">Start New Session</button>
+  </div>
+  <div class="card" id="homeFresh">
+    <p style="margin:2px 0 14px;color:var(--text2);font-size:14px;line-height:1.55">Upload Instagram screenshots, let Claude read each profile, then copy a likely handle and open Snapchat — one tap per athlete.</p>
+    <button class="btn gold" id="homeNewBtn">START NEW SESSION</button>
+  </div>
+  <p class="note">Sessions and screenshots stay saved on this device.</p>
+</section>
+
+<section class="view" id="view-new">
+  <header class="head">
+    <button class="iconBtn" id="newBack" aria-label="Back">‹</button>
+    <div class="headMid"><div class="eyebrow">SNAPRECRUIT</div><div class="headTitle">NEW SESSION</div></div>
+    <span></span>
+  </header>
+  <div class="card">
+    <label class="btn line" for="files" style="cursor:pointer">CHOOSE INSTAGRAM SCREENSHOTS</label>
+    <input id="files" type="file" accept="image/*" multiple>
+    <div class="pickCount" id="pickCount" style="display:none"></div>
+    <div class="thumbs" id="thumbs"></div>
+    <button class="btn quiet" id="clearPick" style="display:none;margin-top:12px">Clear Selection</button>
+  </div>
+  <div class="card errCard" id="newError" style="display:none"><h3 id="newErrorTitle">NO SCREENSHOTS SELECTED</h3><p id="newErrorMsg">Choose at least one Instagram profile screenshot to start scanning.</p></div>
+  <button class="btn gold" id="scanBtn">SCAN PROFILES</button>
+  <button class="btn quiet" id="newCancel">Cancel</button>
+  <p class="note">Screenshots and progress remain saved on this device.</p>
+</section>
+
+<section class="view" id="view-scanning">
+  <header class="head">
+    <span></span>
+    <div class="headMid"><div class="eyebrow">SNAPRECRUIT · SCANNING</div></div>
+    <span></span>
+  </header>
+  <div class="scanWrap" id="scanWrap">
+    <div class="scanCounter"><span id="scanX">0</span><span> of </span><span id="scanY">0</span></div>
+    <div class="bar" style="max-width:340px;margin:18px auto 0"><div class="fill" id="scanFill"></div></div>
+    <div class="scanStatus" id="scanStatus">Reading Instagram profile with Claude vision…</div>
+    <p class="scanNote">Keep this screen open. Progress is saved after each profile —<br>nothing is lost if a read fails.</p>
+  </div>
+  <div class="card errCard" id="scanError" style="display:none">
+    <h3 id="scanErrorTitle">READER ERROR</h3>
+    <p id="scanErrorMsg"></p>
+    <button class="btn gold" id="retryBtn">RETRY</button>
+    <button class="btn quiet" id="skipProfileBtn">Skip This Profile</button>
+    <button class="btn quiet" id="returnBtn">Return to Session</button>
+  </div>
+</section>
+
+<section class="view" id="view-review">
+  <header class="rhead">
+    <button class="iconBtn" id="prevBtn" aria-label="Previous athlete">‹</button>
+    <div class="pos">
+      <div class="posMain">ATHLETE <b id="posX">1</b> OF <span id="posY">1</span></div>
+      <div class="posSub"><span id="posRemain">0</span> REMAINING</div>
+    </div>
+    <button class="iconBtn" id="sessionBtn" aria-label="Session home">⌂</button>
+  </header>
+  <div class="thinbar"><div class="fill" id="reviewFill"></div></div>
+  <div class="work">
+    <div class="shotWrap"><img class="shot" id="shot" alt="Instagram profile screenshot"></div>
+    <div class="details">
+      <div class="card" id="fieldsView">
+        <div class="fieldRow"><label>INSTAGRAM</label><div class="val" id="vIg"></div></div>
+        <div class="fieldRow"><label>FULL NAME</label><div class="val" id="vName"></div></div>
+        <div class="fieldRow"><label>SNAPCHAT</label><div class="val" id="vSnap"></div></div>
+        <span class="outcomeChip" id="outcomeChip" style="display:none"></span>
+        <button class="btn quiet editBtn" id="editBtn">EDIT PROFILE</button>
+      </div>
+      <div class="card" id="fieldsEdit" style="display:none">
+        <div class="editField"><label>INSTAGRAM</label><input id="ig" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+        <div class="editField"><label>FULL NAME</label><input id="name" autocomplete="off" spellcheck="false"></div>
+        <div class="editField"><label>SNAPCHAT</label><input id="snap" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Not detected"></div>
+        <button class="btn gold" id="doneEditBtn">DONE</button>
+      </div>
+      <div class="sectionTitle">SNAPCHAT SEARCH</div>
+      <div id="options"></div>
+      <button class="plainRow" id="openOnly">Open Snapchat without copying</button>
+      <div class="actionbar">
+        <button class="abAdded" id="addedBtn">ADDED</button>
+        <button class="abNot" id="notFoundBtn">NOT FOUND</button>
+        <button class="abSkip" id="skipBtn">SKIP</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="view-complete">
+  <div class="doneWrap">
+    <div class="eyebrow">SNAPRECRUIT</div>
+    <h2>SESSION COMPLETE</h2>
+    <div class="sub"><span id="doneTotal">0</span> athletes processed</div>
+  </div>
+  <div class="statgrid">
+    <div class="stat add"><strong id="dAdded">0</strong><span>ADDED</span></div>
+    <div class="stat no"><strong id="dNot">0</strong><span>NOT FOUND</span></div>
+    <div class="stat"><strong id="dSkip">0</strong><span>SKIPPED</span></div>
+    <div class="stat ok"><strong id="dTotal2">0</strong><span>TOTAL</span></div>
+  </div>
+  <button class="btn gold" id="doneNewBtn">START NEW SESSION</button>
+  <a class="btn quiet" href="/">RETURN HOME</a>
+</section>
+
+</main>
+<script type="module">
+import {cleanHandle, cleanName, buildSuggestions} from '/js/snaprecruit-core.mjs';
+
+const $=s=>document.querySelector(s);
+const DB='snaprecruit-v12',STORE='session';
+
+/* ---------- persistence (locked: same DB, store, and key as scanner-v14) ---------- */
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function save(){
+  const c=counts();
+  const db=await openDB(),tx=db.transaction(STORE,'readwrite');
+  tx.objectStore(STORE).put({
+    items:state.items.map(x=>({file:x.file,ig:x.ig,name:x.name,snap:x.snap,read:!!x.read,outcome:x.outcome||null,searched:x.searched||[]})),
+    index:state.index,added:c.added,notFound:c.notFound,skipped:c.skipped,legacyBase:state.legacyBase
+  },'current');
+  return new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=()=>j(tx.error)});
+}
+async function load(){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).get('current');r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error)})}
+async function clearSaved(){const db=await openDB(),tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete('current');return new Promise(r=>tx.oncomplete=r)}
+
+/* ---------- state ---------- */
+const state={items:[],index:0,legacyBase:{added:0,notFound:0,skipped:0}};
+let completeTotals=null,scanning=false,scanFailIndex=-1,lastShotUrl=null;
+
+function hydrate(saved){
+  state.items=(saved.items||[]).map(x=>({
+    file:x.file,ig:x.ig||'',name:x.name||'',snap:x.snap||'',
+    read:x.read!==undefined?!!x.read:!!(x.ig||x.name||x.snap),
+    outcome:x.outcome||null,
+    searched:Array.isArray(x.searched)?x.searched:[]
+  }));
+  state.legacyBase=saved.legacyBase||{added:0,notFound:0,skipped:0};
+  const anyOutcome=state.items.some(x=>x.outcome);
+  const savedIdx=Math.min(saved.index||0,state.items.length);
+  if(!anyOutcome&&!saved.legacyBase&&savedIdx>0){
+    // Session saved by the pre-MainStage scanner: items before the saved index
+    // were already decided but only aggregate counters exist.
+    for(let i=0;i<savedIdx;i++)state.items[i].outcome='legacy';
+    state.legacyBase={added:saved.added||0,notFound:saved.notFound||0,skipped:saved.skipped||0};
+  }
+  const first=firstUndecided();
+  state.index=first>=0?first:Math.max(0,state.items.length-1);
+}
+function counts(){
+  const b=state.legacyBase;
+  return {
+    added:b.added+state.items.filter(x=>x.outcome==='added').length,
+    notFound:b.notFound+state.items.filter(x=>x.outcome==='notFound').length,
+    skipped:b.skipped+state.items.filter(x=>x.outcome==='skip').length
+  };
+}
+const decidedCount=()=>state.items.filter(x=>x.outcome).length;
+const firstUndecided=()=>state.items.findIndex(x=>!x.outcome);
+function nextUndecidedAfter(i){for(let k=i+1;k<state.items.length;k++)if(!state.items[k].outcome)return k;for(let k=0;k<state.items.length;k++)if(!state.items[k].outcome)return k;return -1}
+
+/* ---------- routing ---------- */
+const PATHS={home:'/snaprecruit/',new:'/snaprecruit/new',scanning:'/snaprecruit/scanning',review:'/snaprecruit/review',complete:'/snaprecruit/complete'};
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('#view-'+name).classList.add('active');
+  $('#appRoot').classList.toggle('wide',name==='review');
+  scrollTo(0,0);
+}
+function go(name,{replace=false,skipHistory=false}={}){
+  if(!skipHistory){
+    const st=name==='review'?{v:'review',i:state.index}:{v:name};
+    history[replace?'replaceState':'pushState'](st,'',PATHS[name]);
+  }
+  showView(name);
+  if(name==='home')renderHome();
+  if(name==='new')renderUpload();
+  if(name==='review')renderReview();
+  if(name==='complete')renderComplete();
+}
+function pushAthlete(){history.pushState({v:'review',i:state.index},'',PATHS.review)}
+addEventListener('popstate',e=>{
+  const st=e.state;
+  if(st&&st.v==='review'&&state.items.length){state.index=Math.min(st.i||0,state.items.length-1);showView('review');$('#appRoot').classList.add('wide');renderReview();return}
+  if(st&&st.v&&PATHS[st.v]){go(st.v,{skipHistory:true});return}
+  route(location.pathname,{replace:true});
+});
+function route(path,{replace=true}={}){
+  const p=path.replace(/\/+$/,'')||'/snaprecruit';
+  if(p==='/snaprecruit/new')return go('new',{replace});
+  if(p==='/snaprecruit/scanning'){
+    if(state.items.length&&state.items.some(x=>!x.read)){go('scanning',{replace});runScan();return}
+    if(state.items.length)return go(firstUndecided()>=0?'review':'home',{replace});
+    return go('new',{replace});
+  }
+  if(p==='/snaprecruit/review'){
+    if(!state.items.length)return go('home',{replace});
+    if(state.items.some(x=>!x.read)){go('scanning',{replace});runScan();return}
+    return go('review',{replace});
+  }
+  if(p==='/snaprecruit/complete')return completeTotals?go('complete',{replace}):go('home',{replace});
+  return go('home',{replace});
+}
+
+/* ---------- home ---------- */
+function renderHome(){
+  const total=state.items.length,decided=decidedCount(),remaining=total-decided;
+  const has=total>0&&remaining>0;
+  $('#homeResume').style.display=has?'block':'none';
+  $('#homeFresh').style.display=has?'none':'block';
+  if(has){
+    const c=counts();
+    $('#hAdded').textContent=c.added;$('#hNot').textContent=c.notFound;$('#hSkip').textContent=c.skipped;
+    $('#hRemain').textContent=remaining;
+    $('#hFill').style.width=(decided/total*100)+'%';
+  }
+}
+$('#homeResumeBtn').onclick=()=>{if(state.items.some(x=>!x.read)){go('scanning');runScan()}else go('review')};
+$('#homeNewBtn').onclick=()=>go('new');
+$('#homeNewBtn2').onclick=()=>go('new');
+
+/* ---------- upload ---------- */
+function renderUpload(){
+  const n=state.items.length;
+  $('#pickCount').style.display=n?'block':'none';
+  $('#clearPick').style.display=n?'block':'none';
+  $('#pickCount').textContent=n?`${n} screenshot${n===1?'':'s'} selected`:'';
+  const t=$('#thumbs');
+  t.querySelectorAll('img').forEach(img=>URL.revokeObjectURL(img.src));
+  t.innerHTML='';
+  state.items.forEach(x=>{const img=document.createElement('img');img.loading='lazy';img.src=URL.createObjectURL(x.file);t.appendChild(img)});
+  $('#newError').style.display='none';
+}
+$('#files').onchange=async e=>{
+  state.items=[...e.target.files].map(file=>({file,ig:'',name:'',snap:'',read:false,outcome:null,searched:[]}));
+  state.index=0;state.legacyBase={added:0,notFound:0,skipped:0};completeTotals=null;
+  await save();
+  renderUpload();
+};
+$('#clearPick').onclick=async()=>{state.items=[];$('#files').value='';await clearSaved();renderUpload()};
+$('#newBack').onclick=()=>go('home');
+$('#newCancel').onclick=()=>go('home');
+function newError(title,msg){$('#newErrorTitle').textContent=title;$('#newErrorMsg').textContent=msg;$('#newError').style.display='block'}
+$('#scanBtn').onclick=()=>{
+  if(!state.items.length)return newError('NO SCREENSHOTS SELECTED','Choose at least one Instagram profile screenshot to start scanning.');
+  if(!navigator.onLine)return newError('YOU’RE OFFLINE','Scanning needs a network connection. Your selected screenshots are saved on this device.');
+  go('scanning');runScan();
+};
+
+/* ---------- scan engine (locked: downsize + /api/read-profile contract from scanner-v14) ---------- */
+async function fileToDataUrl(file){const bmp=await createImageBitmap(file);const max=1500,scale=Math.min(1,max/bmp.width),c=document.createElement('canvas');c.width=Math.round(bmp.width*scale);c.height=Math.round(bmp.height*scale);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.86)}
+async function readProfile(file){
+  const image=await fileToDataUrl(file);
+  let r;
+  try{r=await fetch('/api/read-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})})}
+  catch(err){const e=new Error('Network unavailable');e.kind='network';throw e}
+  let data=null;
+  try{data=await r.json()}catch{}
+  if(!r.ok){const e=new Error((data&&data.error)||'Reader failed');e.status=r.status;throw e}
+  if(!data)throw new Error('Reader returned an unreadable response');
+  return data;
+}
+function scanUI(){
+  const total=state.items.length,done=state.items.filter(x=>x.read).length;
+  $('#scanX').textContent=Math.min(done+1,total);$('#scanY').textContent=total;
+  $('#scanFill').style.width=(total?done/total*100:0)+'%';
+}
+function showScanError(e){
+  let title='READER ERROR',msg=e.message||'The vision reader failed.';
+  if(e.kind==='network'||!navigator.onLine){title='NETWORK UNAVAILABLE';msg='SnapRecruit couldn’t reach the reader. Check your connection and retry — your batch and completed reads are saved.'}
+  else if(e.status===429||e.status===529){title='READER LIMIT REACHED';msg='The vision reader is rate-limited right now. Wait a moment and retry — your batch and completed reads are saved.'}
+  else if(e.status===402){title='READER LIMIT REACHED';msg='The vision reader account is out of credit. Your batch is saved — retry once it’s topped up.'}
+  else{msg=`${msg} Your batch and completed reads are saved.`}
+  $('#scanErrorTitle').textContent=title;$('#scanErrorMsg').textContent=msg;
+  $('#scanError').style.display='block';$('#scanWrap').style.display='none';
+  $('#skipProfileBtn').style.display=scanFailIndex>=0?'block':'none';
+}
+function hideScanError(){$('#scanError').style.display='none';$('#scanWrap').style.display='block'}
+async function runScan(){
+  if(scanning)return;
+  scanning=true;hideScanError();
+  try{
+    const total=state.items.length;
+    for(let i=0;i<total;i++){
+      const x=state.items[i];
+      if(x.read)continue;
+      scanFailIndex=i;scanUI();
+      $('#scanStatus').textContent='Reading Instagram profile with Claude vision…';
+      const data=await readProfile(x.file);
+      x.ig=cleanHandle(data.instagram);x.name=cleanName(data.full_name);x.snap=cleanHandle(data.snapchat);
+      x.read=true;
+      await save();
+      scanUI();
+    }
+    scanFailIndex=-1;
+    const first=firstUndecided();
+    state.index=first>=0?first:0;
+    await save();
+    scanning=false;
+    go('review',{replace:true});
+    return;
+  }catch(e){
+    scanning=false;
+    showScanError(e);
+  }
+}
+$('#retryBtn').onclick=()=>runScan();
+$('#skipProfileBtn').onclick=async()=>{
+  if(scanFailIndex>=0&&state.items[scanFailIndex]){state.items[scanFailIndex].read=true;await save()}
+  scanFailIndex=-1;runScan();
+};
+$('#returnBtn').onclick=()=>{
+  if(state.items.some(x=>x.read)){state.index=Math.max(firstUndecided(),0);go('review',{replace:true})}
+  else go('home',{replace:true});
+};
+
+/* ---------- review ---------- */
+function renderReview(){
+  if(!state.items.length)return go('home',{replace:true});
+  const total=state.items.length,decided=decidedCount();
+  const x=state.items[state.index];
+  $('#posX').textContent=state.index+1;$('#posY').textContent=total;
+  $('#posRemain').textContent=total-decided;
+  $('#reviewFill').style.width=(decided/total*100)+'%';
+  if(lastShotUrl)URL.revokeObjectURL(lastShotUrl);
+  lastShotUrl=URL.createObjectURL(x.file);
+  $('#shot').src=lastShotUrl;
+  setVal('#vIg',x.ig,v=>'@'+v);setVal('#vName',x.name);setVal('#vSnap',x.snap,null,'Not detected');
+  const chip=$('#outcomeChip');
+  if(x.outcome){
+    chip.style.display='inline-block';
+    chip.className='outcomeChip '+(x.outcome==='added'?'added':x.outcome==='notFound'?'notFound':'');
+    chip.textContent=x.outcome==='added'?'MARKED: ADDED':x.outcome==='notFound'?'MARKED: NOT FOUND':x.outcome==='skip'?'MARKED: SKIPPED':'REVIEWED EARLIER';
+  }else chip.style.display='none';
+  $('#ig').value=x.ig;$('#name').value=x.name;$('#snap').value=x.snap;
+  setEditing(false);
+  renderOptions();
+}
+function setVal(sel,v,fmt,emptyText){const el=$(sel);if(v){el.textContent=fmt?fmt(v):v;el.classList.remove('empty')}else{el.textContent=emptyText||'—';el.classList.add('empty')}}
+function setEditing(on){$('#fieldsEdit').style.display=on?'block':'none';$('#fieldsView').style.display=on?'none':'block'}
+$('#editBtn').onclick=()=>setEditing(true);
+$('#doneEditBtn').onclick=()=>{const x=state.items[state.index];setVal('#vIg',x.ig,v=>'@'+v);setVal('#vName',x.name);setVal('#vSnap',x.snap,null,'Not detected');setEditing(false)};
+function renderOptions(){
+  const x=state.items[state.index];
+  const opts=buildSuggestions({name:x.name,instagram:x.ig,snapchat:x.snap});
+  const LABELS={snapchat:'DETECTED SNAPCHAT',instagram:'INSTAGRAM HANDLE'};
+  $('#options').innerHTML=opts.length?opts.map(o=>{
+    const searched=(x.searched||[]).includes(o.handle);
+    return `<button class="srow${o.type==='snapchat'?' prime':''}${searched?' searched':''}" data-h="${o.handle}">`
+      +`<span class="main">${LABELS[o.type]?`<span class="rlabel">${LABELS[o.type]}</span>`:''}<span class="rhandle">${o.handle}</span></span>`
+      +`<span class="raction">${searched?'SEARCHED ✓':'COPY + OPEN ↗'}</span></button>`;
+  }).join(''):'<div class="noSuggest">No usable handle yet. Use EDIT PROFILE to correct the fields and suggestions will appear.</div>';
+}
+/* locked: one tap = copy to clipboard + open Snapchat, no confirmation */
+async function launchSnapchat(handle){if(handle)await navigator.clipboard.writeText(handle);const a=document.createElement('a');a.href='snapchat://';a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove()}
+$('#options').onclick=async e=>{
+  const b=e.target.closest('[data-h]');
+  if(!b)return;
+  const x=state.items[state.index],h=b.dataset.h;
+  if(!(x.searched||[]).includes(h)){x.searched=[...(x.searched||[]),h];await save();renderOptions()}
+  launchSnapchat(h);
+};
+$('#openOnly').onclick=()=>launchSnapchat('');
+['ig','name','snap'].forEach(id=>$('#'+id).addEventListener('input',async()=>{
+  const x=state.items[state.index];
+  x[id]=$('#'+id).value;
+  renderOptions();
+  await save();
+}));
+async function decide(type){
+  const x=state.items[state.index];
+  x.outcome=type;
+  await save();
+  const n=nextUndecidedAfter(state.index);
+  if(n===-1){
+    completeTotals={...counts(),total:state.items.length};
+    await clearSaved();
+    state.items=[];state.index=0;state.legacyBase={added:0,notFound:0,skipped:0};
+    go('complete');
+  }else{
+    state.index=n;
+    pushAthlete();
+    renderReview();
+  }
+}
+$('#addedBtn').onclick=()=>decide('added');
+$('#notFoundBtn').onclick=()=>decide('notFound');
+$('#skipBtn').onclick=()=>decide('skip');
+$('#prevBtn').onclick=()=>{if(state.index>0){state.index--;pushAthlete();renderReview()}};
+$('#sessionBtn').onclick=()=>go('home');
+
+/* ---------- complete ---------- */
+function renderComplete(){
+  const t=completeTotals||{added:0,notFound:0,skipped:0,total:0};
+  $('#doneTotal').textContent=t.total;$('#dTotal2').textContent=t.total;
+  $('#dAdded').textContent=t.added;$('#dNot').textContent=t.notFound;$('#dSkip').textContent=t.skipped;
+}
+$('#doneNewBtn').onclick=()=>go('new');
+
+/* ---------- boot ---------- */
+(async()=>{
+  try{const saved=await load();if(saved&&saved.items&&saved.items.length)hydrate(saved)}catch{}
+  route(location.pathname,{replace:true});
+})();
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+</script>
+</body></html>
