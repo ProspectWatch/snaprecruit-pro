@@ -1,0 +1,72 @@
+/* MainStage Athletes design tokens — from the approved design handoff.
+   Every value is exact per README §3. */
+:root{
+  /* Surfaces */
+  --ms-bg:#0A0A0A;
+  --ms-well:#0C0C0B;
+  --ms-surface:#171614;
+  --ms-surface-2:#211F1B;
+  /* Borders */
+  --ms-border:#37332B;
+  --ms-border-strong:#453F35;
+  /* Gold — the only accent */
+  --ms-gold:#C9962F;
+  --ms-gold-bright:#E3B54A;
+  --ms-gold-deep:#8C6716;
+  --ms-gold-hover:#E7C98A;
+  /* Text */
+  --ms-text:#F0EDE6;
+  --ms-text-2:#B4AEA2;
+  --ms-muted:#8F887A;
+  /* Status — desaturated for night use */
+  --ms-success:#7FA98A;
+  --ms-warn:#C89A6A;
+  --ms-error:#B4726B;
+  /* Gradients */
+  --grad-btn:linear-gradient(180deg,#E3B54A,#8C6716);
+  --grad-fill:linear-gradient(90deg,#8C6716,#E3B54A);
+  /* Type */
+  --f-ui:Inter,system-ui,-apple-system,sans-serif;
+  --f-brand:Archivo,Inter,system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{background:#0A0A0A}
+html,body{margin:0;min-height:100%}
+body{min-height:100vh;background:var(--ms-bg);color:var(--ms-text);font-family:var(--f-ui);-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+a{color:var(--ms-gold-bright);text-decoration:none}
+img{display:block}
+
+/* Primitives */
+.ms-mark{border-radius:50%}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--ms-muted)}
+.eyebrow.gold{color:var(--ms-gold-bright)}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;height:56px;border-radius:14px;font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-align:center}
+.btn-gold{background:var(--grad-btn);color:#0A0A0A}
+.btn-gold:active{background:var(--ms-gold-deep)}
+.btn-outline{border:1px solid var(--ms-gold);color:var(--ms-gold-bright);background:transparent}
+.btn-secondary{background:var(--ms-surface);border:1px solid var(--ms-border);color:var(--ms-text-2)}
+.btn-disabled,.btn[disabled]{background:var(--ms-surface-2);color:var(--ms-muted);pointer-events:none}
+.btn-text{width:auto;height:44px;font-size:13px;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--ms-muted);padding:0 8px}
+.chipbtn{width:44px;height:44px;border-radius:14px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text);display:flex;align-items:center;justify-content:center;font-size:18px}
+.chipbtn:active{background:var(--ms-surface-2)}
+.card{background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:20px}
+
+/* Progress */
+.bar{height:6px;background:var(--ms-well);border-radius:3px;overflow:hidden}
+.bar .fill{height:100%;width:0;background:var(--grad-fill);transition:width 240ms ease-out}
+.bar.indeterminate .fill{width:30%;animation:sweep 1.4s ease-in-out infinite}
+@keyframes sweep{0%{transform:translateX(-100%)}100%{transform:translateX(430%)}}
+@keyframes srpulse{0%,100%{opacity:.25;transform:scale(1)}50%{opacity:.6;transform:scale(1.08)}}
+
+/* Bottom sheet — errors + the single confirm */
+.scrim{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:min(100%,560px);background:var(--ms-surface);border-radius:20px 20px 0 0;padding:22px 22px calc(env(safe-area-inset-bottom) + 22px);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.sheet.error{border-top:1px solid var(--ms-error)}
+.sheet.gold{border-top:1px solid var(--ms-gold)}
+.sheet .sicon{width:44px;height:44px;border-radius:12px;border:1px solid var(--ms-error);color:var(--ms-error);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;margin-bottom:14px}
+.sheet h3{margin:0 0 8px;font-size:18px;font-weight:700;letter-spacing:-.01em}
+.sheet p{margin:0 0 16px;font-size:13px;line-height:1.55;color:var(--ms-text-2)}
+.sheet .btn{margin-top:10px}
