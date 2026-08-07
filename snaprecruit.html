@@ -484,12 +484,14 @@ function renderOptions(){
 }
 /* locked: one tap = copy to clipboard + open Snapchat, no confirmation */
 async function launchSnapchat(handle){if(handle)await navigator.clipboard.writeText(handle);const a=document.createElement('a');a.href='snapchat://';a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove()}
-$('#options').onclick=async e=>{
+$('#options').onclick=e=>{
   const b=e.target.closest('[data-h]');
   if(!b)return;
   const x=state.items[state.index],h=b.dataset.h;
-  if(!(x.searched||[]).includes(h)){x.searched=[...(x.searched||[]),h];await save();renderOptions()}
+  // Clipboard + deep link must run first, inside the tap's user-activation
+  // window (Safari), exactly like scanner-v14. Bookkeeping happens after.
   launchSnapchat(h);
+  if(!(x.searched||[]).includes(h)){x.searched=[...(x.searched||[]),h];renderOptions();save()}
 };
 $('#openOnly').onclick=()=>launchSnapchat('');
 ['ig','name','snap'].forEach(id=>$('#'+id).addEventListener('input',async()=>{
