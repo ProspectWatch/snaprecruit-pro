@@ -7,9 +7,57 @@
   to = "/.netlify/functions/read-profile"
   status = 200
 
+# Same-origin proxies to the MainStage Media admin API — the browser calls
+# /api/athletes and /api/sports with the x-admin-password header and Netlify
+# forwards them server-side, so no CORS setup and no keys in this app.
+[[redirects]]
+  from = "/api/athletes"
+  to = "https://main-stage-media.vercel.app/api/admin/athletes"
+  status = 200
+
+[[redirects]]
+  from = "/api/sports"
+  to = "https://main-stage-media.vercel.app/api/admin/sports"
+  status = 200
+
+[[redirects]]
+  from = "/snaprecruit"
+  to = "/snaprecruit.html"
+  status = 200
+
+[[redirects]]
+  from = "/snaprecruit/*"
+  to = "/snaprecruit.html"
+  status = 200
+
+[[redirects]]
+  from = "/submissions"
+  to = "/submissions.html"
+  status = 200
+
+[[redirects]]
+  from = "/media"
+  to = "/media.html"
+  status = 200
+
+[[redirects]]
+  from = "/athletes"
+  to = "/athletes.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
