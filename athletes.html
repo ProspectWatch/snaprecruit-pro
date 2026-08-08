@@ -201,7 +201,9 @@
         var o=document.createElement('option');o.value=s.id;o.textContent=s.name;sportSel.appendChild(o);
       });
       sportSel.value=cur;
-      sportsLoaded=true;
+      // An empty list isn't "loaded" — sports appear once the first import
+      // runs, so keep retrying until we actually have some.
+      sportsLoaded=body.data.length>0;
     }).catch(function(){});
   }
 
@@ -295,6 +297,12 @@
   q.addEventListener('keydown',function(e){if(e.key==='Enter'){clearTimeout(debounceT);runSearch();q.blur()}});
   qClear.addEventListener('click',function(){q.value='';q.focus();runSearch()});
   sportSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  // The installed app can sit alive in the background for days — refresh the
+  // sports list when it's still empty and the user returns or taps the picker.
+  sportSel.addEventListener('focus',function(){if(pwStored)loadSports()});
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden&&pwStored&&viewSearch.classList.contains('active'))loadSports();
+  });
   $('retryBtn').addEventListener('click',function(){lastKey='';runSearch()});
 
   if(pwStored)showSearch();else showUnlock();
