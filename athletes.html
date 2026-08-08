@@ -187,24 +187,41 @@
   $('keyBtn').addEventListener('click',function(){showUnlock()});
 
   /* ---------- sports ---------- */
-  var sportsLoaded=false;
+  var SPORTS_CACHE='ms-sports-cache';
+  var sportsLoaded=false, sportsFetching=false;
+  function populateSports(list){
+    var cur=sportSel.value;
+    while(sportSel.options.length>1)sportSel.remove(1);
+    list.forEach(function(s){
+      var o=document.createElement('option');o.value=s.id;o.textContent=s.name;sportSel.appendChild(o);
+    });
+    sportSel.value=cur;
+  }
+  // Fill instantly from the last-seen list: the iOS picker snapshots its
+  // options the moment it opens, so waiting on the network leaves a user who
+  // taps it right away staring at an empty list.
+  try{
+    var cachedSports=JSON.parse(localStorage.getItem(SPORTS_CACHE)||'[]');
+    if(cachedSports.length)populateSports(cachedSports);
+  }catch(e){}
   function loadSports(){
-    if(sportsLoaded)return;
+    if(sportsLoaded||sportsFetching)return;
+    sportsFetching=true;
+    if(sportSel.options.length===1)sportSel.options[0].textContent='All sports (loading…)';
     fetch(API_SPORTS,{headers:headers()}).then(function(res){
       if(res.status===401){forget();return null}
       return res.ok?res.json():null;
     }).then(function(body){
       if(!body||!body.data)return;
-      var cur=sportSel.value;
-      while(sportSel.options.length>1)sportSel.remove(1);
-      body.data.forEach(function(s){
-        var o=document.createElement('option');o.value=s.id;o.textContent=s.name;sportSel.appendChild(o);
-      });
-      sportSel.value=cur;
+      populateSports(body.data);
       // An empty list isn't "loaded" — sports appear once the first import
       // runs, so keep retrying until we actually have some.
       sportsLoaded=body.data.length>0;
-    }).catch(function(){});
+      if(sportsLoaded)try{localStorage.setItem(SPORTS_CACHE,JSON.stringify(body.data))}catch(e){}
+    }).catch(function(){}).then(function(){
+      sportsFetching=false;
+      sportSel.options[0].textContent='All sports';
+    });
   }
 
   function forget(){
