@@ -43,6 +43,10 @@
 .viewer img{width:100%;max-height:38vh;object-fit:contain;background:#0C0B0A;border:1px solid var(--ms-border);border-radius:16px}
 .viewerToggle{position:absolute;top:10px;right:10px;height:28px;padding:0 11px;border-radius:9px;background:rgba(23,22,20,.88);border:1px solid var(--ms-border-strong);font-size:11px;font-weight:600;color:var(--ms-text-2)}
 .viewer.collapsed img{max-height:64px;object-fit:cover;object-position:top}
+.shotMissing{display:none}
+.viewer.noimg img{display:none}
+.viewer.noimg .viewerToggle{display:none}
+.viewer.noimg .shotMissing{display:flex;align-items:center;justify-content:center;text-align:center;min-height:120px;padding:22px;color:var(--ms-muted);font-size:13px;line-height:1.5;background:#0C0B0A;border:1px dashed var(--ms-border);border-radius:16px}
 .editing .viewer{display:none}
 /* profile card */
 .pcard{background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:20px;padding:2px 16px;margin-bottom:16px}
@@ -222,6 +226,7 @@
     <div class="paneLeft">
       <div class="viewer" id="viewer">
         <img id="shot" alt="Instagram profile screenshot">
+        <div class="shotMissing">Screenshot unavailable on this device — the profile details below are saved. Edit them if you need to.</div>
         <button class="viewerToggle" id="viewerToggle" type="button">Collapse ⌃</button>
       </div>
     </div>
@@ -292,34 +297,44 @@
 import {cleanHandle, cleanName, buildSuggestions} from '/js/snaprecruit-core.mjs';
 
 const $=s=>document.querySelector(s);
-const DB='snaprecruit-v12',STORE='session';
+const DB='snaprecruit-v12',STORE='session',IMG='images';
 
-/* ---------- persistence (locked: same DB, store, and key as scanner-v14) ---------- */
-function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+/* ---------- persistence ----------
+   The session record (STORE/'current') holds only lightweight metadata.
+   Scanned screenshots are stored once each as compact downsized JPEG data-URL
+   STRINGS in a separate IMG store. Strings survive iOS Safari's IndexedDB
+   eviction across an app relaunch where Blob/File handles do not, and keeping
+   the heavy image bytes out of the per-keystroke session write avoids the
+   storage-quota blow-up that was dropping whole sessions. */
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB,2);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE);if(!db.objectStoreNames.contains(IMG))db.createObjectStore(IMG)};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function save(){
   const c=counts();
   const db=await openDB(),tx=db.transaction(STORE,'readwrite');
   tx.objectStore(STORE).put({
-    items:state.items.map(x=>({file:x.file,ig:x.ig,name:x.name,snap:x.snap,read:!!x.read,outcome:x.outcome||null,searched:x.searched||[]})),
+    items:state.items.map(x=>({ig:x.ig,name:x.name,snap:x.snap,read:!!x.read,outcome:x.outcome||null,searched:x.searched||[],hasImg:!!x.img})),
     index:state.index,added:c.added,notFound:c.notFound,skipped:c.skipped,
     legacyBase:state.legacyBase,startedAt:state.startedAt||null,savedAt:Date.now()
   },'current');
   return new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=()=>j(tx.error)});
 }
+async function putImage(i,dataUrl){const db=await openDB(),tx=db.transaction(IMG,'readwrite');tx.objectStore(IMG).put(dataUrl,i);return new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=()=>j(tx.error)})}
+function getImage(i){return openDB().then(db=>new Promise(res=>{const r=db.transaction(IMG).objectStore(IMG).get(i);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null)}))}
 async function load(){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).get('current');r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error)})}
-async function clearSaved(){const db=await openDB(),tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete('current');return new Promise(r=>tx.oncomplete=r)}
+async function clearSaved(){const db=await openDB(),tx=db.transaction([STORE,IMG],'readwrite');tx.objectStore(STORE).delete('current');tx.objectStore(IMG).clear();return new Promise(r=>tx.oncomplete=r)}
 
 /* ---------- state ---------- */
 const state={items:[],index:0,legacyBase:{added:0,notFound:0,skipped:0},startedAt:null};
 let completeTotals=null,scanning=false,cancelScan=false,pendingFails=[],lastShotUrl=null,lastCopied=null,editSnapshot=null;
 
-function hydrate(saved){
+async function hydrate(saved){
   state.items=(saved.items||[]).map(x=>({
-    file:x.file,ig:x.ig||'',name:x.name||'',snap:x.snap||'',
+    file:x.file||null,img:null,ig:x.ig||'',name:x.name||'',snap:x.snap||'',
     read:x.read!==undefined?!!x.read:!!(x.ig||x.name||x.snap),
     outcome:x.outcome||null,
     searched:Array.isArray(x.searched)?x.searched:[]
   }));
+  // Reattach each scanned screenshot from the durable image store.
+  for(let i=0;i<state.items.length;i++){try{state.items[i].img=await getImage(i)}catch{}}
   state.legacyBase=saved.legacyBase||{added:0,notFound:0,skipped:0};
   state.startedAt=saved.startedAt||null;
   const anyOutcome=state.items.some(x=>x.outcome);
@@ -407,36 +422,41 @@ function renderUpload(){
   const MAX=11;
   state.items.slice(0,MAX).forEach((x,i)=>{
     const d=document.createElement('div');d.className='thumb';
-    const img=document.createElement('img');img.loading='lazy';img.src=URL.createObjectURL(x.file);
+    const img=document.createElement('img');img.loading='lazy';
+    const src=x.file?URL.createObjectURL(x.file):x.img;
+    if(src)img.src=src;
     const rm=document.createElement('button');rm.className='rm';rm.type='button';rm.textContent='✕';rm.dataset.i=i;
     d.append(img,rm);t.appendChild(d);
   });
   if(n>MAX){const d=document.createElement('div');d.className='thumb more';d.textContent=`+${n-MAX}`;t.appendChild(d)}
 }
 $('#files').onchange=async e=>{
-  state.items=[...e.target.files].map(file=>({file,ig:'',name:'',snap:'',read:false,outcome:null,searched:[]}));
+  // Drop any prior session and its stored screenshots before a new batch.
+  await clearSaved();
+  // A pre-scan selection lives in memory only — Files are never written to
+  // IndexedDB (that's what caused the quota blow-up). The session becomes
+  // durable once scanning stores each compact screenshot.
+  state.items=[...e.target.files].map(file=>({file,img:null,ig:'',name:'',snap:'',read:false,outcome:null,searched:[]}));
   state.index=0;state.legacyBase={added:0,notFound:0,skipped:0};state.startedAt=Date.now();completeTotals=null;
-  await save();
   renderUpload();
 };
-$('#thumbs').onclick=async e=>{
+$('#thumbs').onclick=e=>{
   const rm=e.target.closest('.rm');
   if(!rm)return;
   state.items.splice(+rm.dataset.i,1);
-  if(state.items.length)await save();else{$('#files').value='';await clearSaved()}
+  if(!state.items.length)$('#files').value='';
   renderUpload();
 };
 $('#clearPick').onclick=async()=>{state.items=[];$('#files').value='';await clearSaved();renderUpload()};
 $('#scanBtn').onclick=()=>{
   if(!state.items.length)return;
-  if(!navigator.onLine)return showSheet({title:'You’re offline',msg:'Scanning needs a network connection. Your screenshots are saved on this device.',retry:true,skip:0,ret:false});
+  if(!navigator.onLine)return showSheet({title:'You’re offline',msg:'Scanning needs a network connection. Reconnect and tap Scan again — your selected screenshots are still here.',retry:true,skip:0,ret:false});
   show('scanning');runScan();
 };
 
 /* ---------- scan engine (locked: downsize + /api/read-profile contract from scanner-v14) ---------- */
 async function fileToDataUrl(file){const bmp=await createImageBitmap(file);const max=1500,scale=Math.min(1,max/bmp.width),c=document.createElement('canvas');c.width=Math.round(bmp.width*scale);c.height=Math.round(bmp.height*scale);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.86)}
-async function readProfile(file){
-  const image=await fileToDataUrl(file);
+async function readProfileImage(image){
   let r;
   try{r=await fetch('/api/read-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})})}
   catch(err){const e=new Error('Network unavailable');e.kind='network';throw e}
@@ -481,9 +501,14 @@ async function runScan(){
     scanUI();
     logRow('cur',`Reading screenshot ${i+1}…`);
     try{
-      const data=await readProfile(x.file);
+      const image=await fileToDataUrl(x.file);
+      const data=await readProfileImage(image);
+      // Persist the compact screenshot first so a completed read is never lost,
+      // then commit the fields. Storage failure stops the batch without
+      // corrupting the item (it stays unread and re-scans on retry).
+      try{await putImage(i,image)}catch(err){throw Object.assign(new Error('Storage full'),{kind:'storage'})}
       x.ig=cleanHandle(data.instagram);x.name=cleanName(data.full_name);x.snap=cleanHandle(data.snapchat);
-      x.read=true;
+      x.img=image;x.read=true;x.file=null;
       await save();
       $('#scanLog').lastChild.remove();
       logRow('ok',x.name||x.ig||`Screenshot ${i+1}`);
@@ -491,13 +516,14 @@ async function runScan(){
     }catch(e){
       $('#scanLog').lastChild.remove();
       lastError=e;
-      if(e.kind==='network'||!navigator.onLine)break;
+      if(e.kind==='network'||e.kind==='storage'||!navigator.onLine)break;
       pendingFails.push(i);
       logRow('fail',`Screenshot ${i+1} — couldn’t read`);
     }
   }
   scanning=false;
   if(cancelScan){show('new');return}
+  if(lastError&&lastError.kind==='storage'){const done=state.items.filter(x=>x.read).length;showSheet({title:'Device storage is full',msg:`Saved ${done} of ${total} so far — nothing scanned is lost. Free up space on your device, then Retry to finish the rest.`,retry:true,skip:0,ret:true});return}
   if(lastError&&(lastError.kind==='network'||!navigator.onLine)){showSheet(sheetFor(lastError,0));return}
   if(pendingFails.length){showSheet(sheetFor(lastError,pendingFails.length));return}
   finishScan();
@@ -536,9 +562,11 @@ function renderReview(){
   $('#posX').textContent=state.index+1;$('#posY').textContent=total;
   $('#rSub').textContent=`${total-decided} remaining`;
   $('#reviewFill').style.width=(decided/total*100)+'%';
-  if(lastShotUrl)URL.revokeObjectURL(lastShotUrl);
-  lastShotUrl=URL.createObjectURL(x.file);
-  $('#shot').src=lastShotUrl;
+  if(lastShotUrl){URL.revokeObjectURL(lastShotUrl);lastShotUrl=null}
+  const shot=$('#shot');
+  if(x.img){shot.src=x.img;setShotMissing(false)}
+  else if(x.file){lastShotUrl=URL.createObjectURL(x.file);shot.src=lastShotUrl;setShotMissing(false)}
+  else{shot.removeAttribute('src');setShotMissing(true)}
   setVal('#vIg',x.ig);setVal('#vName',x.name);setVal('#vSnap',x.snap,'Not detected');
   $('#vSnap').classList.toggle('gold',!!x.snap);
   $('#ig').value=x.ig;$('#name').value=x.name;$('#snap').value=x.snap;
@@ -633,7 +661,9 @@ $('#viewerToggle').onclick=()=>{
   v.classList.toggle('collapsed');
   $('#viewerToggle').textContent=v.classList.contains('collapsed')?'Expand ⌄':'Collapse ⌃';
 };
-$('#shot').onclick=()=>{$('#fsImg').src=$('#shot').src;$('#fsOverlay').hidden=false};
+function setShotMissing(on){$('#viewer').classList.toggle('noimg',on)}
+$('#shot').onerror=()=>setShotMissing(true);
+$('#shot').onclick=()=>{if($('#viewer').classList.contains('noimg'))return;$('#fsImg').src=$('#shot').src;$('#fsOverlay').hidden=false};
 $('#fsOverlay').onclick=()=>{$('#fsOverlay').hidden=true};
 async function decide(type){
   const x=state.items[state.index];
@@ -673,7 +703,7 @@ $('#doneNewBtn').onclick=()=>show('new');
 
 /* ---------- boot ---------- */
 (async()=>{
-  try{const saved=await load();if(saved&&saved.items&&saved.items.length)hydrate(saved)}catch{}
+  try{const saved=await load();if(saved&&saved.items&&saved.items.length)await hydrate(saved)}catch{}
   route(location.pathname);
 })();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
