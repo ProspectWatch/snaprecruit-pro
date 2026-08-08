@@ -136,7 +136,7 @@ body.booted .lower{visibility:visible}
 
 <script>
 (function(){
-  function openDB(){return new Promise(function(res,rej){var r=indexedDB.open('snaprecruit-v12',1);r.onupgradeneeded=function(){r.result.createObjectStore('session')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
+  function openDB(){return new Promise(function(res,rej){var r=indexedDB.open('snaprecruit-v12',2);r.onupgradeneeded=function(){var db=r.result;if(!db.objectStoreNames.contains('session'))db.createObjectStore('session');if(!db.objectStoreNames.contains('images'))db.createObjectStore('images')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
   function load(){return openDB().then(function(db){return new Promise(function(res,rej){var r=db.transaction('session').objectStore('session').get('current');r.onsuccess=function(){res(r.result||null)};r.onerror=function(){rej(r.error)}})})}
   function clearSaved(){return openDB().then(function(db){return new Promise(function(res){var tx=db.transaction('session','readwrite');tx.objectStore('session').delete('current');tx.oncomplete=res})})}
   function fmtWhen(ts){
