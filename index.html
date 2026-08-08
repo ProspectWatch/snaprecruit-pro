@@ -148,6 +148,16 @@ body.booted .lower{visibility:visible}
     if(d.toDateString()===y.toDateString())return (d.getHours()>=18?'Last night, ':'Yesterday, ')+t;
     return d.toLocaleDateString([], {weekday:'short'})+', '+t;
   }
+  // Recovery lifeline: /?reset wipes the saved session, caches and the service
+  // worker, then reloads clean — for a device stuck on a bad session.
+  if(new URLSearchParams(location.search).has('reset')){
+    Promise.resolve()
+      .then(function(){try{indexedDB.deleteDatabase('snaprecruit-v12')}catch(e){}})
+      .then(function(){return (window.caches?caches.keys():Promise.resolve([])).then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}).catch(function(){})})
+      .then(function(){return (navigator.serviceWorker?navigator.serviceWorker.getRegistrations():Promise.resolve([])).then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}).catch(function(){})})
+      .then(function(){location.replace('/')});
+    return;
+  }
   var remaining=0;
   load().then(function(saved){
     if(saved&&saved.items&&saved.items.length){

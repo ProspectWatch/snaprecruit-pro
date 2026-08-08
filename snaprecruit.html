@@ -298,6 +298,7 @@ import {cleanHandle, cleanName, buildSuggestions} from '/js/snaprecruit-core.mjs
 
 const $=s=>document.querySelector(s);
 const DB='snaprecruit-v12',STORE='session',IMG='images';
+const MAX_BATCH=40; // cap a batch so a huge selection can't run the phone out of memory
 
 /* ---------- persistence ----------
    The session record (STORE/'current') holds only lightweight metadata.
@@ -414,7 +415,7 @@ function hideSheet(){$('#sheetScrim').hidden=true}
 function renderUpload(){
   const n=state.items.length;
   $('#pickRow').style.display=n?'flex':'none';
-  $('#pickCount').textContent=n?`${n} screenshot${n===1?'':'s'} selected`:'';
+  $('#pickCount').textContent=n?`${n} screenshot${n===1?'':'s'} selected${state.trimmed?` · max ${MAX_BATCH} per batch`:''}`:'';
   $('#scanBtn').disabled=!n;
   const t=$('#thumbs');
   t.querySelectorAll('img').forEach(img=>URL.revokeObjectURL(img.src));
@@ -433,10 +434,14 @@ function renderUpload(){
 $('#files').onchange=async e=>{
   // Drop any prior session and its stored screenshots before a new batch.
   await clearSaved();
+  // Cap the batch so a very large selection can't exhaust phone memory.
+  let files=[...e.target.files];
+  state.trimmed=files.length>MAX_BATCH;
+  if(state.trimmed)files=files.slice(0,MAX_BATCH);
   // A pre-scan selection lives in memory only — Files are never written to
   // IndexedDB (that's what caused the quota blow-up). The session becomes
   // durable once scanning stores each compact screenshot.
-  state.items=[...e.target.files].map(file=>({file,img:null,ig:'',name:'',snap:'',read:false,outcome:null,searched:[]}));
+  state.items=files.map(file=>({file,img:null,ig:'',name:'',snap:'',read:false,outcome:null,searched:[]}));
   state.index=0;state.legacyBase={added:0,notFound:0,skipped:0};state.startedAt=Date.now();completeTotals=null;
   renderUpload();
 };
@@ -702,8 +707,25 @@ function renderComplete(){
 $('#doneNewBtn').onclick=()=>show('new');
 
 /* ---------- boot ---------- */
+// Full recovery: /snaprecruit/new?reset wipes the saved session, caches and the
+// service worker, then reloads clean. A lifeline if a device ever gets stuck.
+async function hardReset(){
+  try{indexedDB.deleteDatabase(DB)}catch{}
+  try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch{}
+  try{if(navigator.serviceWorker){const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()))}}catch{}
+  location.replace('/');
+}
 (async()=>{
-  try{const saved=await load();if(saved&&saved.items&&saved.items.length)await hydrate(saved)}catch{}
+  if(new URLSearchParams(location.search).has('reset'))return hardReset();
+  try{
+    const saved=await load();
+    if(saved&&saved.items&&saved.items.length){
+      // Self-heal: an implausibly large saved session (only possible from the
+      // old uncapped build) is dropped rather than re-loaded into a crash loop.
+      if(saved.items.length>MAX_BATCH)await clearSaved();
+      else await hydrate(saved);
+    }
+  }catch{try{await clearSaved()}catch{}}
   route(location.pathname);
 })();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
