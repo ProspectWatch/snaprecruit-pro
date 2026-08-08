@@ -108,6 +108,14 @@ body.booted .lower{visibility:visible}
 
     <a class="btn btn-outline" id="startNewOutline" href="/snaprecruit/new" style="display:none">START NEW SESSION</a>
 
+    <section class="toolCard" id="athleteCard">
+      <div class="toolRow">
+        <span class="toolChip"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="8" cy="8" r="5.4" stroke="currentColor" stroke-width="1.6"/><path d="m12.2 12.2 3.6 3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+        <div><div class="toolT">Athlete Search</div><div class="toolS">Find any athlete in the database</div></div>
+      </div>
+      <a class="btn btn-outline" href="/athletes">SEARCH ATHLETES</a>
+    </section>
+
     <div class="tileRow" id="tileRow">
       <a class="tile" href="/submissions">
         <span class="toolChip"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
@@ -175,6 +183,7 @@ body.booted .lower{visibility:visible}
         document.getElementById('scSkip').textContent=saved.skipped||0;
         document.getElementById('scWhen').textContent=fmtWhen(saved.savedAt);
         document.getElementById('toolCard').style.display='none';
+        document.getElementById('athleteCard').style.display='none';
         document.getElementById('toolsEyebrow').style.display='none';
         document.getElementById('tileRow').style.display='none';
         document.getElementById('startNewOutline').style.display='flex';
