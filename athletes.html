@@ -50,13 +50,21 @@
 .sportRow select:focus{outline:none;border-color:var(--ms-gold)}
 .sportRow select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
 .sportRow .caret{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ms-muted);pointer-events:none}
+.sportNote{font-size:11px;line-height:1.5;color:var(--ms-warn);margin-top:8px}
 .controls .bar{margin:12px 0 -6px;opacity:0;transition:opacity 150ms}
 .controls .bar.on{opacity:1}
 /* ---- results ---- */
 .results{padding-top:14px}
 .resMeta{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
 .resMeta .searchMeta{font-size:11px;color:var(--ms-muted)}
-.acard{display:flex;align-items:center;gap:12px;background:var(--ms-surface);border:1px solid var(--ms-border);border-left:3px solid var(--ms-gold-deep);border-radius:14px;padding:13px 16px;margin-bottom:9px}
+.acard{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--ms-surface);border:1px solid var(--ms-border);border-left:3px solid var(--ms-gold-deep);border-radius:14px;padding:13px 16px;margin-bottom:9px;transition:background 120ms}
+.acard:active{background:var(--ms-surface-2)}
+.drow{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--ms-border)}
+.drow:last-child{border-bottom:0}
+.drow .dl{flex:0 0 auto;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted)}
+.drow .dv{font-size:14px;font-weight:600;text-align:right;overflow-wrap:anywhere}
+.dEmpty{margin:0;font-size:13px;color:var(--ms-muted)}
+#dFields{margin-bottom:6px}
 .acard .amain{flex:1;min-width:0}
 .aname{font-size:16px;font-weight:700;overflow-wrap:anywhere}
 .aname .pref{font-weight:400;color:var(--ms-muted)}
@@ -109,6 +117,7 @@
         <select id="sport" aria-label="Filter by sport"><option value="">All sports</option></select>
         <span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="m2.5 4.5 3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </div>
+      <div class="sportNote" id="sportNote" hidden></div>
       <div class="bar indeterminate" id="loadBar"><div class="fill"></div></div>
     </div>
 
@@ -137,6 +146,16 @@
   </section>
 </main>
 
+<!-- Athlete detail sheet -->
+<div class="scrim" id="detailScrim" hidden>
+  <div class="sheet gold">
+    <h3 id="dName"></h3>
+    <div id="dFields"></div>
+    <button class="btn btn-gold" id="dCopy" type="button">COPY NAME</button>
+    <button class="btn btn-secondary" id="dClose" type="button">CLOSE</button>
+  </div>
+</div>
+
 <script>
 (function(){
   var KEY='ms-admin-password';
@@ -148,6 +167,7 @@
   var viewUnlock=$('view-unlock'), viewSearch=$('view-search');
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
+  var sportNote=$('sportNote');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
 
   function headers(){return {'x-admin-password':pwStored||''}}
@@ -207,18 +227,29 @@
   function loadSports(){
     if(sportsLoaded||sportsFetching)return;
     sportsFetching=true;
+    var ctl=new AbortController();
+    var timer=setTimeout(function(){ctl.abort()},12000);
     if(sportSel.options.length===1)sportSel.options[0].textContent='All sports (loading…)';
-    fetch(API_SPORTS,{headers:headers()}).then(function(res){
+    fetch(API_SPORTS,{headers:headers(),cache:'no-store',signal:ctl.signal}).then(function(res){
       if(res.status===401){forget();return null}
-      return res.ok?res.json():null;
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      return res.json();
     }).then(function(body){
-      if(!body||!body.data)return;
-      populateSports(body.data);
+      if(body===null)return;
       // An empty list isn't "loaded" — sports appear once the first import
       // runs, so keep retrying until we actually have some.
-      sportsLoaded=body.data.length>0;
-      if(sportsLoaded)try{localStorage.setItem(SPORTS_CACHE,JSON.stringify(body.data))}catch(e){}
-    }).catch(function(){}).then(function(){
+      if(!body.data||!body.data.length)throw new Error('empty list');
+      populateSports(body.data);
+      sportsLoaded=true;
+      sportNote.hidden=true;
+      try{localStorage.setItem(SPORTS_CACHE,JSON.stringify(body.data))}catch(e){}
+    }).catch(function(e){
+      if(!pwStored)return;
+      var why=e&&e.name==='AbortError'?'timed out':(e&&e.message)||'network error';
+      sportNote.textContent='Sport filter unavailable ('+why+') — tap the dropdown to retry. Name search still works.';
+      sportNote.hidden=false;
+    }).then(function(){
+      clearTimeout(timer);
       sportsFetching=false;
       sportSel.options[0].textContent='All sports';
     });
@@ -290,25 +321,61 @@
       setState('empty');return;
     }
     setState('list');
+    lastRows=rows;
     var browsing=term.length<2;
     resLabel.textContent=browsing?'BROWSING A–Z':'RESULTS';
     resCount.textContent=rows.length+(rows.length===1?' athlete':' athletes');
     resMeta.hidden=false;
-    list.innerHTML=rows.map(function(a){
+    list.innerHTML=rows.map(function(a,i){
       var meta=[a.sport&&a.sport.name,a.position,a.current_team,a.school&&a.school.name,a.grad_year?'Class of '+a.grad_year:null]
         .filter(Boolean).map(esc).join(' · ');
       var loc=[a.city,a.state_province,a.country].filter(Boolean).map(esc).join(', ');
       var pref=a.preferred_name&&a.preferred_name!==a.display_name
         ?' <span class="pref">“'+esc(a.preferred_name)+'”</span>':'';
-      return '<div class="acard"><div class="amain">'
+      return '<button type="button" class="acard" data-i="'+i+'"><div class="amain">'
         +'<div class="aname">'+esc(a.display_name)+pref+'</div>'
         +(meta?'<div class="aline">'+meta+'</div>':'')
         +(loc?'<div class="aloc">'+loc+'</div>':'')
         +'</div>'
         +(a.status?'<span class="apill">'+esc(a.status)+'</span>':'')
-        +'</div>';
+        +'</button>';
     }).join('');
   }
+
+  /* ---------- detail sheet ---------- */
+  var lastRows=[], detailName='';
+  function openDetail(a){
+    if(!a)return;
+    detailName=a.display_name;
+    $('dName').innerHTML=esc(a.display_name)+(a.preferred_name&&a.preferred_name!==a.display_name
+      ?' <span class="pref">“'+esc(a.preferred_name)+'”</span>':'');
+    var f=[
+      ['Sport',a.sport&&a.sport.name],
+      ['Position',a.position],
+      ['Team',a.current_team],
+      ['School',a.school&&a.school.name],
+      ['Grad year',a.grad_year],
+      ['Location',[a.city,a.state_province,a.country].filter(Boolean).join(', ')],
+      ['Status',a.status]
+    ].filter(function(x){return x[1]});
+    $('dFields').innerHTML=f.length
+      ?f.map(function(x){return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv">'+esc(x[1])+'</span></div>'}).join('')
+      :'<p class="dEmpty">No additional details on file yet.</p>';
+    $('detailScrim').hidden=false;
+  }
+  list.addEventListener('click',function(e){
+    var b=e.target.closest('.acard');
+    if(b)openDetail(lastRows[+b.getAttribute('data-i')]);
+  });
+  $('dClose').addEventListener('click',function(){$('detailScrim').hidden=true});
+  $('detailScrim').addEventListener('click',function(e){if(e.target===this)this.hidden=true});
+  $('dCopy').addEventListener('click',function(){
+    var btn=this;
+    function done(ok){btn.textContent=ok?'COPIED ✓':'COPY FAILED';setTimeout(function(){btn.textContent='COPY NAME'},1400)}
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(detailName).then(function(){done(true)},function(){done(false)});
+    else done(false);
+  });
 
   q.addEventListener('input',scheduleSearch);
   q.addEventListener('keydown',function(e){if(e.key==='Enter'){clearTimeout(debounceT);runSearch();q.blur()}});
