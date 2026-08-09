@@ -92,6 +92,15 @@
 .spill.mut{border-color:var(--ms-border);color:var(--ms-text-2)}
 .dSectHead{display:flex;align-items:baseline;justify-content:space-between;margin:14px 0 9px}
 .dSectHead .searchMeta{font-size:10.5px;color:var(--ms-muted)}
+.editToggle{font-size:10.5px;font-weight:700;letter-spacing:.14em;color:var(--ms-gold-bright);padding:2px}
+.dEditForm{margin-bottom:14px}
+.efield{margin-bottom:12px}
+.efield label{display:block;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted);margin-bottom:6px}
+.efield input,.efield select{width:100%;height:44px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:11px;color:var(--ms-text);font-size:14px;padding:0 12px;font-family:var(--f-ui)}
+.efield input:focus,.efield select:focus{outline:none;border-color:var(--ms-gold)}
+.efield2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.editSaved{font-size:11px;color:var(--ms-success);margin:-4px 0 12px;display:none}
+.editSaved.show{display:block}
 .srow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:12px;padding:9px 9px 9px 13px;margin-bottom:8px}
 .shandle{font-family:var(--f-mono);font-size:14px;overflow-wrap:anywhere;min-width:0}
 .sbtns{display:flex;gap:7px;flex:0 0 auto}
@@ -200,7 +209,26 @@
         <button class="btn btn-secondary" id="dcNo" type="button">NO</button>
       </div>
     </div>
+    <div class="dSectHead"><span class="eyebrow gold">PROFILE</span><button type="button" class="editToggle" id="editToggle">EDIT</button></div>
     <div id="dFields"></div>
+    <p class="editSaved" id="editSaved">✓ Profile updated</p>
+    <div class="dEditForm" id="dEditForm" hidden>
+      <div class="efield2">
+        <div class="efield"><label for="ePosition">Position</label><input id="ePosition" type="text" maxlength="20" autocapitalize="characters"></div>
+        <div class="efield"><label for="eGradYear">Grad year</label><select id="eGradYear"><option value="">—</option></select></div>
+      </div>
+      <div class="efield2">
+        <div class="efield"><label for="eHeight">Height</label><input id="eHeight" type="text" maxlength="12" placeholder="e.g. 5'10&quot;"></div>
+        <div class="efield"><label for="eState">State</label><input id="eState" type="text" maxlength="2" autocapitalize="characters"></div>
+      </div>
+      <div class="efield"><label for="eSchool">School</label><input id="eSchool" type="text" maxlength="120"></div>
+      <div class="efield"><label for="eClub">Club team</label><input id="eClub" type="text" maxlength="80"></div>
+      <p class="formErr" id="editErr"></p>
+      <div class="dcRow">
+        <button class="btn btn-gold" id="eSave" type="button">SAVE CHANGES</button>
+        <button class="btn btn-secondary" id="eCancel" type="button">CANCEL</button>
+      </div>
+    </div>
 
     <div class="dSectHead"><span class="eyebrow gold">PHOTOS</span><span class="searchMeta">tap a slot to add</span></div>
     <div class="photoGrid" id="photoGrid">
@@ -229,7 +257,7 @@
 import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 (function(){
   var KEY='ms-hs-api-key';
-  var API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo';
+  var API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -254,8 +282,12 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   SPORTS.forEach(function(s){var o=document.createElement('option');o.value=s.value;o.textContent=s.label;sportSel.appendChild(o)});
   function sportLabel(v){var s=SPORTS.filter(function(x){return x.value===v})[0];return s?s.label:v}
 
-  ['2025','2026','2027','2028','2029','2030'].forEach(function(y){
+  var GRAD_YEARS=['2025','2026','2027','2028','2029','2030'];
+  GRAD_YEARS.forEach(function(y){
     var o=document.createElement('option');o.value=y;o.textContent='Class of '+y;gradYearSel.appendChild(o);
+  });
+  GRAD_YEARS.forEach(function(y){
+    var o=document.createElement('option');o.value=y;o.textContent='Class of '+y;$('eGradYear').appendChild(o);
   });
 
   function headers(){return {'x-hs-api-key':pwStored||''}}
@@ -410,20 +442,28 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     });
   }
 
-  function openDetail(a){
-    if(!a)return;
-    currentAthlete=a;pendingTry=null;
-    $('dConfirm').hidden=true;
-    detailName=a.name;
-    $('dName').textContent=a.name;
+  function renderFields(){
+    var a=currentAthlete;
     var f=[
       ['Sport',sportLabel(a.sport)],['Position',a.position],['Grad year',a.grad_year],
-      ['School',a.school],['State',a.state],['Club team',a.club_team],
+      ['Height',a.height],['School',a.school],['State',a.state],['Club team',a.club_team],
       ['National rank',a.national_rank?'#'+a.national_rank:null],
       ['Regional rank',a.regional_rank?'#'+a.regional_rank:null],
       ['Committed',a.committed?(a.commit_school||'Yes'):null]
     ].filter(function(x){return x[1]});
-    $('dFields').innerHTML=f.map(function(x){return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv">'+esc(x[1])+'</span></div>'}).join('');
+    $('dFields').innerHTML=f.length
+      ?f.map(function(x){return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv">'+esc(x[1])+'</span></div>'}).join('')
+      :'<p class="dEmpty">Nothing on file yet — tap EDIT to add some.</p>';
+  }
+
+  function openDetail(a){
+    if(!a)return;
+    currentAthlete=a;pendingTry=null;
+    $('dConfirm').hidden=true;
+    $('dEditForm').hidden=true;$('dFields').hidden=false;$('editSaved').classList.remove('show');
+    detailName=a.name;
+    $('dName').textContent=a.name;
+    renderFields();
     renderSheet();
     $('detailScrim').hidden=false;
   }
@@ -439,6 +479,53 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(navigator.clipboard&&navigator.clipboard.writeText)
       navigator.clipboard.writeText(detailName).then(function(){done(true)},function(){done(false)});
     else done(false);
+  });
+
+  /* ---------- profile edit (club, height, position, school, state, grad year) ---------- */
+  $('editToggle').addEventListener('click',function(){
+    if(!pwStored){showUnlock();return}
+    var a=currentAthlete;
+    $('ePosition').value=a.position||'';
+    $('eGradYear').value=a.grad_year?String(a.grad_year):'';
+    $('eHeight').value=a.height||'';
+    $('eState').value=a.state||'';
+    $('eSchool').value=a.school||'';
+    $('eClub').value=a.club_team||'';
+    $('editErr').classList.remove('show');
+    $('editSaved').classList.remove('show');
+    $('dFields').hidden=true;
+    $('dEditForm').hidden=false;
+  });
+  $('eCancel').addEventListener('click',function(){
+    $('dEditForm').hidden=true;$('dFields').hidden=false;
+  });
+  $('eSave').addEventListener('click',function(){
+    var a=currentAthlete,btn=this,err=$('editErr');
+    err.classList.remove('show');
+    var body={
+      id:a.id,
+      position:$('ePosition').value.trim(),
+      grad_year:$('eGradYear').value,
+      height:$('eHeight').value.trim(),
+      state:$('eState').value.trim(),
+      school:$('eSchool').value.trim(),
+      club:$('eClub').value.trim()
+    };
+    btn.disabled=true;btn.textContent='SAVING…';
+    postJSON(API_EDIT,body).then(function(r){
+      if(r&&r.athlete){
+        Object.assign(a,{
+          position:r.athlete.position,grad_year:r.athlete.grad_year,height:r.athlete.height,
+          state:r.athlete.state,school:r.athlete.school,club_team:r.athlete.club_team
+        });
+      }
+      renderFields();rerenderList();
+      $('dEditForm').hidden=true;$('dFields').hidden=false;
+      $('editSaved').classList.add('show');
+    }).catch(function(e){
+      err.textContent=(e&&e.message)||'Save failed — try again.';
+      err.classList.add('show');
+    }).then(function(){btn.disabled=false;btn.textContent='SAVE CHANGES'});
   });
 
   /* ---------- social search + write-back ---------- */
