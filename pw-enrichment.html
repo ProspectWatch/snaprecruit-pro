@@ -61,6 +61,9 @@
 .fwToggle .dot{width:7px;height:7px;border-radius:50%;background:var(--ms-border-strong)}
 .fwToggle.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
 .fwToggle.on .dot{background:var(--ms-gold-bright)}
+.segRow{display:flex;gap:7px;margin-top:8px}
+.segBtn{flex:1;height:38px;border-radius:10px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:10.5px;font-weight:700;letter-spacing:.08em}
+.segBtn.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
 .controls .bar{margin:12px 0 -6px;opacity:0;transition:opacity 150ms}
 .controls .bar.on{opacity:1}
 .results{padding-top:14px}
@@ -169,6 +172,11 @@
         <select id="gradYear" aria-label="Filter by grad year"><option value="">All grad years</option></select>
       </div>
       <button class="fwToggle" id="fwToggle" type="button" aria-pressed="false"><span class="dot"></span>FUTURE WATCH ONLY</button>
+      <div class="segRow" id="searchedRow" role="group" aria-label="Filter by search status">
+        <button class="segBtn on" type="button" data-v="">ALL</button>
+        <button class="segBtn" type="button" data-v="no">UNSEARCHED</button>
+        <button class="segBtn" type="button" data-v="yes">SEARCHED</button>
+      </div>
       <div class="bar indeterminate" id="loadBar"><div class="fill"></div></div>
     </div>
 
@@ -266,8 +274,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
-  var stateInput=$('state'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle');
-  var fwOn=false;
+  var stateInput=$('state'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
+  var fwOn=false, searchedFilter='';
 
   // Girls sports only, for now — this list intentionally omits boys-lacrosse.
   // The backend also hard-enforces gender=F server-side (see hs-search.js),
@@ -340,7 +348,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   }
 
   /* ---------- search (public read — no key needed to browse) ---------- */
-  var debounceT=null, inflight=null, lastKey='';
+  var debounceT=null, inflight=null, lastKey='', searchGen=0;
   function scheduleSearch(){clearTimeout(debounceT);debounceT=setTimeout(runSearch,250)}
   function runSearch(){
     var term=q.value.trim(), sport=sportSel.value;
@@ -350,23 +358,31 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     sportSel.classList.toggle('filtering',!!sport);
     stateInput.classList.toggle('filtering',!!st);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+st+' '+gradYear+' '+fwOn;
+    var key=term+' '+sport+' '+st+' '+gradYear+' '+fwOn+' '+searchedFilter;
     if(key===lastKey)return;
     lastKey=key;
     if(inflight)inflight.abort();
-    if(term.length<2&&!sport&&!st&&!gradYear&&!fwOn){setState('idle');return}
+    if(term.length<2&&!sport&&!st&&!gradYear&&!fwOn&&!searchedFilter){setState('idle');return}
     var ctl=new AbortController();inflight=ctl;
+    // A generation counter, not just AbortController: abort() only cancels a
+    // fetch that's still pending — it has no effect once the response has
+    // already arrived, so two rapid filter changes can otherwise resolve
+    // out of order and let the OLDER result overwrite the newer one on
+    // screen. Every render is gated on still being the latest request.
+    var myGen=++searchGen;
     loadBar.classList.add('on');
     var url=API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)
       +(sport?'&sport='+encodeURIComponent(sport):'')
       +(st?'&state='+encodeURIComponent(st):'')
       +(gradYear?'&grad_year='+encodeURIComponent(gradYear):'')
-      +(fwOn?'&fw=1':'');
+      +(fwOn?'&fw=1':'')
+      +(searchedFilter?'&searched='+searchedFilter:'');
     fetch(url,{signal:ctl.signal}).then(function(res){
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
-    }).then(function(body){render(body.data||[],term,sport)}).catch(function(e){
+    }).then(function(body){if(myGen===searchGen)render(body.data||[],term,sport)}).catch(function(e){
       if(e&&e.name==='AbortError')return;
+      if(myGen!==searchGen)return;
       lastKey='';
       $('errMsg').textContent=navigator.onLine===false?'You look offline. Reconnect and try again.':'Check your connection and try again.';
       setState('err');
@@ -382,7 +398,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   function render(rows,term,sport){
     if(!rows.length){
       var name=sport?sportLabel(sport):'';
-      var extraBits=[name,stateInput.value.trim()?stateInput.value.trim().toUpperCase():'',gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'']
+      var extraBits=[name,stateInput.value.trim()?stateInput.value.trim().toUpperCase():'',gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'']
         .filter(Boolean).join(', ');
       $('emptyMsg').textContent=term.length>=2
         ?('No athletes match “'+term+'”'+(extraBits?' ('+extraBits+')':'')+'.')
@@ -621,6 +637,13 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     fwOn=!fwOn;
     this.classList.toggle('on',fwOn);
     this.setAttribute('aria-pressed',String(fwOn));
+    clearTimeout(debounceT);runSearch();
+  });
+  searchedRow.addEventListener('click',function(e){
+    var b=e.target.closest('.segBtn');
+    if(!b)return;
+    searchedFilter=b.getAttribute('data-v');
+    Array.prototype.forEach.call(searchedRow.querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
     clearTimeout(debounceT);runSearch();
   });
   $('retryBtn').addEventListener('click',function(){lastKey='';runSearch()});
