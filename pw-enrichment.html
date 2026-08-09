@@ -52,6 +52,15 @@
 .sportRow select:focus{outline:none;border-color:var(--ms-gold)}
 .sportRow select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
 .sportRow .caret{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ms-muted);pointer-events:none}
+.filterRow2{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;margin-top:8px}
+.filterRow2 input,.filterRow2 select{width:100%;height:44px;appearance:none;-webkit-appearance:none;background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:12px;color:var(--ms-text);font-size:14px;font-family:var(--f-ui);padding:0 13px}
+.filterRow2 input:focus,.filterRow2 select:focus{outline:none;border-color:var(--ms-gold)}
+.filterRow2 input.filtering,.filterRow2 select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
+.filterRow2 input::placeholder{color:var(--ms-muted);text-transform:none}
+.fwToggle{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:40px;margin-top:8px;border-radius:11px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:11px;font-weight:700;letter-spacing:.14em}
+.fwToggle .dot{width:7px;height:7px;border-radius:50%;background:var(--ms-border-strong)}
+.fwToggle.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
+.fwToggle.on .dot{background:var(--ms-gold-bright)}
 .controls .bar{margin:12px 0 -6px;opacity:0;transition:opacity 150ms}
 .controls .bar.on{opacity:1}
 .results{padding-top:14px}
@@ -146,6 +155,11 @@
         <select id="sport" aria-label="Filter by sport"><option value="">All sports</option></select>
         <span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="m2.5 4.5 3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </div>
+      <div class="filterRow2">
+        <input id="state" type="text" inputmode="text" maxlength="2" placeholder="State" aria-label="Filter by state" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false">
+        <select id="gradYear" aria-label="Filter by grad year"><option value="">All grad years</option></select>
+      </div>
+      <button class="fwToggle" id="fwToggle" type="button" aria-pressed="false"><span class="dot"></span>FUTURE WATCH ONLY</button>
       <div class="bar indeterminate" id="loadBar"><div class="fill"></div></div>
     </div>
 
@@ -224,16 +238,25 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
+  var stateInput=$('state'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle');
+  var fwOn=false;
 
+  // Girls sports only, for now — this list intentionally omits boys-lacrosse.
+  // The backend also hard-enforces gender=F server-side (see hs-search.js),
+  // since "lacrosse" here is a genuinely mixed-gender key, not just a naming
+  // convention — filtering the dropdown alone wouldn't be enough.
   var SPORTS=[
     {value:'volleyball',label:'Volleyball'},{value:'softball',label:'Softball'},
     {value:'basketball',label:'Basketball'},{value:'girls-soccer',label:'Girls Soccer'},
     {value:'girls-lacrosse',label:'Girls Lacrosse'},{value:'lacrosse',label:'Lacrosse'},
-    {value:'field-hockey',label:'Field Hockey'},{value:'water-polo',label:'Water Polo'},
-    {value:'boys-lacrosse',label:'Boys Lacrosse'}
+    {value:'field-hockey',label:'Field Hockey'},{value:'water-polo',label:'Water Polo'}
   ];
   SPORTS.forEach(function(s){var o=document.createElement('option');o.value=s.value;o.textContent=s.label;sportSel.appendChild(o)});
   function sportLabel(v){var s=SPORTS.filter(function(x){return x.value===v})[0];return s?s.label:v}
+
+  ['2025','2026','2027','2028','2029','2030'].forEach(function(y){
+    var o=document.createElement('option');o.value=y;o.textContent='Class of '+y;gradYearSel.appendChild(o);
+  });
 
   function headers(){return {'x-hs-api-key':pwStored||''}}
 
@@ -289,16 +312,24 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   function scheduleSearch(){clearTimeout(debounceT);debounceT=setTimeout(runSearch,250)}
   function runSearch(){
     var term=q.value.trim(), sport=sportSel.value;
+    var st=stateInput.value.trim().toUpperCase().slice(0,2);
+    var gradYear=gradYearSel.value;
     qClear.classList.toggle('show',!!q.value);
     sportSel.classList.toggle('filtering',!!sport);
-    var key=term+' '+sport;
+    stateInput.classList.toggle('filtering',!!st);
+    gradYearSel.classList.toggle('filtering',!!gradYear);
+    var key=term+' '+sport+' '+st+' '+gradYear+' '+fwOn;
     if(key===lastKey)return;
     lastKey=key;
     if(inflight)inflight.abort();
-    if(term.length<2&&!sport){setState('idle');return}
+    if(term.length<2&&!sport&&!st&&!gradYear&&!fwOn){setState('idle');return}
     var ctl=new AbortController();inflight=ctl;
     loadBar.classList.add('on');
-    var url=API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)+(sport?'&sport='+encodeURIComponent(sport):'');
+    var url=API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)
+      +(sport?'&sport='+encodeURIComponent(sport):'')
+      +(st?'&state='+encodeURIComponent(st):'')
+      +(gradYear?'&grad_year='+encodeURIComponent(gradYear):'')
+      +(fwOn?'&fw=1':'');
     fetch(url,{signal:ctl.signal}).then(function(res){
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
@@ -319,9 +350,11 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   function render(rows,term,sport){
     if(!rows.length){
       var name=sport?sportLabel(sport):'';
+      var extraBits=[name,stateInput.value.trim()?stateInput.value.trim().toUpperCase():'',gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'']
+        .filter(Boolean).join(', ');
       $('emptyMsg').textContent=term.length>=2
-        ?('No athletes match “'+term+'”'+(name?' in '+name:'')+'.')
-        :('No athletes in '+(name||'this sport')+' yet.');
+        ?('No athletes match “'+term+'”'+(extraBits?' ('+extraBits+')':'')+'.')
+        :('No athletes match '+(extraBits||'those filters')+'.');
       setState('empty');return;
     }
     setState('list');
@@ -333,7 +366,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     list.innerHTML=rows.map(function(a,i){
       var meta=[sportLabel(a.sport),a.position,a.school,a.state,a.grad_year?'Class of '+a.grad_year:null]
         .filter(Boolean).map(esc).join(' · ');
-      var extra=[a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null]
+      var extra=[a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.future_watch?'★ Future Watch':null]
         .filter(Boolean).map(esc).join(' · ');
       var pill=a.ig_handle?'<span class="apill done">✓ @'+esc(a.ig_handle)+'</span>'
         :a.snap_handle?'<span class="apill done">✓ snap:'+esc(a.snap_handle)+'</span>'
@@ -495,6 +528,14 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   q.addEventListener('keydown',function(e){if(e.key==='Enter'){clearTimeout(debounceT);runSearch();q.blur()}});
   qClear.addEventListener('click',function(){q.value='';q.focus();runSearch()});
   sportSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  stateInput.addEventListener('input',function(){this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,2);scheduleSearch()});
+  gradYearSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  fwToggle.addEventListener('click',function(){
+    fwOn=!fwOn;
+    this.classList.toggle('on',fwOn);
+    this.setAttribute('aria-pressed',String(fwOn));
+    clearTimeout(debounceT);runSearch();
+  });
   $('retryBtn').addEventListener('click',function(){lastKey='';runSearch()});
 
   if(pwStored)showSearch();else showUnlock();
