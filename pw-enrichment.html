@@ -75,7 +75,7 @@
 .aname{font-size:16px;font-weight:700;overflow-wrap:anywhere}
 .aline{font-size:12px;line-height:1.5;color:var(--ms-text-2);margin-top:3px}
 .aloc{font-size:11px;color:var(--ms-muted);margin-top:2px}
-.apill{flex:0 0 auto;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-text-2);font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border-radius:999px;padding:5px 10px}
+.apill{flex:0 0 auto;max-width:132px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-text-2);font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border-radius:999px;padding:5px 10px}
 .apill.done{border-color:var(--ms-gold);color:var(--ms-gold-bright);font-family:var(--f-mono);letter-spacing:.04em;text-transform:none}
 .apill.done.mut{border-color:var(--ms-border);color:var(--ms-success);font-family:var(--f-ui);letter-spacing:.16em;text-transform:uppercase}
 .stateBox{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:44px 20px;color:var(--ms-muted)}
@@ -91,7 +91,7 @@
 .drow .dv{font-size:14px;font-weight:600;text-align:right;overflow-wrap:anywhere}
 #dFields{margin-bottom:14px}
 .dSaved{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
-.spill{background:var(--ms-surface-2);border:1px solid var(--ms-gold);color:var(--ms-gold-bright);font-size:10px;font-weight:700;letter-spacing:.1em;border-radius:999px;padding:6px 11px;font-family:var(--f-mono)}
+.spill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--ms-surface-2);border:1px solid var(--ms-gold);color:var(--ms-gold-bright);font-size:10px;font-weight:700;letter-spacing:.1em;border-radius:999px;padding:6px 11px;font-family:var(--f-mono)}
 .spill.mut{border-color:var(--ms-border);color:var(--ms-text-2)}
 .dSectHead{display:flex;align-items:baseline;justify-content:space-between;margin:14px 0 9px}
 .dSectHead .searchMeta{font-size:10.5px;color:var(--ms-muted)}
@@ -394,6 +394,19 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   }
   function esc(x){return String(x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 
+  // Some legacy ig_handle values (scraped before this tool existed) are full
+  // profile URLs rather than bare handles — this table has no server-side
+  // guarantee on that column's shape. Every write this tool makes is
+  // regex-validated to a bare handle (see hs-athlete-socials.js), so this is
+  // purely a display-time cleanup for pre-existing data, mirroring the exact
+  // normalization update-athlete.js already applies to ig_handle on save.
+  function displayHandle(raw,kind){
+    if(!raw)return '';
+    var s=String(raw).trim().replace(/^@+/,'');
+    var hostRe=kind==='snapchat'?/^(?:https?:\/\/)?(?:www\.)?snapchat\.com\/(?:add\/)?/i:/^(?:https?:\/\/)?(?:www\.)?instagram\.com\//i;
+    return s.replace(hostRe,'').replace(/\/.*$/,'').replace(/\?.*$/,'') || s;
+  }
+
   var lastRows=[];
   function render(rows,term,sport){
     if(!rows.length){
@@ -416,8 +429,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         .filter(Boolean).map(esc).join(' · ');
       var extra=[a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.future_watch?'★ Future Watch':null]
         .filter(Boolean).map(esc).join(' · ');
-      var pill=a.ig_handle?'<span class="apill done">✓ @'+esc(a.ig_handle)+'</span>'
-        :a.snap_handle?'<span class="apill done">✓ snap:'+esc(a.snap_handle)+'</span>'
+      var pill=a.ig_handle?'<span class="apill done">✓ @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>'
+        :a.snap_handle?'<span class="apill done">✓ snap:'+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>'
         :a.socials_searched_at?'<span class="apill done mut">✓ Searched</span>'
         :a.committed?'<span class="apill">COMMITTED</span>':'';
       return '<button type="button" class="acard" data-i="'+i+'"><div class="amain">'
@@ -437,12 +450,12 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   function renderSheet(){
     var a=currentAthlete;
     var saved=[];
-    if(a.ig_handle)saved.push('<span class="spill">IG @'+esc(a.ig_handle)+'</span>');
-    if(a.snap_handle)saved.push('<span class="spill">SNAP '+esc(a.snap_handle)+'</span>');
+    if(a.ig_handle)saved.push('<span class="spill">IG @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>');
+    if(a.snap_handle)saved.push('<span class="spill">SNAP '+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>');
     if(!saved.length&&a.socials_searched_at)saved.push('<span class="spill mut">✓ SEARCHED</span>');
     $('dSaved').innerHTML=saved.join('');
     $('dSaved').hidden=!saved.length;
-    var opts=buildSuggestions({name:a.name,instagram:a.ig_handle,snapchat:a.snap_handle});
+    var opts=buildSuggestions({name:a.name,instagram:displayHandle(a.ig_handle,'instagram'),snapchat:displayHandle(a.snap_handle,'snapchat')});
     $('dOptions').innerHTML=opts.length?opts.map(function(o){
       return '<div class="srow"><span class="shandle">'+esc(o.handle)+'</span><span class="sbtns">'
         +'<button type="button" class="pbtn snap" data-p="snapchat" data-h="'+esc(o.handle)+'">SNAP</button>'
