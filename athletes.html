@@ -65,6 +65,28 @@
 .drow .dv{font-size:14px;font-weight:600;text-align:right;overflow-wrap:anywhere}
 .dEmpty{margin:0;font-size:13px;color:var(--ms-muted)}
 #dFields{margin-bottom:6px}
+/* detail sheet: scroll + search rows */
+#detailScrim .sheet{max-height:84vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.dListed{margin:-4px 0 10px;font-size:11px;color:var(--ms-muted)}
+.dSaved{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.spill{background:var(--ms-surface-2);border:1px solid var(--ms-gold);color:var(--ms-gold-bright);font-size:10px;font-weight:700;letter-spacing:.1em;border-radius:999px;padding:6px 11px;font-family:var(--f-mono)}
+.spill.mut{border-color:var(--ms-border);color:var(--ms-text-2)}
+.dSearchHead{display:flex;align-items:baseline;justify-content:space-between;margin:14px 0 9px}
+.dSearchHead .searchMeta{font-size:10.5px;color:var(--ms-muted)}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:12px;padding:9px 9px 9px 13px;margin-bottom:8px}
+.shandle{font-family:var(--f-mono);font-size:14px;overflow-wrap:anywhere;min-width:0}
+.sbtns{display:flex;gap:7px;flex:0 0 auto}
+.pbtn{height:38px;padding:0 13px;border-radius:10px;border:1px solid var(--ms-border);background:var(--ms-surface);font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--ms-text-2)}
+.pbtn:active{background:var(--ms-surface-2)}
+.pbtn.snap{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
+.pbtn.tried{border-color:var(--ms-success);color:var(--ms-success)}
+.dConfirm{background:var(--ms-surface-2);border:1px solid var(--ms-gold);border-radius:14px;padding:14px;margin:4px 0 12px}
+.dConfirm p{margin:0 0 11px;font-size:13px;color:var(--ms-text)}
+.dConfirm b{font-family:var(--f-mono);font-weight:500;color:var(--ms-gold-bright)}
+.dcRow{display:flex;gap:9px}
+.dcRow .btn{height:46px;font-size:12px}
+.apill.done{border-color:var(--ms-gold);color:var(--ms-gold-bright);font-family:var(--f-mono);letter-spacing:.04em;text-transform:none}
+.apill.done.mut{border-color:var(--ms-border);color:var(--ms-success);font-family:var(--f-ui);letter-spacing:.16em;text-transform:uppercase}
 .acard .amain{flex:1;min-width:0}
 .aname{font-size:16px;font-weight:700;overflow-wrap:anywhere}
 .aname .pref{font-weight:400;color:var(--ms-muted)}
@@ -150,16 +172,28 @@
 <div class="scrim" id="detailScrim" hidden>
   <div class="sheet gold">
     <h3 id="dName"></h3>
+    <p class="dListed" id="dListed" hidden></p>
+    <div class="dSaved" id="dSaved" hidden></div>
+    <div class="dConfirm" id="dConfirm" hidden>
+      <p>Did <b id="dcHandle"></b> work on <span id="dcPlatform"></span>?</p>
+      <div class="dcRow">
+        <button class="btn btn-gold" id="dcYes" type="button">YES — SAVE IT</button>
+        <button class="btn btn-secondary" id="dcNo" type="button">NO</button>
+      </div>
+    </div>
     <div id="dFields"></div>
+    <div class="dSearchHead"><span class="eyebrow gold">SEARCH HANDLES</span><span class="searchMeta">SNAP copies + opens · IG opens profile</span></div>
+    <div id="dOptions"></div>
     <button class="btn btn-gold" id="dCopy" type="button">COPY NAME</button>
     <button class="btn btn-secondary" id="dClose" type="button">CLOSE</button>
   </div>
 </div>
 
-<script>
+<script type="module">
+import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 (function(){
   var KEY='ms-admin-password';
-  var API_ATHLETES='/api/athletes', API_SPORTS='/api/sports';
+  var API_ATHLETES='/api/athletes', API_SPORTS='/api/sports', API_SOCIALS='/api/athlete-socials';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -332,23 +366,61 @@
       var loc=[a.city,a.state_province,a.country].filter(Boolean).map(esc).join(', ');
       var pref=a.preferred_name&&a.preferred_name!==a.display_name
         ?' <span class="pref">“'+esc(a.preferred_name)+'”</span>':'';
+      var ig=socialHandle(a,'instagram'), snap=socialHandle(a,'snapchat');
+      var pill=ig?'<span class="apill done">✓ @'+esc(ig)+'</span>'
+        :snap?'<span class="apill done">✓ snap:'+esc(snap)+'</span>'
+        :a.socials_searched_at?'<span class="apill done mut">✓ Searched</span>'
+        :(a.status?'<span class="apill">'+esc(a.status)+'</span>':'');
       return '<button type="button" class="acard" data-i="'+i+'"><div class="amain">'
         +'<div class="aname">'+esc(a.display_name)+pref+'</div>'
         +(meta?'<div class="aline">'+meta+'</div>':'')
         +(loc?'<div class="aloc">'+loc+'</div>':'')
         +'</div>'
-        +(a.status?'<span class="apill">'+esc(a.status)+'</span>':'')
+        +pill
         +'</button>';
     }).join('');
   }
+  function rerenderList(){if(lastRows.length&&list.innerHTML)render(lastRows,q.value.trim(),sportSel.value)}
 
   /* ---------- detail sheet ---------- */
-  var lastRows=[], detailName='';
+  var lastRows=[], detailName='', currentAthlete=null, pendingTry=null;
+  // The "(School)" suffix baked into imported display names breaks handle
+  // suggestions and Snapchat/Instagram searches — strip it for search + copy.
+  function coreName(a){return String(a.display_name||'').replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim()}
+  function socialHandle(a,platform){
+    var s=(a.socials||[]).filter(function(x){return x.platform===platform})[0];
+    return (s&&s.handle)||'';
+  }
+  function openLink(href){var a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove()}
+
+  function renderSheet(){
+    var a=currentAthlete;
+    var ig=socialHandle(a,'instagram'), snap=socialHandle(a,'snapchat');
+    var saved=[];
+    if(ig)saved.push('<span class="spill">IG @'+esc(ig)+'</span>');
+    if(snap)saved.push('<span class="spill">SNAP '+esc(snap)+'</span>');
+    if(!saved.length&&a.socials_searched_at)saved.push('<span class="spill mut">✓ SEARCHED</span>');
+    $('dSaved').innerHTML=saved.join('');
+    $('dSaved').hidden=!saved.length;
+    var opts=buildSuggestions({name:coreName(a),instagram:ig,snapchat:snap});
+    $('dOptions').innerHTML=opts.length?opts.map(function(o){
+      return '<div class="srow"><span class="shandle">'+esc(o.handle)+'</span><span class="sbtns">'
+        +'<button type="button" class="pbtn snap" data-p="snapchat" data-h="'+esc(o.handle)+'">SNAP</button>'
+        +'<button type="button" class="pbtn" data-p="instagram" data-h="'+esc(o.handle)+'">IG</button>'
+        +'</span></div>';
+    }).join(''):'<p class="dEmpty">No handle suggestions for this name.</p>';
+  }
+
   function openDetail(a){
     if(!a)return;
-    detailName=a.display_name;
-    $('dName').innerHTML=esc(a.display_name)+(a.preferred_name&&a.preferred_name!==a.display_name
+    currentAthlete=a;
+    pendingTry=null;
+    $('dConfirm').hidden=true;
+    detailName=coreName(a);
+    $('dName').innerHTML=esc(detailName)+(a.preferred_name&&a.preferred_name!==a.display_name
       ?' <span class="pref">“'+esc(a.preferred_name)+'”</span>':'');
+    $('dListed').textContent=detailName!==a.display_name?'Listed as: '+a.display_name:'';
+    $('dListed').hidden=detailName===a.display_name;
     var f=[
       ['Sport',a.sport&&a.sport.name],
       ['Position',a.position],
@@ -360,7 +432,8 @@
     ].filter(function(x){return x[1]});
     $('dFields').innerHTML=f.length
       ?f.map(function(x){return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv">'+esc(x[1])+'</span></div>'}).join('')
-      :'<p class="dEmpty">No additional details on file yet.</p>';
+      :'';
+    renderSheet();
     $('detailScrim').hidden=false;
   }
   list.addEventListener('click',function(e){
@@ -375,6 +448,75 @@
     if(navigator.clipboard&&navigator.clipboard.writeText)
       navigator.clipboard.writeText(detailName).then(function(){done(true)},function(){done(false)});
     else done(false);
+  });
+
+  /* ---------- social search + write-back ---------- */
+  function postSocials(a,extra){
+    return fetch(API_SOCIALS,{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},headers()),
+      body:JSON.stringify(Object.assign({athlete_id:a.id},extra||{}))
+    }).then(function(res){
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      return res.json();
+    });
+  }
+  function applySaved(a,platform,handle){
+    a.socials=(a.socials||[]).filter(function(x){return x.platform!==platform});
+    if(handle)a.socials.push({platform:platform,handle:handle});
+    a.socials_searched_at=a.socials_searched_at||new Date().toISOString();
+    if(currentAthlete===a)renderSheet();
+    rerenderList();
+  }
+  // First tap on any handle stamps the athlete as searched, so the check-off
+  // survives even if the user never confirms a winner.
+  function stampSearched(a){
+    if(a._stamped||a.socials_searched_at)return;
+    a._stamped=true;
+    postSocials(a,{}).then(function(){applySaved(a,null,null)}).catch(function(){a._stamped=false});
+  }
+  $('dOptions').addEventListener('click',function(e){
+    var b=e.target.closest('.pbtn');
+    if(!b)return;
+    var h=b.getAttribute('data-h'),p=b.getAttribute('data-p');
+    pendingTry={handle:h,platform:p};
+    b.classList.add('tried');
+    // Clipboard + deep link inside the tap's user-activation window (Safari),
+    // exactly like SnapRecruit's locked one-tap flow.
+    if(p==='snapchat'){
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(h).catch(function(){});
+      openLink('snapchat://');
+    }else{
+      openLink('https://www.instagram.com/'+encodeURIComponent(h)+'/');
+    }
+    stampSearched(currentAthlete);
+  });
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden&&pendingTry&&currentAthlete&&!$('detailScrim').hidden){
+      $('dcHandle').textContent='@'+pendingTry.handle;
+      $('dcPlatform').textContent=pendingTry.platform==='instagram'?'Instagram':'Snapchat';
+      $('dConfirm').hidden=false;
+    }
+  });
+  $('dcYes').addEventListener('click',function(){
+    if(!pendingTry||!currentAthlete)return;
+    var a=currentAthlete,t=pendingTry,btn=this;
+    var extra={};extra[t.platform==='instagram'?'instagram':'snapchat']=t.handle;
+    btn.disabled=true;btn.textContent='SAVING…';
+    postSocials(a,extra).then(function(){
+      applySaved(a,t.platform,t.handle);
+      $('dConfirm').hidden=true;
+    }).catch(function(){
+      btn.textContent='SAVE FAILED — TRY AGAIN';
+    }).then(function(){
+      btn.disabled=false;
+      setTimeout(function(){btn.textContent='YES — SAVE IT'},1600);
+      pendingTry=null;
+    });
+  });
+  $('dcNo').addEventListener('click',function(){
+    $('dConfirm').hidden=true;
+    pendingTry=null;
   });
 
   q.addEventListener('input',scheduleSearch);
