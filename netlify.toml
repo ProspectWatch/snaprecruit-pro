@@ -25,6 +25,25 @@
   to = "https://main-stage-media.vercel.app/api/admin/athletes/socials"
   status = 200
 
+# Same-origin proxies to the pw-hs-dashboard API — backs the standalone
+# "PW Data Enrichment" tool only. Kept fully separate from the MainStage
+# proxies above: different upstream, different secret (x-hs-api-key, not
+# x-admin-password), different database (PW_HSdata_maxxpreps).
+[[redirects]]
+  from = "/api/hs-athletes"
+  to = "https://pw-hs-dashboard.vercel.app/api/hs-search"
+  status = 200
+
+[[redirects]]
+  from = "/api/hs-athlete-socials"
+  to = "https://pw-hs-dashboard.vercel.app/api/hs-athlete-socials"
+  status = 200
+
+[[redirects]]
+  from = "/api/hs-athlete-photo"
+  to = "https://pw-hs-dashboard.vercel.app/api/hs-athlete-photo"
+  status = 200
+
 [[redirects]]
   from = "/snaprecruit"
   to = "/snaprecruit.html"
@@ -48,6 +67,11 @@
 [[redirects]]
   from = "/athletes"
   to = "/athletes.html"
+  status = 200
+
+[[redirects]]
+  from = "/pw-enrichment"
+  to = "/pw-enrichment.html"
   status = 200
 
 [[headers]]
