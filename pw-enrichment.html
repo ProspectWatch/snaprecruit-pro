@@ -168,7 +168,7 @@
         <span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="m2.5 4.5 3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </div>
       <div class="filterRow2">
-        <input id="state" type="text" inputmode="text" maxlength="2" placeholder="State" aria-label="Filter by state" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false">
+        <select id="state" aria-label="Filter by state"><option value="">All states</option></select>
         <select id="gradYear" aria-label="Filter by grad year"><option value="">All grad years</option></select>
       </div>
       <button class="fwToggle" id="fwToggle" type="button" aria-pressed="false"><span class="dot"></span>FUTURE WATCH ONLY</button>
@@ -274,7 +274,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
-  var stateInput=$('state'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
+  var stateSel=$('state'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
   var fwOn=false, searchedFilter='';
 
   // Girls sports only, for now — this list intentionally omits boys-lacrosse.
@@ -289,6 +289,23 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   ];
   SPORTS.forEach(function(s){var o=document.createElement('option');o.value=s.value;o.textContent=s.label;sportSel.appendChild(o)});
   function sportLabel(v){var s=SPORTS.filter(function(x){return x.value===v})[0];return s?s.label:v}
+
+  // 50 states + DC + PR — a curated list, not the raw distinct values in the
+  // table (which also has stray junk from bad scrapes, e.g. "N/", "11").
+  var STATES=[
+    ['AL','Alabama'],['AK','Alaska'],['AZ','Arizona'],['AR','Arkansas'],['CA','California'],
+    ['CO','Colorado'],['CT','Connecticut'],['DE','Delaware'],['DC','D.C.'],['FL','Florida'],
+    ['GA','Georgia'],['HI','Hawaii'],['ID','Idaho'],['IL','Illinois'],['IN','Indiana'],
+    ['IA','Iowa'],['KS','Kansas'],['KY','Kentucky'],['LA','Louisiana'],['ME','Maine'],
+    ['MD','Maryland'],['MA','Massachusetts'],['MI','Michigan'],['MN','Minnesota'],['MS','Mississippi'],
+    ['MO','Missouri'],['MT','Montana'],['NE','Nebraska'],['NV','Nevada'],['NH','New Hampshire'],
+    ['NJ','New Jersey'],['NM','New Mexico'],['NY','New York'],['NC','North Carolina'],['ND','North Dakota'],
+    ['OH','Ohio'],['OK','Oklahoma'],['OR','Oregon'],['PA','Pennsylvania'],['PR','Puerto Rico'],
+    ['RI','Rhode Island'],['SC','South Carolina'],['SD','South Dakota'],['TN','Tennessee'],['TX','Texas'],
+    ['UT','Utah'],['VT','Vermont'],['VA','Virginia'],['WA','Washington'],['WV','West Virginia'],
+    ['WI','Wisconsin'],['WY','Wyoming']
+  ];
+  STATES.forEach(function(s){var o=document.createElement('option');o.value=s[0];o.textContent=s[1];stateSel.appendChild(o)});
 
   var GRAD_YEARS=['2025','2026','2027','2028','2029','2030'];
   GRAD_YEARS.forEach(function(y){
@@ -352,11 +369,11 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   function scheduleSearch(){clearTimeout(debounceT);debounceT=setTimeout(runSearch,250)}
   function runSearch(){
     var term=q.value.trim(), sport=sportSel.value;
-    var st=stateInput.value.trim().toUpperCase().slice(0,2);
+    var st=stateSel.value;
     var gradYear=gradYearSel.value;
     qClear.classList.toggle('show',!!q.value);
     sportSel.classList.toggle('filtering',!!sport);
-    stateInput.classList.toggle('filtering',!!st);
+    stateSel.classList.toggle('filtering',!!st);
     gradYearSel.classList.toggle('filtering',!!gradYear);
     var key=term+' '+sport+' '+st+' '+gradYear+' '+fwOn+' '+searchedFilter;
     if(key===lastKey)return;
@@ -411,7 +428,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   function render(rows,term,sport){
     if(!rows.length){
       var name=sport?sportLabel(sport):'';
-      var extraBits=[name,stateInput.value.trim()?stateInput.value.trim().toUpperCase():'',gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'']
+      var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'']
         .filter(Boolean).join(', ');
       $('emptyMsg').textContent=term.length>=2
         ?('No athletes match “'+term+'”'+(extraBits?' ('+extraBits+')':'')+'.')
@@ -644,7 +661,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   q.addEventListener('keydown',function(e){if(e.key==='Enter'){clearTimeout(debounceT);runSearch();q.blur()}});
   qClear.addEventListener('click',function(){q.value='';q.focus();runSearch()});
   sportSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
-  stateInput.addEventListener('input',function(){this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,2);scheduleSearch()});
+  stateSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   gradYearSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   fwToggle.addEventListener('click',function(){
     fwOn=!fwOn;
