@@ -21,6 +21,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/athlete-socials"
+  to = "https://main-stage-media.vercel.app/api/admin/athletes/socials"
+  status = 200
+
+[[redirects]]
   from = "/snaprecruit"
   to = "/snaprecruit.html"
   status = 200
