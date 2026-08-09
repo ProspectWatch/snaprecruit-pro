@@ -299,7 +299,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   }
 
   /* ---------- search ---------- */
-  var debounceT=null, inflight=null, lastKey='';
+  var debounceT=null, inflight=null, lastKey='', searchGen=0;
   function scheduleSearch(){
     clearTimeout(debounceT);
     debounceT=setTimeout(runSearch,250);
@@ -318,6 +318,12 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       setState('idle');return;
     }
     var ctl=new AbortController();inflight=ctl;
+    // A generation counter, not just AbortController: abort() only cancels a
+    // fetch that's still pending — it has no effect once the response has
+    // already arrived, so two rapid filter changes can otherwise resolve
+    // out of order and let the OLDER result overwrite the newer one on
+    // screen. Every render is gated on still being the latest request.
+    var myGen=++searchGen;
     loadBar.classList.add('on');
     var url=API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)+(sport?'&sport='+encodeURIComponent(sport):'');
     fetch(url,{headers:headers(),signal:ctl.signal}).then(function(res){
@@ -325,10 +331,11 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
     }).then(function(body){
-      if(!body)return;
+      if(!body||myGen!==searchGen)return;
       render(body.data||[],term,sport);
     }).catch(function(e){
       if(e&&e.name==='AbortError')return;
+      if(myGen!==searchGen)return;
       lastKey='';
       $('errMsg').textContent=navigator.onLine===false?'You look offline. Reconnect and try again.':'Check your connection and try again.';
       setState('err');

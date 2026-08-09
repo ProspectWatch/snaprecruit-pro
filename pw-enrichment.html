@@ -1,0 +1,656 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MainStage">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/tokens.css">
+<title>PW Data Enrichment — MainStage Athletes</title>
+<style>
+/* Standalone tool: a copy of Athlete Search's visual language, not a shared
+   file with it — this screen has its own password (x-hs-api-key), its own
+   database (PW_HSdata_maxxpreps), and must stay fully independent of both
+   Athlete Search (athletes.html) and SnapRecruit (snaprecruit.html). */
+.app{max-width:560px;margin:auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 10px) 22px calc(env(safe-area-inset-bottom) + 22px)}
+.head{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px;padding:6px 0 12px}
+.crumb{font-size:9px;font-weight:700;letter-spacing:.24em;text-transform:uppercase}
+.crumb .dim{color:var(--ms-muted)}
+.crumb .lit{color:var(--ms-gold-bright)}
+.screenTitle{font-size:22px;font-weight:700;letter-spacing:-.01em;margin-top:3px}
+.headRight{display:flex;justify-content:flex-end}
+.view{display:none}
+.view.active{display:block}
+.unlockWrap{flex-direction:column;justify-content:center;padding-bottom:40px}
+.unlockWrap.active{display:flex;flex:1}
+.unlockCard{background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:20px;padding:22px}
+.unlockCard .chip{width:44px;height:44px;border-radius:13px;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-gold);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.unlockCard h2{margin:0 0 8px;font-size:18px;font-weight:700}
+.unlockCard p{margin:0 0 18px;font-size:13px;line-height:1.55;color:var(--ms-text-2)}
+.field label{display:block;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted);margin-bottom:7px}
+.field input{width:100%;height:48px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:12px;color:var(--ms-text);font-size:15px;padding:0 13px;font-family:var(--f-ui)}
+.field input:focus{outline:none;border-color:var(--ms-gold)}
+.formErr{display:none;font-size:12px;line-height:1.5;color:var(--ms-error);margin:10px 0 0}
+.formErr.show{display:block}
+.unlockCard .btn{margin-top:16px}
+.unlockFoot{font-size:11px;color:var(--ms-muted);text-align:center;margin-top:14px}
+.controls{position:sticky;top:0;z-index:30;background:rgba(10,10,10,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);margin:0 -22px;padding:2px 22px 12px}
+.searchBox{position:relative}
+.searchBox .sIcon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ms-muted);pointer-events:none}
+.searchBox input{width:100%;height:50px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:14px;color:var(--ms-text);font-size:16px;padding:0 44px;font-family:var(--f-ui)}
+.searchBox input:focus{outline:none;border-color:var(--ms-gold)}
+.searchBox input::placeholder{color:var(--ms-muted)}
+.searchBox input::-webkit-search-cancel-button,.searchBox input::-webkit-search-decoration{-webkit-appearance:none;display:none}
+.sClear{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:11px;color:var(--ms-muted);font-size:16px;display:none;align-items:center;justify-content:center}
+.sClear.show{display:flex}
+.sportRow{position:relative;margin-top:10px}
+.sportRow select{width:100%;height:44px;appearance:none;-webkit-appearance:none;background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:12px;color:var(--ms-text);font-size:14px;font-family:var(--f-ui);padding:0 40px 0 13px}
+.sportRow select:focus{outline:none;border-color:var(--ms-gold)}
+.sportRow select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
+.sportRow .caret{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ms-muted);pointer-events:none}
+.filterRow2{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;margin-top:8px}
+.filterRow2 input,.filterRow2 select{width:100%;height:44px;appearance:none;-webkit-appearance:none;background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:12px;color:var(--ms-text);font-size:14px;font-family:var(--f-ui);padding:0 13px}
+.filterRow2 input:focus,.filterRow2 select:focus{outline:none;border-color:var(--ms-gold)}
+.filterRow2 input.filtering,.filterRow2 select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
+.filterRow2 input::placeholder{color:var(--ms-muted);text-transform:none}
+.fwToggle{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:40px;margin-top:8px;border-radius:11px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:11px;font-weight:700;letter-spacing:.14em}
+.fwToggle .dot{width:7px;height:7px;border-radius:50%;background:var(--ms-border-strong)}
+.fwToggle.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
+.fwToggle.on .dot{background:var(--ms-gold-bright)}
+.segRow{display:flex;gap:7px;margin-top:8px}
+.segBtn{flex:1;height:38px;border-radius:10px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:10.5px;font-weight:700;letter-spacing:.08em}
+.segBtn.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
+.controls .bar{margin:12px 0 -6px;opacity:0;transition:opacity 150ms}
+.controls .bar.on{opacity:1}
+.results{padding-top:14px}
+.resMeta{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.resMeta .searchMeta{font-size:11px;color:var(--ms-muted)}
+.acard{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--ms-surface);border:1px solid var(--ms-border);border-left:3px solid var(--ms-gold-deep);border-radius:14px;padding:13px 16px;margin-bottom:9px;transition:background 120ms}
+.acard:active{background:var(--ms-surface-2)}
+.acard .amain{flex:1;min-width:0}
+.aname{font-size:16px;font-weight:700;overflow-wrap:anywhere}
+.aline{font-size:12px;line-height:1.5;color:var(--ms-text-2);margin-top:3px}
+.aloc{font-size:11px;color:var(--ms-muted);margin-top:2px}
+.apill{flex:0 0 auto;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-text-2);font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border-radius:999px;padding:5px 10px}
+.apill.done{border-color:var(--ms-gold);color:var(--ms-gold-bright);font-family:var(--f-mono);letter-spacing:.04em;text-transform:none}
+.apill.done.mut{border-color:var(--ms-border);color:var(--ms-success);font-family:var(--f-ui);letter-spacing:.16em;text-transform:uppercase}
+.stateBox{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:44px 20px;color:var(--ms-muted)}
+.stateBox .chip{width:52px;height:52px;border-radius:15px;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-gold);display:flex;align-items:center;justify-content:center}
+.stateBox h3{margin:0;font-size:16px;font-weight:700;color:var(--ms-text)}
+.stateBox p{margin:0;font-size:13px;line-height:1.55;max-width:300px}
+.stateBox .retry{width:auto;padding:0 24px;height:44px;margin-top:4px}
+/* detail sheet */
+#detailScrim .sheet{max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.drow{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--ms-border)}
+.drow:last-child{border-bottom:0}
+.drow .dl{flex:0 0 auto;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted)}
+.drow .dv{font-size:14px;font-weight:600;text-align:right;overflow-wrap:anywhere}
+#dFields{margin-bottom:14px}
+.dSaved{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.spill{background:var(--ms-surface-2);border:1px solid var(--ms-gold);color:var(--ms-gold-bright);font-size:10px;font-weight:700;letter-spacing:.1em;border-radius:999px;padding:6px 11px;font-family:var(--f-mono)}
+.spill.mut{border-color:var(--ms-border);color:var(--ms-text-2)}
+.dSectHead{display:flex;align-items:baseline;justify-content:space-between;margin:14px 0 9px}
+.dSectHead .searchMeta{font-size:10.5px;color:var(--ms-muted)}
+.editToggle{font-size:10.5px;font-weight:700;letter-spacing:.14em;color:var(--ms-gold-bright);padding:2px}
+.dEditForm{margin-bottom:14px}
+.efield{margin-bottom:12px}
+.efield label{display:block;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted);margin-bottom:6px}
+.efield input,.efield select{width:100%;height:44px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:11px;color:var(--ms-text);font-size:14px;padding:0 12px;font-family:var(--f-ui)}
+.efield input:focus,.efield select:focus{outline:none;border-color:var(--ms-gold)}
+.efield2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.editSaved{font-size:11px;color:var(--ms-success);margin:-4px 0 12px;display:none}
+.editSaved.show{display:block}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:12px;padding:9px 9px 9px 13px;margin-bottom:8px}
+.shandle{font-family:var(--f-mono);font-size:14px;overflow-wrap:anywhere;min-width:0}
+.sbtns{display:flex;gap:7px;flex:0 0 auto}
+.pbtn{height:38px;padding:0 13px;border-radius:10px;border:1px solid var(--ms-border);background:var(--ms-surface);font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--ms-text-2)}
+.pbtn:active{background:var(--ms-surface-2)}
+.pbtn.snap{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
+.pbtn.tried{border-color:var(--ms-success);color:var(--ms-success)}
+.dConfirm{background:var(--ms-surface-2);border:1px solid var(--ms-gold);border-radius:14px;padding:14px;margin:4px 0 12px}
+.dConfirm p{margin:0 0 11px;font-size:13px;color:var(--ms-text)}
+.dConfirm b{font-family:var(--f-mono);font-weight:500;color:var(--ms-gold-bright)}
+.dcRow{display:flex;gap:9px}
+.dcRow .btn{height:46px;font-size:12px}
+/* photo slots */
+.photoGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
+.pslot{display:flex;flex-direction:column;align-items:center;gap:7px}
+.pslot .pbox{width:100%;aspect-ratio:3/4;border-radius:14px;background:var(--ms-well);border:1px dashed var(--ms-border);display:flex;align-items:center;justify-content:center;color:var(--ms-muted);overflow:hidden;position:relative}
+.pslot .pbox img{width:100%;height:100%;object-fit:cover}
+.pslot .pbox.has{border-style:solid;border-color:var(--ms-gold)}
+.pslot .pbox .tick{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:var(--ms-gold);color:#0A0A0A;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.pslot .plabel{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ms-text-2)}
+.pslot .pbox.uploading{opacity:.5}
+.pslot input[type=file]{display:none}
+@media(min-width:768px){.app{max-width:620px;padding-left:28px;padding-right:28px}.controls{margin:0 -28px;padding-left:28px;padding-right:28px}}
+</style>
+</head><body>
+<main class="app">
+  <header class="head">
+    <a class="chipbtn" href="/" aria-label="MainStage home">‹</a>
+    <div>
+      <div class="crumb"><span class="dim">MAINSTAGE</span> <span class="dim">·</span> <span class="lit">PW ENRICHMENT</span></div>
+      <div class="screenTitle">PW Data Enrichment</div>
+    </div>
+    <span class="headRight"><button class="chipbtn" id="keyBtn" type="button" aria-label="Change access key" hidden><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="6" cy="8.5" r="3.4" stroke="currentColor" stroke-width="1.5"/><path d="M9.4 8.5H15M13 8.5v2.6M15 8.5v1.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></span>
+  </header>
+
+  <!-- ============ UNLOCK ============ -->
+  <section class="view unlockWrap" id="view-unlock">
+    <div class="unlockCard">
+      <span class="chip"><svg width="20" height="20" viewBox="0 0 17 17" fill="none"><circle cx="6" cy="8.5" r="3.4" stroke="currentColor" stroke-width="1.5"/><path d="M9.4 8.5H15M13 8.5v2.6M15 8.5v1.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+      <h2>Enter PW HS access key</h2>
+      <p>This tool searches the national PW HS athlete database (PW_HSdata_maxxpreps) — a separate system from Athlete Search. Enter the key once — it's saved on this device.</p>
+      <div class="field">
+        <label for="pw">Access key</label>
+        <input id="pw" type="password" autocomplete="current-password" enterkeyhint="go">
+      </div>
+      <p class="formErr" id="pwErr"></p>
+      <button class="btn btn-gold" id="unlockBtn" type="button">UNLOCK</button>
+    </div>
+    <p class="unlockFoot">The key is stored only on this device.</p>
+  </section>
+
+  <!-- ============ SEARCH ============ -->
+  <section class="view" id="view-search">
+    <div class="controls">
+      <div class="searchBox">
+        <span class="sIcon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="m11 11 3.4 3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+        <input id="q" type="search" placeholder="Search athlete name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+        <button class="sClear" id="qClear" type="button" aria-label="Clear search">✕</button>
+      </div>
+      <div class="sportRow">
+        <select id="sport" aria-label="Filter by sport"><option value="">All sports</option></select>
+        <span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="m2.5 4.5 3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+      <div class="filterRow2">
+        <input id="state" type="text" inputmode="text" maxlength="2" placeholder="State" aria-label="Filter by state" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false">
+        <select id="gradYear" aria-label="Filter by grad year"><option value="">All grad years</option></select>
+      </div>
+      <button class="fwToggle" id="fwToggle" type="button" aria-pressed="false"><span class="dot"></span>FUTURE WATCH ONLY</button>
+      <div class="segRow" id="searchedRow" role="group" aria-label="Filter by search status">
+        <button class="segBtn on" type="button" data-v="">ALL</button>
+        <button class="segBtn" type="button" data-v="no">UNSEARCHED</button>
+        <button class="segBtn" type="button" data-v="yes">SEARCHED</button>
+      </div>
+      <div class="bar indeterminate" id="loadBar"><div class="fill"></div></div>
+    </div>
+
+    <div class="results">
+      <div class="resMeta" id="resMeta" hidden>
+        <span class="eyebrow gold" id="resLabel">RESULTS</span>
+        <span class="searchMeta" id="resCount"></span>
+      </div>
+      <div id="list"></div>
+
+      <div class="stateBox" id="stateIdle">
+        <span class="chip"><svg width="20" height="20" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="m11 11 3.4 3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+        <h3>Search 130,000+ HS athletes</h3>
+        <p>Type at least two letters of a name, or pick a sport to browse it A–Z.</p>
+      </div>
+      <div class="stateBox" id="stateEmpty" hidden>
+        <h3>No athletes found</h3>
+        <p id="emptyMsg">Nothing matches that search.</p>
+      </div>
+      <div class="stateBox" id="stateErr" hidden>
+        <h3>Couldn't reach the database</h3>
+        <p id="errMsg">Check your connection and try again.</p>
+        <button class="btn btn-outline retry" id="retryBtn" type="button">TRY AGAIN</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Athlete detail sheet -->
+<div class="scrim" id="detailScrim" hidden>
+  <div class="sheet gold">
+    <h3 id="dName"></h3>
+    <div class="dSaved" id="dSaved" hidden></div>
+    <div class="dConfirm" id="dConfirm" hidden>
+      <p>Did <b id="dcHandle"></b> work on <span id="dcPlatform"></span>?</p>
+      <div class="dcRow">
+        <button class="btn btn-gold" id="dcYes" type="button">YES — SAVE IT</button>
+        <button class="btn btn-secondary" id="dcNo" type="button">NO</button>
+      </div>
+    </div>
+    <div class="dSectHead"><span class="eyebrow gold">PROFILE</span><button type="button" class="editToggle" id="editToggle">EDIT</button></div>
+    <div id="dFields"></div>
+    <p class="editSaved" id="editSaved">✓ Profile updated</p>
+    <div class="dEditForm" id="dEditForm" hidden>
+      <div class="efield2">
+        <div class="efield"><label for="ePosition">Position</label><input id="ePosition" type="text" maxlength="20" autocapitalize="characters"></div>
+        <div class="efield"><label for="eGradYear">Grad year</label><select id="eGradYear"><option value="">—</option></select></div>
+      </div>
+      <div class="efield2">
+        <div class="efield"><label for="eHeight">Height</label><input id="eHeight" type="text" maxlength="12" placeholder="e.g. 5'10&quot;"></div>
+        <div class="efield"><label for="eState">State</label><input id="eState" type="text" maxlength="2" autocapitalize="characters"></div>
+      </div>
+      <div class="efield"><label for="eSchool">School</label><input id="eSchool" type="text" maxlength="120"></div>
+      <div class="efield"><label for="eClub">Club team</label><input id="eClub" type="text" maxlength="80"></div>
+      <p class="formErr" id="editErr"></p>
+      <div class="dcRow">
+        <button class="btn btn-gold" id="eSave" type="button">SAVE CHANGES</button>
+        <button class="btn btn-secondary" id="eCancel" type="button">CANCEL</button>
+      </div>
+    </div>
+
+    <div class="dSectHead"><span class="eyebrow gold">PHOTOS</span><span class="searchMeta">tap a slot to add</span></div>
+    <div class="photoGrid" id="photoGrid">
+      <div class="pslot" data-slot="screenshot">
+        <label class="pbox" for="pf-screenshot"><span class="ph">+</span><input id="pf-screenshot" type="file" accept="image/*"></label>
+        <span class="plabel">Screenshot</span>
+      </div>
+      <div class="pslot" data-slot="cover">
+        <label class="pbox" for="pf-cover"><span class="ph">+</span><input id="pf-cover" type="file" accept="image/*"></label>
+        <span class="plabel">Cover</span>
+      </div>
+      <div class="pslot" data-slot="action">
+        <label class="pbox" for="pf-action"><span class="ph">+</span><input id="pf-action" type="file" accept="image/*"></label>
+        <span class="plabel">Action</span>
+      </div>
+    </div>
+
+    <div class="dSectHead"><span class="eyebrow gold">SEARCH HANDLES</span><span class="searchMeta">SNAP copies + opens · IG opens profile</span></div>
+    <div id="dOptions"></div>
+    <button class="btn btn-gold" id="dCopy" type="button">COPY NAME</button>
+    <button class="btn btn-secondary" id="dClose" type="button">CLOSE</button>
+  </div>
+</div>
+
+<script type="module">
+import {buildSuggestions} from '/js/snaprecruit-core.mjs';
+(function(){
+  var KEY='ms-hs-api-key';
+  var API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit';
+  var pwStored=null;
+  try{pwStored=localStorage.getItem(KEY)}catch(e){}
+
+  var $=function(id){return document.getElementById(id)};
+  var viewUnlock=$('view-unlock'), viewSearch=$('view-search');
+  var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
+  var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
+  var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
+  var stateInput=$('state'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
+  var fwOn=false, searchedFilter='';
+
+  // Girls sports only, for now — this list intentionally omits boys-lacrosse.
+  // The backend also hard-enforces gender=F server-side (see hs-search.js),
+  // since "lacrosse" here is a genuinely mixed-gender key, not just a naming
+  // convention — filtering the dropdown alone wouldn't be enough.
+  var SPORTS=[
+    {value:'volleyball',label:'Volleyball'},{value:'softball',label:'Softball'},
+    {value:'basketball',label:'Basketball'},{value:'girls-soccer',label:'Girls Soccer'},
+    {value:'girls-lacrosse',label:'Girls Lacrosse'},{value:'lacrosse',label:'Lacrosse'},
+    {value:'field-hockey',label:'Field Hockey'},{value:'water-polo',label:'Water Polo'}
+  ];
+  SPORTS.forEach(function(s){var o=document.createElement('option');o.value=s.value;o.textContent=s.label;sportSel.appendChild(o)});
+  function sportLabel(v){var s=SPORTS.filter(function(x){return x.value===v})[0];return s?s.label:v}
+
+  var GRAD_YEARS=['2025','2026','2027','2028','2029','2030'];
+  GRAD_YEARS.forEach(function(y){
+    var o=document.createElement('option');o.value=y;o.textContent='Class of '+y;gradYearSel.appendChild(o);
+  });
+  GRAD_YEARS.forEach(function(y){
+    var o=document.createElement('option');o.value=y;o.textContent='Class of '+y;$('eGradYear').appendChild(o);
+  });
+
+  function headers(){return {'x-hs-api-key':pwStored||''}}
+
+  /* ---------- unlock ---------- */
+  function showUnlock(){
+    viewUnlock.classList.add('active');viewSearch.classList.remove('active');
+    $('keyBtn').hidden=true;
+    setTimeout(function(){$('pw').focus()},50);
+  }
+  function showSearch(){
+    viewUnlock.classList.remove('active');viewSearch.classList.add('active');
+    $('keyBtn').hidden=false;
+    runSearch();
+  }
+  function unlock(){
+    var val=$('pw').value.trim();
+    var err=$('pwErr'), btn=$('unlockBtn');
+    if(!val){err.textContent='Enter the access key.';err.classList.add('show');return}
+    btn.disabled=true;btn.textContent='CHECKING…';err.classList.remove('show');
+    // No GET route to validate against (search is intentionally public read),
+    // so validate against the write route instead: a wrong key gets 401; a
+    // right key gets 400 (missing id, sent on purpose). Anything else
+    // (500/503/network) is treated as a failure to verify, not success —
+    // otherwise an unconfigured server (missing HS_API_KEY -> 503) would
+    // silently accept any key typed here.
+    fetch(API_SOCIALS,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},{'x-hs-api-key':val}),body:'{}'}).then(function(res){
+      if(res.status===401)throw new Error('That access key isn’t right. Check it and try again.');
+      if(res.status!==400)throw new Error('The database isn’t responding right now (HTTP '+res.status+'). Try again in a moment.');
+      pwStored=val;
+      try{localStorage.setItem(KEY,val)}catch(e){}
+      $('pw').value='';
+      showSearch();
+    }).catch(function(e){
+      err.textContent=(e&&e.message)||'Something went wrong. Try again.';
+      err.classList.add('show');
+    }).then(function(){btn.disabled=false;btn.textContent='UNLOCK'});
+  }
+  $('unlockBtn').addEventListener('click',unlock);
+  $('pw').addEventListener('keydown',function(e){if(e.key==='Enter')unlock()});
+  $('keyBtn').addEventListener('click',function(){showUnlock()});
+
+  function forget(){
+    pwStored=null;
+    try{localStorage.removeItem(KEY)}catch(e){}
+    var err=$('pwErr');
+    err.textContent='The saved access key was rejected. Enter it again.';
+    err.classList.add('show');
+    showUnlock();
+  }
+
+  /* ---------- search (public read — no key needed to browse) ---------- */
+  var debounceT=null, inflight=null, lastKey='', searchGen=0;
+  function scheduleSearch(){clearTimeout(debounceT);debounceT=setTimeout(runSearch,250)}
+  function runSearch(){
+    var term=q.value.trim(), sport=sportSel.value;
+    var st=stateInput.value.trim().toUpperCase().slice(0,2);
+    var gradYear=gradYearSel.value;
+    qClear.classList.toggle('show',!!q.value);
+    sportSel.classList.toggle('filtering',!!sport);
+    stateInput.classList.toggle('filtering',!!st);
+    gradYearSel.classList.toggle('filtering',!!gradYear);
+    var key=term+' '+sport+' '+st+' '+gradYear+' '+fwOn+' '+searchedFilter;
+    if(key===lastKey)return;
+    lastKey=key;
+    if(inflight)inflight.abort();
+    if(term.length<2&&!sport&&!st&&!gradYear&&!fwOn&&!searchedFilter){setState('idle');return}
+    var ctl=new AbortController();inflight=ctl;
+    // A generation counter, not just AbortController: abort() only cancels a
+    // fetch that's still pending — it has no effect once the response has
+    // already arrived, so two rapid filter changes can otherwise resolve
+    // out of order and let the OLDER result overwrite the newer one on
+    // screen. Every render is gated on still being the latest request.
+    var myGen=++searchGen;
+    loadBar.classList.add('on');
+    var url=API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)
+      +(sport?'&sport='+encodeURIComponent(sport):'')
+      +(st?'&state='+encodeURIComponent(st):'')
+      +(gradYear?'&grad_year='+encodeURIComponent(gradYear):'')
+      +(fwOn?'&fw=1':'')
+      +(searchedFilter?'&searched='+searchedFilter:'');
+    fetch(url,{signal:ctl.signal}).then(function(res){
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      return res.json();
+    }).then(function(body){if(myGen===searchGen)render(body.data||[],term,sport)}).catch(function(e){
+      if(e&&e.name==='AbortError')return;
+      if(myGen!==searchGen)return;
+      lastKey='';
+      $('errMsg').textContent=navigator.onLine===false?'You look offline. Reconnect and try again.':'Check your connection and try again.';
+      setState('err');
+    }).then(function(){if(inflight===ctl){inflight=null;loadBar.classList.remove('on')}});
+  }
+  function setState(s){
+    stateIdle.hidden=s!=='idle';stateEmpty.hidden=s!=='empty';stateErr.hidden=s!=='err';
+    if(s!=='list'){list.innerHTML='';resMeta.hidden=true}
+  }
+  function esc(x){return String(x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+  var lastRows=[];
+  function render(rows,term,sport){
+    if(!rows.length){
+      var name=sport?sportLabel(sport):'';
+      var extraBits=[name,stateInput.value.trim()?stateInput.value.trim().toUpperCase():'',gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'']
+        .filter(Boolean).join(', ');
+      $('emptyMsg').textContent=term.length>=2
+        ?('No athletes match “'+term+'”'+(extraBits?' ('+extraBits+')':'')+'.')
+        :('No athletes match '+(extraBits||'those filters')+'.');
+      setState('empty');return;
+    }
+    setState('list');
+    lastRows=rows;
+    var browsing=term.length<2;
+    resLabel.textContent=browsing?'BROWSING A–Z':'RESULTS';
+    resCount.textContent=rows.length+(rows.length===1?' athlete':' athletes');
+    resMeta.hidden=false;
+    list.innerHTML=rows.map(function(a,i){
+      var meta=[sportLabel(a.sport),a.position,a.school,a.state,a.grad_year?'Class of '+a.grad_year:null]
+        .filter(Boolean).map(esc).join(' · ');
+      var extra=[a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.future_watch?'★ Future Watch':null]
+        .filter(Boolean).map(esc).join(' · ');
+      var pill=a.ig_handle?'<span class="apill done">✓ @'+esc(a.ig_handle)+'</span>'
+        :a.snap_handle?'<span class="apill done">✓ snap:'+esc(a.snap_handle)+'</span>'
+        :a.socials_searched_at?'<span class="apill done mut">✓ Searched</span>'
+        :a.committed?'<span class="apill">COMMITTED</span>':'';
+      return '<button type="button" class="acard" data-i="'+i+'"><div class="amain">'
+        +'<div class="aname">'+esc(a.name)+'</div>'
+        +(meta?'<div class="aline">'+meta+'</div>':'')
+        +(extra?'<div class="aloc">'+extra+'</div>':'')
+        +'</div>'+pill+'</button>';
+    }).join('');
+  }
+  function rerenderList(){if(lastRows.length&&list.innerHTML)render(lastRows,q.value.trim(),sportSel.value)}
+
+  /* ---------- detail sheet ---------- */
+  var currentAthlete=null, pendingTry=null, detailName='';
+  function socialsFromRow(a){return {instagram:a.ig_handle||'',snapchat:a.snap_handle||''}}
+  function openLink(href){var el=document.createElement('a');el.href=href;el.target='_blank';el.rel='noopener noreferrer';document.body.appendChild(el);el.click();el.remove()}
+
+  function renderSheet(){
+    var a=currentAthlete;
+    var saved=[];
+    if(a.ig_handle)saved.push('<span class="spill">IG @'+esc(a.ig_handle)+'</span>');
+    if(a.snap_handle)saved.push('<span class="spill">SNAP '+esc(a.snap_handle)+'</span>');
+    if(!saved.length&&a.socials_searched_at)saved.push('<span class="spill mut">✓ SEARCHED</span>');
+    $('dSaved').innerHTML=saved.join('');
+    $('dSaved').hidden=!saved.length;
+    var opts=buildSuggestions({name:a.name,instagram:a.ig_handle,snapchat:a.snap_handle});
+    $('dOptions').innerHTML=opts.length?opts.map(function(o){
+      return '<div class="srow"><span class="shandle">'+esc(o.handle)+'</span><span class="sbtns">'
+        +'<button type="button" class="pbtn snap" data-p="snapchat" data-h="'+esc(o.handle)+'">SNAP</button>'
+        +'<button type="button" class="pbtn" data-p="instagram" data-h="'+esc(o.handle)+'">IG</button>'
+        +'</span></div>';
+    }).join(''):'<p class="dEmpty">No handle suggestions for this name.</p>';
+    ['screenshot','cover','action'].forEach(function(slot){
+      var box=document.querySelector('#photoGrid [data-slot="'+slot+'"] .pbox');
+      var url=(a.photos||{})[slot];
+      box.classList.toggle('has',!!url);
+      box.innerHTML=(url?'<img src="'+esc(url)+'" alt=""><span class="tick">✓</span>':'<span class="ph">+</span>')
+        +'<input id="pf-'+slot+'" type="file" accept="image/*">';
+    });
+  }
+
+  function renderFields(){
+    var a=currentAthlete;
+    var f=[
+      ['Sport',sportLabel(a.sport)],['Position',a.position],['Grad year',a.grad_year],
+      ['Height',a.height],['School',a.school],['State',a.state],['Club team',a.club_team],
+      ['National rank',a.national_rank?'#'+a.national_rank:null],
+      ['Regional rank',a.regional_rank?'#'+a.regional_rank:null],
+      ['Committed',a.committed?(a.commit_school||'Yes'):null]
+    ].filter(function(x){return x[1]});
+    $('dFields').innerHTML=f.length
+      ?f.map(function(x){return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv">'+esc(x[1])+'</span></div>'}).join('')
+      :'<p class="dEmpty">Nothing on file yet — tap EDIT to add some.</p>';
+  }
+
+  function openDetail(a){
+    if(!a)return;
+    currentAthlete=a;pendingTry=null;
+    $('dConfirm').hidden=true;
+    $('dEditForm').hidden=true;$('dFields').hidden=false;$('editSaved').classList.remove('show');
+    detailName=a.name;
+    $('dName').textContent=a.name;
+    renderFields();
+    renderSheet();
+    $('detailScrim').hidden=false;
+  }
+  list.addEventListener('click',function(e){
+    var b=e.target.closest('.acard');
+    if(b)openDetail(lastRows[+b.getAttribute('data-i')]);
+  });
+  $('dClose').addEventListener('click',function(){$('detailScrim').hidden=true});
+  $('detailScrim').addEventListener('click',function(e){if(e.target===this)this.hidden=true});
+  $('dCopy').addEventListener('click',function(){
+    var btn=this;
+    function done(ok){btn.textContent=ok?'COPIED ✓':'COPY FAILED';setTimeout(function(){btn.textContent='COPY NAME'},1400)}
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(detailName).then(function(){done(true)},function(){done(false)});
+    else done(false);
+  });
+
+  /* ---------- profile edit (club, height, position, school, state, grad year) ---------- */
+  $('editToggle').addEventListener('click',function(){
+    if(!pwStored){showUnlock();return}
+    var a=currentAthlete;
+    $('ePosition').value=a.position||'';
+    $('eGradYear').value=a.grad_year?String(a.grad_year):'';
+    $('eHeight').value=a.height||'';
+    $('eState').value=a.state||'';
+    $('eSchool').value=a.school||'';
+    $('eClub').value=a.club_team||'';
+    $('editErr').classList.remove('show');
+    $('editSaved').classList.remove('show');
+    $('dFields').hidden=true;
+    $('dEditForm').hidden=false;
+  });
+  $('eCancel').addEventListener('click',function(){
+    $('dEditForm').hidden=true;$('dFields').hidden=false;
+  });
+  $('eSave').addEventListener('click',function(){
+    var a=currentAthlete,btn=this,err=$('editErr');
+    err.classList.remove('show');
+    var body={
+      id:a.id,
+      position:$('ePosition').value.trim(),
+      grad_year:$('eGradYear').value,
+      height:$('eHeight').value.trim(),
+      state:$('eState').value.trim(),
+      school:$('eSchool').value.trim(),
+      club:$('eClub').value.trim()
+    };
+    btn.disabled=true;btn.textContent='SAVING…';
+    postJSON(API_EDIT,body).then(function(r){
+      if(r&&r.athlete){
+        Object.assign(a,{
+          position:r.athlete.position,grad_year:r.athlete.grad_year,height:r.athlete.height,
+          state:r.athlete.state,school:r.athlete.school,club_team:r.athlete.club_team
+        });
+      }
+      renderFields();rerenderList();
+      $('dEditForm').hidden=true;$('dFields').hidden=false;
+      $('editSaved').classList.add('show');
+    }).catch(function(e){
+      err.textContent=(e&&e.message)||'Save failed — try again.';
+      err.classList.add('show');
+    }).then(function(){btn.disabled=false;btn.textContent='SAVE CHANGES'});
+  });
+
+  /* ---------- social search + write-back ---------- */
+  function postJSON(url,body){
+    return fetch(url,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},headers()),body:JSON.stringify(body)})
+      .then(function(res){
+        if(res.status===401){forget();throw new Error('unauthorized')}
+        if(!res.ok)return res.json().catch(function(){return {}}).then(function(b){throw new Error(b.error||('HTTP '+res.status))});
+        return res.json();
+      });
+  }
+  function stampSearched(a){
+    if(a._stamped||a.socials_searched_at)return;
+    a._stamped=true;
+    postJSON(API_SOCIALS,{id:a.id}).then(function(r){
+      if(r&&r.athlete){a.socials_searched_at=r.athlete.socials_searched_at;renderSheet();rerenderList()}
+    }).catch(function(){a._stamped=false});
+  }
+  $('dOptions').addEventListener('click',function(e){
+    var b=e.target.closest('.pbtn');
+    if(!b||!pwStored){if(b&&!pwStored){showUnlock()}return}
+    var h=b.getAttribute('data-h'),p=b.getAttribute('data-p');
+    pendingTry={handle:h,platform:p};
+    b.classList.add('tried');
+    if(p==='snapchat'){
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(h).catch(function(){});
+      openLink('snapchat://');
+    }else{
+      openLink('https://www.instagram.com/'+encodeURIComponent(h)+'/');
+    }
+    stampSearched(currentAthlete);
+  });
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden&&pendingTry&&currentAthlete&&!$('detailScrim').hidden){
+      $('dcHandle').textContent='@'+pendingTry.handle;
+      $('dcPlatform').textContent=pendingTry.platform==='instagram'?'Instagram':'Snapchat';
+      $('dConfirm').hidden=false;
+    }
+  });
+  $('dcYes').addEventListener('click',function(){
+    if(!pendingTry||!currentAthlete)return;
+    var a=currentAthlete,t=pendingTry,btn=this;
+    var extra={id:a.id};extra[t.platform==='instagram'?'instagram':'snapchat']=t.handle;
+    btn.disabled=true;btn.textContent='SAVING…';
+    postJSON(API_SOCIALS,extra).then(function(r){
+      if(r&&r.athlete){a.ig_handle=r.athlete.ig_handle;a.snap_handle=r.athlete.snap_handle;a.socials_searched_at=r.athlete.socials_searched_at}
+      renderSheet();rerenderList();
+      $('dConfirm').hidden=true;
+    }).catch(function(){
+      btn.textContent='SAVE FAILED — TRY AGAIN';
+    }).then(function(){
+      btn.disabled=false;
+      setTimeout(function(){btn.textContent='YES — SAVE IT'},1600);
+      pendingTry=null;
+    });
+  });
+  $('dcNo').addEventListener('click',function(){$('dConfirm').hidden=true;pendingTry=null});
+
+  /* ---------- photo upload ---------- */
+  async function fileToDataUrl(file){
+    var bmp=await createImageBitmap(file);
+    var max=1600,scale=Math.min(1,max/Math.max(bmp.width,bmp.height));
+    var c=document.createElement('canvas');
+    c.width=Math.round(bmp.width*scale);c.height=Math.round(bmp.height*scale);
+    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',.88);
+  }
+  document.getElementById('photoGrid').addEventListener('change',function(e){
+    var input=e.target.closest('input[type=file]');
+    if(!input||!input.files||!input.files[0])return;
+    if(!pwStored){showUnlock();return}
+    var slot=input.closest('.pslot').getAttribute('data-slot');
+    var box=input.closest('.pbox');
+    var a=currentAthlete,file=input.files[0];
+    box.classList.add('uploading');
+    fileToDataUrl(file).then(function(dataUrl){
+      return postJSON(API_PHOTO,{id:a.id,dataBase64:dataUrl,contentType:'image/jpeg',slot:slot});
+    }).then(function(r){
+      a.photos=a.photos||{};a.photos[slot]=r.url;
+      renderSheet();
+    }).catch(function(err){
+      alert((err&&err.message)||'Upload failed — try again.');
+    }).then(function(){box.classList.remove('uploading')});
+  });
+
+  q.addEventListener('input',scheduleSearch);
+  q.addEventListener('keydown',function(e){if(e.key==='Enter'){clearTimeout(debounceT);runSearch();q.blur()}});
+  qClear.addEventListener('click',function(){q.value='';q.focus();runSearch()});
+  sportSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  stateInput.addEventListener('input',function(){this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,2);scheduleSearch()});
+  gradYearSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  fwToggle.addEventListener('click',function(){
+    fwOn=!fwOn;
+    this.classList.toggle('on',fwOn);
+    this.setAttribute('aria-pressed',String(fwOn));
+    clearTimeout(debounceT);runSearch();
+  });
+  searchedRow.addEventListener('click',function(e){
+    var b=e.target.closest('.segBtn');
+    if(!b)return;
+    searchedFilter=b.getAttribute('data-v');
+    Array.prototype.forEach.call(searchedRow.querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
+    clearTimeout(debounceT);runSearch();
+  });
+  $('retryBtn').addEventListener('click',function(){lastKey='';runSearch()});
+
+  if(pwStored)showSearch();else showUnlock();
+
+  if('serviceWorker' in navigator)addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});
+})();
+</script>
+</body></html>
