@@ -25,6 +25,19 @@
   to = "https://main-stage-media.vercel.app/api/admin/athletes/socials"
   status = 200
 
+# Same-origin proxies to the PW HS dashboard API (a separate backend and
+# Supabase project from MainStage Media above) — the browser sends the
+# x-hs-api-key header and Netlify forwards server-side.
+[[redirects]]
+  from = "/api/hs-athletes"
+  to = "https://pw-hs-dashboard.vercel.app/api/hs-athletes"
+  status = 200
+
+[[redirects]]
+  from = "/api/hs-athlete-socials"
+  to = "https://pw-hs-dashboard.vercel.app/api/hs-athlete-socials"
+  status = 200
+
 [[redirects]]
   from = "/snaprecruit"
   to = "/snaprecruit.html"
@@ -48,6 +61,11 @@
 [[redirects]]
   from = "/athletes"
   to = "/athletes.html"
+  status = 200
+
+[[redirects]]
+  from = "/pw-athletes"
+  to = "/pw-athletes.html"
   status = 200
 
 [[headers]]

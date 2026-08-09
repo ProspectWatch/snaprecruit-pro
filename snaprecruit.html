@@ -205,7 +205,14 @@
 
   <section class="dbPanel">
     <div class="dbT">Load from Athlete Database</div>
-    <div class="dbS">Pick a sport or search a name — athletes load straight from the database, no screenshots needed.</div>
+    <div class="dbS">Pick a database and a sport, or search a name — athletes load straight in, no screenshots needed.</div>
+    <div class="dbRow">
+      <select id="dbSource" aria-label="Database">
+        <option value="ms">MainStage database</option>
+        <option value="hs">PW HS database</option>
+      </select>
+      <span class="caret">▾</span>
+    </div>
     <div class="dbRow">
       <select id="dbSport" aria-label="Sport"><option value="">All sports</option></select>
       <span class="caret">▾</span>
@@ -341,7 +348,7 @@ async function save(){
   const c=counts();
   const db=await openDB(),tx=db.transaction(STORE,'readwrite');
   tx.objectStore(STORE).put({
-    items:state.items.map(x=>({ig:x.ig,name:x.name,snap:x.snap,read:!!x.read,outcome:x.outcome||null,searched:x.searched||[],igSearched:x.igSearched||[],hasImg:!!x.img,athleteId:x.athleteId||null,lastSnap:x.lastSnap||''})),
+    items:state.items.map(x=>({ig:x.ig,name:x.name,snap:x.snap,read:!!x.read,outcome:x.outcome||null,searched:x.searched||[],igSearched:x.igSearched||[],hasImg:!!x.img,athleteId:x.athleteId||null,hsId:x.hsId||null,lastSnap:x.lastSnap||''})),
     index:state.index,added:c.added,notFound:c.notFound,skipped:c.skipped,
     legacyBase:state.legacyBase,startedAt:state.startedAt||null,savedAt:Date.now()
   },'current');
@@ -363,7 +370,7 @@ async function hydrate(saved){
     outcome:x.outcome||null,
     searched:Array.isArray(x.searched)?x.searched:[],
     igSearched:Array.isArray(x.igSearched)?x.igSearched:[],
-    athleteId:x.athleteId||null,lastSnap:x.lastSnap||''
+    athleteId:x.athleteId||null,hsId:x.hsId||null,lastSnap:x.lastSnap||''
   }));
   // Reattach each scanned screenshot from the durable image store.
   for(let i=0;i<state.items.length;i++){try{state.items[i].img=await getImage(i)}catch{}}
@@ -490,51 +497,80 @@ $('#scanBtn').onclick=()=>{
   show('scanning');runScan();
 };
 
-/* ---------- load a session straight from the athlete database ---------- */
-const ADMIN_KEY='ms-admin-password';
+/* ---------- load a session straight from an athlete database ----------
+   Two independent sources share the panel: the MainStage database (admin
+   password saved by Athlete Search) and the PW HS database (access key saved
+   by PW HS Athletes). Each loaded item carries athleteId (MainStage) or hsId
+   (PW HS) so outcomes write back to the right place. */
+const ADMIN_KEY='ms-admin-password', HS_KEY='pw-hs-api-key';
 const adminPw=()=>{try{return localStorage.getItem(ADMIN_KEY)||''}catch{return ''}};
+const hsKey=()=>{try{return localStorage.getItem(HS_KEY)||''}catch{return ''}};
 const coreName=s=>String(s||'').replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();
 const socialOf=(a,p)=>{const s=(a.socials||[]).find(x=>x.platform===p);return (s&&s.handle)||''};
-let dbSportsLoaded=false;
+const HS_SPORTS=[
+  ['volleyball','Volleyball'],['softball','Softball'],['basketball','Basketball'],
+  ['girls-soccer','Girls Soccer'],['girls-lacrosse','Girls Lacrosse'],['lacrosse','Lacrosse'],
+  ['field-hockey','Field Hockey'],['water-polo','Water Polo'],['boys-lacrosse','Boys Lacrosse']
+];
+let msSports=null;
+const dbSource=()=>$('#dbSource').value;
+function fillDbSports(list){
+  const sel=$('#dbSport');
+  while(sel.options.length>1)sel.remove(1);
+  list.forEach(([id,name])=>{const o=document.createElement('option');o.value=id;o.textContent=name;sel.appendChild(o)});
+}
 async function loadDbSports(){
-  if(dbSportsLoaded||!adminPw())return;
+  if(dbSource()==='hs'){fillDbSports(HS_SPORTS);return}
+  if(msSports){fillDbSports(msSports);return}
+  if(!adminPw())return;
   try{
     const r=await fetch('/api/sports',{headers:{'x-admin-password':adminPw()},cache:'no-store'});
     if(!r.ok)return;
     const b=await r.json();
     if(!b.data||!b.data.length)return;
-    const sel=$('#dbSport');
-    while(sel.options.length>1)sel.remove(1);
-    b.data.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;sel.appendChild(o)});
-    dbSportsLoaded=true;
+    msSports=b.data.map(s=>[s.id,s.name]);
+    if(dbSource()==='ms')fillDbSports(msSports);
   }catch{}
 }
 $('#dbSport').addEventListener('focus',()=>loadDbSports());
+$('#dbSource').addEventListener('change',()=>{
+  $('#dbSport').value='';
+  fillDbSports(dbSource()==='hs'?HS_SPORTS:(msSports||[]));
+  if(dbSource()==='ms')loadDbSports();
+});
 loadDbSports();
 $('#dbLoadBtn').onclick=async()=>{
   const note=$('#dbNote');
   const showNote=t=>{note.textContent=t;note.hidden=false};
   note.hidden=true;
-  if(!adminPw())return showNote('Unlock Athlete Search once first (it saves the admin password on this device), then come back here.');
+  const hs=dbSource()==='hs';
+  if(hs&&!hsKey())return showNote('Unlock PW HS Athletes once first (it saves the access key on this device), then come back here.');
+  if(!hs&&!adminPw())return showNote('Unlock Athlete Search once first (it saves the admin password on this device), then come back here.');
   const term=$('#dbQ').value.trim(),sport=$('#dbSport').value;
   if(term.length<2&&!sport)return showNote('Pick a sport or type at least two letters of a name.');
   if(!navigator.onLine)return showNote('You look offline — reconnect to load athletes.');
   const btn=$('#dbLoadBtn');btn.disabled=true;btn.textContent='LOADING…';
   try{
-    const url='/api/athletes?q='+encodeURIComponent(term.length<2?'':term)+(sport?'&sport='+encodeURIComponent(sport):'');
-    const r=await fetch(url,{headers:{'x-admin-password':adminPw()}});
-    if(r.status===401)return showNote('The saved admin password was rejected — re-enter it in Athlete Search.');
+    const qs='?q='+encodeURIComponent(term.length<2?'':term)+(sport?'&sport='+encodeURIComponent(sport):'');
+    const r=hs
+      ?await fetch('/api/hs-athletes'+qs,{headers:{'x-hs-api-key':hsKey()}})
+      :await fetch('/api/athletes'+qs,{headers:{'x-admin-password':adminPw()}});
+    if(r.status===401)return showNote(hs
+      ?'The saved access key was rejected — re-enter it in PW HS Athletes.'
+      :'The saved admin password was rejected — re-enter it in Athlete Search.');
     if(!r.ok)return showNote('Database error (HTTP '+r.status+') — try again in a moment.');
     const b=await r.json();
     const rows=b.data||[];
     if(!rows.length)return showNote('No athletes matched — adjust the sport or name.');
     const trimmed=rows.length>MAX_BATCH;
     await clearSaved();
-    state.items=rows.slice(0,MAX_BATCH).map(a=>({
-      file:null,img:null,athleteId:a.id,
-      ig:socialOf(a,'instagram'),name:coreName(a.display_name),snap:socialOf(a,'snapchat'),
-      read:true,outcome:null,searched:[],igSearched:[]
-    }));
+    state.items=rows.slice(0,MAX_BATCH).map(a=>hs
+      ?{file:null,img:null,hsId:a.id,
+        ig:a.ig_handle||'',name:coreName(a.name),snap:a.snap_handle||'',
+        read:true,outcome:null,searched:[],igSearched:[]}
+      :{file:null,img:null,athleteId:a.id,
+        ig:socialOf(a,'instagram'),name:coreName(a.display_name),snap:socialOf(a,'snapchat'),
+        read:true,outcome:null,searched:[],igSearched:[]});
     state.index=0;state.legacyBase={added:0,notFound:0,skipped:0};state.startedAt=Date.now();state.trimmed=trimmed;completeTotals=null;
     await save();
     show('review');
@@ -771,21 +807,31 @@ $('#shot').onerror=()=>setShotMissing(true);
 $('#shot').onclick=()=>{if($('#viewer').classList.contains('noimg'))return;$('#fsImg').src=$('#shot').src;$('#fsOverlay').hidden=false};
 $('#fsOverlay').onclick=()=>{$('#fsOverlay').hidden=true};
 /* ---------- database write-back ----------
-   For sessions loaded from the athlete database (items carry athleteId),
-   ADDED enriches the athlete: the last Snapchat handle actually searched is
-   saved as their Snapchat, and any known Instagram handle is saved too.
-   NOT FOUND just stamps the athlete as searched. Fire-and-forget. */
+   For sessions loaded from an athlete database (items carry athleteId for
+   MainStage or hsId for PW HS), ADDED enriches the athlete: the last Snapchat
+   handle actually searched is saved as their Snapchat, and any known
+   Instagram handle is saved too. NOT FOUND just stamps the athlete as
+   searched. Fire-and-forget, to whichever database the item came from. */
 function reportOutcome(x,type){
-  if(!x.athleteId||!adminPw()||type==='skip')return;
-  const body={athlete_id:x.athleteId};
+  if(type==='skip')return;
+  const id=x.athleteId||x.hsId;
+  if(!id)return;
+  const hs=!!x.hsId;
+  const auth=hs?hsKey():adminPw();
+  if(!auth)return;
+  const body={athlete_id:id};
   if(type==='added'){
     const snapHandle=x.lastSnap||x.snap||(x.searched&&x.searched[x.searched.length-1])||'';
     if(snapHandle)body.snapchat=snapHandle;
-    if(x.ig)body.instagram=x.ig;
+    // The PW HS route rejects the whole write if any handle is invalid — don't
+    // let a malformed imported ig_handle block saving the Snapchat win.
+    if(x.ig&&(!hs||/^@?[a-z0-9._-]{2,30}$/i.test(x.ig)))body.instagram=x.ig;
   }
-  fetch('/api/athlete-socials',{
+  fetch(hs?'/api/hs-athlete-socials':'/api/athlete-socials',{
     method:'POST',
-    headers:{'Content-Type':'application/json','x-admin-password':adminPw()},
+    headers:hs
+      ?{'Content-Type':'application/json','x-hs-api-key':auth}
+      :{'Content-Type':'application/json','x-admin-password':auth},
     body:JSON.stringify(body)
   }).catch(()=>{});
 }

@@ -1,10 +1,10 @@
 // MainStage Athletes — minimal shell service worker.
 // Network-first for everything it touches; never caches /api/* or non-GET.
 // IndexedDB remains the only source of truth for session data.
-const CACHE = 'mainstage-shell-v4';
+const CACHE = 'mainstage-shell-v5';
 const SHELL = [
   '/', '/index.html', '/snaprecruit.html', '/submissions.html', '/media.html',
-  '/athletes.html',
+  '/athletes.html', '/pw-athletes.html',
   '/js/snaprecruit-core.mjs',
   '/css/tokens.css', '/css/fonts.css',
   '/fonts/archivo-800.woff2', '/fonts/inter-400.woff2', '/fonts/inter-500.woff2',
@@ -39,6 +39,7 @@ self.addEventListener('fetch', e => {
         || url.pathname.startsWith('/snaprecruit')
         || url.pathname.startsWith('/submissions')
         || url.pathname.startsWith('/media')
+        || url.pathname.startsWith('/pw-athletes')
         || url.pathname.startsWith('/athletes');
       if (res.ok && cacheable) {
         const copy = res.clone();
@@ -53,6 +54,7 @@ self.addEventListener('fetch', e => {
         const shell = p.startsWith('/snaprecruit') ? await caches.match('/snaprecruit.html')
           : p.startsWith('/submissions') ? await caches.match('/submissions.html')
           : p.startsWith('/media') ? await caches.match('/media.html')
+          : p.startsWith('/pw-athletes') ? await caches.match('/pw-athletes.html')
           : p.startsWith('/athletes') ? await caches.match('/athletes.html')
           : await caches.match('/index.html');
         if (shell) return shell;
