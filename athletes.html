@@ -676,14 +676,6 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 
   if(pwStored)showSearch();else showUnlock();
 
-  // iOS keeps an installed PWA suspended rather than killing it, so
-  // reopening from the home screen can restore whatever scroll/zoom state
-  // it was left in — including a stray pinch-zoom or mid-scroll offset,
-  // which briefly shows the page shifted and cut off at the edges. Snap
-  // back to a clean top-left view whenever the app becomes visible again.
-  addEventListener('pageshow',function(){window.scrollTo(0,0)});
-  document.addEventListener('visibilitychange',function(){if(!document.hidden)window.scrollTo(0,0)});
-
   if('serviceWorker' in navigator)addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});
 })();
 </script>
