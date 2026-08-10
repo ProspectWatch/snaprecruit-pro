@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/tokens.css">
-<title>Athlete Search — MainStage Athletes</title>
+<title>NCAA Athletes — MainStage Athletes</title>
 <style>
 .app{max-width:560px;margin:auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 10px) 22px calc(env(safe-area-inset-bottom) + 22px)}
 .head{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px;padding:6px 0 12px}
@@ -65,6 +65,11 @@
 .drow .dv{font-size:14px;font-weight:600;text-align:right;overflow-wrap:anywhere}
 .dEmpty{margin:0;font-size:13px;color:var(--ms-muted)}
 #dFields{margin-bottom:6px}
+.dPhoto{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;border:1px solid var(--ms-border);margin-bottom:12px;background:var(--ms-well)}
+.dBio{font-size:13px;line-height:1.6;color:var(--ms-text-2);margin:0 0 14px}
+.drow .dv.ig{font-family:var(--f-mono)}
+.dSectionLabel{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted);margin:16px 0 6px}
+.dSectionLabel:first-child{margin-top:0}
 /* detail sheet: scroll + search rows */
 #detailScrim .sheet{max-height:84vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .dListed{margin:-4px 0 10px;font-size:11px;color:var(--ms-muted)}
@@ -105,8 +110,8 @@
   <header class="head">
     <a class="chipbtn" href="/" aria-label="MainStage home">‹</a>
     <div>
-      <div class="crumb"><span class="dim">MAINSTAGE</span> <span class="dim">·</span> <span class="lit">ATHLETE SEARCH</span></div>
-      <div class="screenTitle">Athlete Search</div>
+      <div class="crumb"><span class="dim">MAINSTAGE</span> <span class="dim">·</span> <span class="lit">NCAA ATHLETES</span></div>
+      <div class="screenTitle">NCAA Athletes</div>
     </div>
     <span class="headRight"><button class="chipbtn" id="keyBtn" type="button" aria-label="Change access key" hidden><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="6" cy="8.5" r="3.4" stroke="currentColor" stroke-width="1.5"/><path d="M9.4 8.5H15M13 8.5v2.6M15 8.5v1.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></span>
   </header>
@@ -116,7 +121,7 @@
     <div class="unlockCard">
       <span class="chip"><svg width="20" height="20" viewBox="0 0 17 17" fill="none"><circle cx="6" cy="8.5" r="3.4" stroke="currentColor" stroke-width="1.5"/><path d="M9.4 8.5H15M13 8.5v2.6M15 8.5v1.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
       <h2>Enter admin password</h2>
-      <p>Athlete Search uses the MainStage athlete database. Enter the admin password once — it's saved on this device.</p>
+      <p>NCAA Athletes uses the MainStage athlete database. Enter the admin password once — it's saved on this device.</p>
       <div class="field">
         <label for="pw">Admin password</label>
         <input id="pw" type="password" autocomplete="current-password" enterkeyhint="go">
@@ -172,6 +177,7 @@
 <div class="scrim" id="detailScrim" hidden>
   <div class="sheet gold">
     <h3 id="dName"></h3>
+    <img class="dPhoto" id="dPhoto" alt="" hidden>
     <p class="dListed" id="dListed" hidden></p>
     <div class="dSaved" id="dSaved" hidden></div>
     <div class="dConfirm" id="dConfirm" hidden>
@@ -181,6 +187,7 @@
         <button class="btn btn-secondary" id="dcNo" type="button">NO</button>
       </div>
     </div>
+    <p class="dBio" id="dBio" hidden></p>
     <div id="dFields"></div>
     <div class="dSearchHead"><span class="eyebrow gold">SEARCH HANDLES</span><span class="searchMeta">SNAP copies + opens · IG opens profile</span></div>
     <div id="dOptions"></div>
@@ -374,10 +381,16 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       var pref=a.preferred_name&&a.preferred_name!==a.display_name
         ?' <span class="pref">“'+esc(a.preferred_name)+'”</span>':'';
       var ig=socialHandle(a,'instagram'), snap=socialHandle(a,'snapchat');
-      var pill=ig?'<span class="apill done">✓ @'+esc(ig)+'</span>'
-        :snap?'<span class="apill done">✓ snap:'+esc(snap)+'</span>'
-        :a.socials_searched_at?'<span class="apill done mut">✓ Searched</span>'
-        :(a.status?'<span class="apill">'+esc(a.status)+'</span>':'');
+      var pill;
+      if(ig)pill='<span class="apill done">✓ @'+esc(ig)+'</span>';
+      else if(snap)pill='<span class="apill done">✓ snap:'+esc(snap)+'</span>';
+      else{
+        var searchedBits=[];
+        if(a.ig_searched_at)searchedBits.push('IG');
+        if(a.snap_searched_at)searchedBits.push('SC');
+        pill=searchedBits.length?'<span class="apill done mut">✓ '+searchedBits.join('+')+' searched</span>'
+          :(a.status?'<span class="apill">'+esc(a.status)+'</span>':'');
+      }
       return '<button type="button" class="acard" data-i="'+i+'"><div class="amain">'
         +'<div class="aname">'+esc(a.display_name)+pref+'</div>'
         +(meta?'<div class="aline">'+meta+'</div>':'')
@@ -399,14 +412,22 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     return (s&&s.handle)||'';
   }
   function openLink(href){var a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove()}
+  function cmToFtIn(cm){
+    if(!cm)return null;
+    var totalIn=cm/2.54, ft=Math.floor(totalIn/12), inch=Math.round(totalIn-ft*12);
+    if(inch===12){ft++;inch=0}
+    return ft+"'"+inch+'"';
+  }
+  function kgToLbs(kg){return kg?Math.round(kg*2.20462)+' lbs':null}
 
   function renderSheet(){
     var a=currentAthlete;
     var ig=socialHandle(a,'instagram'), snap=socialHandle(a,'snapchat');
     var saved=[];
     if(ig)saved.push('<span class="spill">IG @'+esc(ig)+'</span>');
+    else if(a.ig_searched_at)saved.push('<span class="spill mut">✓ IG SEARCHED</span>');
     if(snap)saved.push('<span class="spill">SNAP '+esc(snap)+'</span>');
-    if(!saved.length&&a.socials_searched_at)saved.push('<span class="spill mut">✓ SEARCHED</span>');
+    else if(a.snap_searched_at)saved.push('<span class="spill mut">✓ SC SEARCHED</span>');
     $('dSaved').innerHTML=saved.join('');
     $('dSaved').hidden=!saved.length;
     var opts=buildSuggestions({name:coreName(a),instagram:ig,snapchat:snap});
@@ -418,28 +439,70 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     }).join(''):'<p class="dEmpty">No handle suggestions for this name.</p>';
   }
 
-  function openDetail(a){
-    if(!a)return;
-    currentAthlete=a;
-    pendingTry=null;
-    $('dConfirm').hidden=true;
+  // Rebuilds everything derived from the athlete record (name, photo, bio,
+  // bio-fields table) without touching pendingTry/dConfirm — those track an
+  // in-flight handle-confirmation and must survive a mid-flow refresh (e.g.
+  // when a search stamp round-trips and calls this before the user has had
+  // a chance to switch back and see the confirm banner).
+  function renderDetailFields(a){
     detailName=coreName(a);
     $('dName').innerHTML=esc(detailName)+(a.preferred_name&&a.preferred_name!==a.display_name
       ?' <span class="pref">“'+esc(a.preferred_name)+'”</span>':'');
     $('dListed').textContent=detailName!==a.display_name?'Listed as: '+a.display_name:'';
     $('dListed').hidden=detailName===a.display_name;
+
+    var photo=$('dPhoto');
+    if(a.profile_image_url){photo.src=a.profile_image_url;photo.hidden=false}
+    else{photo.hidden=true;photo.removeAttribute('src')}
+
+    $('dBio').textContent=a.bio||'';
+    $('dBio').hidden=!a.bio;
+
+    var as=(a.athlete_sports||[])[0]||{};
+    var ig=socialHandle(a,'instagram');
+    var commit=[a.commitment_status,a.commitment_school&&a.commitment_school.name].filter(Boolean).join(' — ');
+    var secondary=(a.secondary_positions||[]).filter(Boolean).join(', ');
     var f=[
       ['Sport',a.sport&&a.sport.name],
       ['Position',a.position],
+      ['Secondary positions',secondary],
       ['Team',a.current_team],
       ['School',a.school&&a.school.name],
       ['Grad year',a.grad_year],
       ['Location',[a.city,a.state_province,a.country].filter(Boolean).join(', ')],
-      ['Status',a.status]
+      ['Hometown',a.hometown],
+      ['Status',a.status],
+      ['Instagram',ig?'@'+ig:null],
+      ['Gender',a.gender],
+      ['Height',cmToFtIn(a.height_cm)],
+      ['Weight',kgToLbs(a.weight_kg)],
+      ['Handedness',a.handedness],
+      ['Citizenship',a.citizenship],
+      ['Conference',as.conference],
+      ['Division',as.division],
+      ['League',as.league],
+      ['Recruiting status',a.recruiting_status],
+      ['NCAA eligibility',a.ncaa_eligibility_year],
+      ['Commitment',commit],
+      ['Transfer portal',a.transfer_portal_status],
+      ['GPA',a.gpa],
+      ['SAT',a.sat_score],
+      ['ACT',a.act_score],
+      ['Intended major',a.intended_major],
+      ['Academic honors',a.academic_honors],
+      ['Graduation status',a.graduation_status]
     ].filter(function(x){return x[1]});
     $('dFields').innerHTML=f.length
-      ?f.map(function(x){return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv">'+esc(x[1])+'</span></div>'}).join('')
+      ?f.map(function(x){return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv'+(x[0]==='Instagram'?' ig':'')+'">'+esc(x[1])+'</span></div>'}).join('')
       :'';
+  }
+
+  function openDetail(a){
+    if(!a)return;
+    currentAthlete=a;
+    pendingTry=null;
+    $('dConfirm').hidden=true;
+    renderDetailFields(a);
     renderSheet();
     $('detailScrim').hidden=false;
   }
@@ -468,19 +531,32 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       return res.json();
     });
   }
-  function applySaved(a,platform,handle){
-    a.socials=(a.socials||[]).filter(function(x){return x.platform!==platform});
-    if(handle)a.socials.push({platform:platform,handle:handle});
+  function applySaved(a,platform,handle,searchedPlatform){
+    if(platform){
+      a.socials=(a.socials||[]).filter(function(x){return x.platform!==platform});
+      if(handle)a.socials.push({platform:platform,handle:handle});
+    }
+    var sp=searchedPlatform||platform;
     a.socials_searched_at=a.socials_searched_at||new Date().toISOString();
-    if(currentAthlete===a)renderSheet();
+    if(sp==='instagram')a.ig_searched_at=a.ig_searched_at||new Date().toISOString();
+    if(sp==='snapchat')a.snap_searched_at=a.snap_searched_at||new Date().toISOString();
+    // Refresh the bio-fields "Instagram" row too (a confirmed handle should
+    // show up there), but via renderDetailFields()+renderSheet() rather than
+    // openDetail() — openDetail() also clears pendingTry/dConfirm, which
+    // would wipe an in-flight handle-confirmation banner mid-flow.
+    if(currentAthlete===a){renderDetailFields(a);renderSheet()}
     rerenderList();
   }
-  // First tap on any handle stamps the athlete as searched, so the check-off
-  // survives even if the user never confirms a winner.
-  function stampSearched(a){
-    if(a._stamped||a.socials_searched_at)return;
-    a._stamped=true;
-    postSocials(a,{}).then(function(){applySaved(a,null,null)}).catch(function(){a._stamped=false});
+  // First tap on a platform's handle stamps that platform as searched, so the
+  // check-off survives even if the user never confirms a winner — tracked
+  // per platform (ig_searched_at/snap_searched_at) so "searched Snapchat"
+  // and "searched Instagram" are shown independently.
+  function stampSearched(a,platform){
+    var flagKey=platform==='instagram'?'_stampedIg':'_stampedSnap';
+    var atKey=platform==='instagram'?'ig_searched_at':'snap_searched_at';
+    if(a[flagKey]||a[atKey])return;
+    a[flagKey]=true;
+    postSocials(a,{searched_platform:platform}).then(function(){applySaved(a,null,null,platform)}).catch(function(){a[flagKey]=false});
   }
   $('dOptions').addEventListener('click',function(e){
     var b=e.target.closest('.pbtn');
@@ -496,7 +572,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     }else{
       openLink('https://www.instagram.com/'+encodeURIComponent(h)+'/');
     }
-    stampSearched(currentAthlete);
+    stampSearched(currentAthlete,p);
   });
   document.addEventListener('visibilitychange',function(){
     if(!document.hidden&&pendingTry&&currentAthlete&&!$('detailScrim').hidden){
