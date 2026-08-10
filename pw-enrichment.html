@@ -89,6 +89,8 @@
 .drow:last-child{border-bottom:0}
 .drow .dl{flex:0 0 auto;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted)}
 .drow .dv{font-size:14px;font-weight:600;text-align:right;overflow-wrap:anywhere}
+.drow .dv.ig{font-family:var(--f-mono)}
+.drow .dv.ig a{color:var(--ms-gold-bright);text-decoration:underline}
 #dFields{margin-bottom:14px}
 .dSaved{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
 .spill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--ms-surface-2);border:1px solid var(--ms-gold);color:var(--ms-gold-bright);font-size:10px;font-weight:700;letter-spacing:.1em;border-radius:999px;padding:6px 11px;font-family:var(--f-mono)}
@@ -490,15 +492,23 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 
   function renderFields(){
     var a=currentAthlete;
+    var ig=displayHandle(a.ig_handle,'instagram');
     var f=[
       ['Sport',sportLabel(a.sport)],['Position',a.position],['Grad year',a.grad_year],
       ['Height',a.height],['School',a.school],['State',a.state],['Club team',a.club_team],
       ['National rank',a.national_rank?'#'+a.national_rank:null],
       ['Regional rank',a.regional_rank?'#'+a.regional_rank:null],
-      ['Committed',a.committed?(a.commit_school||'Yes'):null]
+      ['Committed',a.committed?(a.commit_school||'Yes'):null],
+      ['Instagram',ig?'@'+ig:null]
     ].filter(function(x){return x[1]});
     $('dFields').innerHTML=f.length
-      ?f.map(function(x){return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv">'+esc(x[1])+'</span></div>'}).join('')
+      ?f.map(function(x){
+        var isIg=x[0]==='Instagram';
+        var val=isIg
+          ?'<a href="https://www.instagram.com/'+encodeURIComponent(ig)+'/" target="_blank" rel="noopener noreferrer">'+esc(x[1])+'</a>'
+          :esc(x[1]);
+        return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv'+(isIg?' ig':'')+'">'+val+'</span></div>';
+      }).join('')
       :'<p class="dEmpty">Nothing on file yet — tap EDIT to add some.</p>';
   }
 
@@ -618,7 +628,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     btn.disabled=true;btn.textContent='SAVING…';
     postJSON(API_SOCIALS,extra).then(function(r){
       if(r&&r.athlete){a.ig_handle=r.athlete.ig_handle;a.snap_handle=r.athlete.snap_handle;a.socials_searched_at=r.athlete.socials_searched_at}
-      renderSheet();rerenderList();
+      renderFields();renderSheet();rerenderList();
       $('dConfirm').hidden=true;
     }).catch(function(){
       btn.textContent='SAVE FAILED — TRY AGAIN';
