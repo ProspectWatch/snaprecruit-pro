@@ -471,12 +471,6 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     return (s&&s.handle)||'';
   }
   function openLink(href){var a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove()}
-  function cmToFtIn(cm){
-    if(!cm)return null;
-    var totalIn=cm/2.54, ft=Math.floor(totalIn/12), inch=Math.round(totalIn-ft*12);
-    if(inch===12){ft++;inch=0}
-    return ft+"'"+inch+'"';
-  }
   function kgToLbs(kg){return kg?Math.round(kg*2.20462)+' lbs':null}
 
   function renderSheet(){
@@ -519,20 +513,15 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 
     var as=(a.athlete_sports||[])[0]||{};
     var ig=socialHandle(a,'instagram');
-    var secondary=(a.secondary_positions||[]).filter(Boolean).join(', ');
     var f=[
       ['Sport',a.sport&&a.sport.name],
-      ['Position',a.position],
-      ['Secondary positions',secondary],
       ['Team',a.current_team],
       ['School',a.school&&a.school.name],
       ['Grad year',a.grad_year],
       ['Location',[a.city,a.state_province,a.country].filter(Boolean).join(', ')],
-      ['Hometown',a.hometown],
       ['Status',a.status],
       ['Instagram',ig?'@'+ig:null],
       ['Gender',a.gender],
-      ['Height',cmToFtIn(a.height_cm)],
       ['Weight',kgToLbs(a.weight_kg)],
       ['Handedness',a.handedness],
       ['Citizenship',a.citizenship],
@@ -544,7 +533,6 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       ['GPA',a.gpa],
       ['SAT',a.sat_score],
       ['ACT',a.act_score],
-      ['Intended major',a.intended_major],
       ['Academic honors',a.academic_honors],
       ['Graduation status',a.graduation_status]
     ].filter(function(x){return x[1]});
