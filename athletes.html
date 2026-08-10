@@ -73,6 +73,7 @@
 .dPhoto{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;border:1px solid var(--ms-border);margin-bottom:12px;background:var(--ms-well)}
 .dBio{font-size:13px;line-height:1.6;color:var(--ms-text-2);margin:0 0 14px}
 .drow .dv.ig{font-family:var(--f-mono)}
+.drow .dv.ig a{color:var(--ms-gold-bright);text-decoration:underline}
 .dSectionLabel{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted);margin:16px 0 6px}
 .dSectionLabel:first-child{margin-top:0}
 /* detail sheet: scroll + search rows */
@@ -518,7 +519,6 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 
     var as=(a.athlete_sports||[])[0]||{};
     var ig=socialHandle(a,'instagram');
-    var commit=[a.commitment_status,a.commitment_school&&a.commitment_school.name].filter(Boolean).join(' — ');
     var secondary=(a.secondary_positions||[]).filter(Boolean).join(', ');
     var f=[
       ['Sport',a.sport&&a.sport.name],
@@ -539,9 +539,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       ['Conference',as.conference],
       ['Division',as.division],
       ['League',as.league],
-      ['Recruiting status',a.recruiting_status],
       ['NCAA eligibility',a.ncaa_eligibility_year],
-      ['Commitment',commit],
       ['Transfer portal',a.transfer_portal_status],
       ['GPA',a.gpa],
       ['SAT',a.sat_score],
@@ -551,7 +549,13 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       ['Graduation status',a.graduation_status]
     ].filter(function(x){return x[1]});
     $('dFields').innerHTML=f.length
-      ?f.map(function(x){return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv'+(x[0]==='Instagram'?' ig':'')+'">'+esc(x[1])+'</span></div>'}).join('')
+      ?f.map(function(x){
+        var isIg=x[0]==='Instagram';
+        var val=isIg
+          ?'<a href="https://www.instagram.com/'+encodeURIComponent(ig)+'/" target="_blank" rel="noopener noreferrer">'+esc(x[1])+'</a>'
+          :esc(x[1]);
+        return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv'+(isIg?' ig':'')+'">'+val+'</span></div>';
+      }).join('')
       :'';
   }
 
