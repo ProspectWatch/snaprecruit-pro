@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0A0A0A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -676,6 +676,14 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   $('retryBtn').addEventListener('click',function(){lastKey='';runSearch()});
 
   if(pwStored)showSearch();else showUnlock();
+
+  // iOS keeps an installed PWA suspended rather than killing it, so
+  // reopening from the home screen can restore whatever scroll/zoom state
+  // it was left in — including a stray pinch-zoom or mid-scroll offset,
+  // which briefly shows the page shifted and cut off at the edges. Snap
+  // back to a clean top-left view whenever the app becomes visible again.
+  addEventListener('pageshow',function(){window.scrollTo(0,0)});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)window.scrollTo(0,0)});
 
   if('serviceWorker' in navigator)addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});
 })();
