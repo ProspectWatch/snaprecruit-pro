@@ -51,6 +51,11 @@
 .sportRow select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
 .sportRow .caret{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ms-muted);pointer-events:none}
 .sportNote{font-size:11px;line-height:1.5;color:var(--ms-warn);margin-top:8px}
+.filterRow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.filterRow3 select{width:100%;height:42px;appearance:none;-webkit-appearance:none;background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:12px;color:var(--ms-text);font-size:12.5px;font-family:var(--f-ui);padding:0 10px}
+.filterRow3 select:focus{outline:none;border-color:var(--ms-gold)}
+.filterRow3 select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
+.filterRow3 select:disabled{opacity:.4}
 .controls .bar{margin:12px 0 -6px;opacity:0;transition:opacity 150ms}
 .controls .bar.on{opacity:1}
 /* ---- results ---- */
@@ -144,6 +149,11 @@
         <select id="sport" aria-label="Filter by sport"><option value="">All sports</option></select>
         <span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="m2.5 4.5 3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </div>
+      <div class="filterRow3">
+        <select id="conference" aria-label="Filter by conference" disabled><option value="">Conference</option></select>
+        <select id="division" aria-label="Filter by division" disabled><option value="">Division</option></select>
+        <select id="position" aria-label="Filter by position" disabled><option value="">Position</option></select>
+      </div>
       <div class="sportNote" id="sportNote" hidden></div>
       <div class="bar indeterminate" id="loadBar"><div class="fill"></div></div>
     </div>
@@ -200,13 +210,14 @@
 import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 (function(){
   var KEY='ms-admin-password';
-  var API_ATHLETES='/api/athletes', API_SPORTS='/api/sports', API_SOCIALS='/api/athlete-socials';
+  var API_ATHLETES='/api/athletes', API_SPORTS='/api/sports', API_SOCIALS='/api/athlete-socials', API_FILTERS='/api/athlete-filters';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
   var $=function(id){return document.getElementById(id)};
   var viewUnlock=$('view-unlock'), viewSearch=$('view-search');
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
+  var conferenceSel=$('conference'), divisionSel=$('division'), positionSel=$('position');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var sportNote=$('sportNote');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
@@ -296,6 +307,44 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     });
   }
 
+  /* ---------- conference/division/position filters ---------- */
+  // Scoped to the selected sport (a "Big Ten" filter is meaningless once
+  // Basketball is also selectable), so they're disabled until a sport is
+  // chosen and reloaded from scratch whenever it changes. Disabling during
+  // the fetch also sidesteps the iOS-picker-snapshot timing issue that the
+  // sport dropdown needed a cache for: a disabled <select> can't be opened,
+  // so there's no empty-list race to hit.
+  var filtersGen=0;
+  function resetFilterSelect(sel,placeholder){
+    sel.innerHTML='<option value="">'+placeholder+'</option>';
+    sel.value='';
+    sel.disabled=true;
+    sel.classList.remove('filtering');
+  }
+  function populateFilterSelect(sel,values,placeholder){
+    sel.innerHTML='<option value="">'+placeholder+'</option>'+values.map(function(v){
+      return '<option value="'+esc(v)+'">'+esc(v)+'</option>';
+    }).join('');
+    sel.disabled=!values.length;
+  }
+  function loadFilters(sportId){
+    var myGen=++filtersGen;
+    resetFilterSelect(conferenceSel,'Conference');
+    resetFilterSelect(divisionSel,'Division');
+    resetFilterSelect(positionSel,'Position');
+    if(!sportId)return;
+    fetch(API_FILTERS+'?sport='+encodeURIComponent(sportId),{headers:headers()}).then(function(res){
+      if(res.status===401){forget();return null}
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      return res.json();
+    }).then(function(body){
+      if(!body||myGen!==filtersGen)return;
+      populateFilterSelect(conferenceSel,body.conferences||[],'Conference');
+      populateFilterSelect(divisionSel,body.divisions||[],'Division');
+      populateFilterSelect(positionSel,body.positions||[],'Position');
+    }).catch(function(){/* leave filters disabled; sport + name search still work */});
+  }
+
   function forget(){
     pwStored=null;
     try{localStorage.removeItem(KEY)}catch(e){}
@@ -313,14 +362,20 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   }
   function runSearch(){
     var term=q.value.trim(), sport=sportSel.value;
+    var conference=conferenceSel.value, division=divisionSel.value, position=positionSel.value;
     qClear.classList.toggle('show',!!q.value);
     sportSel.classList.toggle('filtering',!!sport);
-    var key=term+' '+sport;
+    conferenceSel.classList.toggle('filtering',!!conference);
+    divisionSel.classList.toggle('filtering',!!division);
+    positionSel.classList.toggle('filtering',!!position);
+    var key=term+' '+sport+' '+conference+' '+division+' '+position;
     if(key===lastKey)return;
     lastKey=key;
     if(inflight)inflight.abort();
 
-    // Nothing to ask for: short term and no sport → idle state.
+    // Nothing to ask for: short term and no sport → idle state. (Conference/
+    // division/position can't be set without a sport — their selects stay
+    // disabled until one is picked — so checking sport alone still covers it.)
     if(term.length<2&&!sport){
       setState('idle');return;
     }
@@ -332,7 +387,10 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     // screen. Every render is gated on still being the latest request.
     var myGen=++searchGen;
     loadBar.classList.add('on');
-    var url=API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)+(sport?'&sport='+encodeURIComponent(sport):'');
+    var url=API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)+(sport?'&sport='+encodeURIComponent(sport):'')
+      +(conference?'&conference='+encodeURIComponent(conference):'')
+      +(division?'&division='+encodeURIComponent(division):'')
+      +(position?'&position='+encodeURIComponent(position):'');
     fetch(url,{headers:headers(),signal:ctl.signal}).then(function(res){
       if(res.status===401){forget();return null}
       if(!res.ok)throw new Error('HTTP '+res.status);
@@ -605,7 +663,10 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   q.addEventListener('input',scheduleSearch);
   q.addEventListener('keydown',function(e){if(e.key==='Enter'){clearTimeout(debounceT);runSearch();q.blur()}});
   qClear.addEventListener('click',function(){q.value='';q.focus();runSearch()});
-  sportSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  sportSel.addEventListener('change',function(){clearTimeout(debounceT);loadFilters(sportSel.value);runSearch()});
+  conferenceSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  divisionSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  positionSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   // The installed app can sit alive in the background for days — refresh the
   // sports list when it's still empty and the user returns or taps the picker.
   sportSel.addEventListener('focus',function(){if(pwStored)loadSports()});
