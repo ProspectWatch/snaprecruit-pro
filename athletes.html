@@ -70,7 +70,7 @@
 .drow .dv{font-size:14px;font-weight:600;text-align:right;overflow-wrap:anywhere}
 .dEmpty{margin:0;font-size:13px;color:var(--ms-muted)}
 #dFields{margin-bottom:6px}
-.dPhoto{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;border:1px solid var(--ms-border);margin-bottom:12px;background:var(--ms-well)}
+.dPhoto{width:100%;height:auto;max-height:440px;object-fit:contain;border-radius:14px;border:1px solid var(--ms-border);margin-bottom:12px;background:var(--ms-well);display:block;margin-left:auto;margin-right:auto}
 .dBio{font-size:13px;line-height:1.6;color:var(--ms-text-2);margin:0 0 14px}
 .drow .dv.ig{font-family:var(--f-mono)}
 .drow .dv.ig a{color:var(--ms-gold-bright);text-decoration:underline}
@@ -98,6 +98,9 @@
 .dcRow .btn{height:46px;font-size:12px}
 .apill.done{border-color:var(--ms-gold);color:var(--ms-gold-bright);font-family:var(--f-mono);letter-spacing:.04em;text-transform:none}
 .apill.done.mut{border-color:var(--ms-border);color:var(--ms-success);font-family:var(--f-ui);letter-spacing:.16em;text-transform:uppercase}
+.acardPhoto{flex:0 0 auto;width:52px;height:68px;border-radius:10px;overflow:hidden;background:var(--ms-surface-2);border:1px solid var(--ms-border);display:flex;align-items:center;justify-content:center}
+.acardPhoto img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.acardPhoto .ph{font-size:15px;font-weight:700;letter-spacing:.02em;color:var(--ms-muted)}
 .acard .amain{flex:1;min-width:0}
 .aname{font-size:16px;font-weight:700;overflow-wrap:anywhere}
 .aname .pref{font-weight:400;color:var(--ms-muted)}
@@ -425,6 +428,27 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 
   function esc(x){return String(x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 
+  function initials(name){
+    var parts=String(name||'').trim().split(/\s+/).filter(Boolean);
+    if(!parts.length)return '?';
+    return (parts[0][0]+(parts.length>1?parts[parts.length-1][0]:'')).toUpperCase();
+  }
+  function cardPhoto(url,name){
+    return '<div class="acardPhoto">'+(url
+      ?'<img src="'+esc(url)+'" alt="" loading="lazy" data-fallback="'+esc(initials(name))+'">'
+      :'<span class="ph">'+esc(initials(name))+'</span>')+'</div>';
+  }
+  // Broken/missing image URLs (dead links, private-CDN photos) fall back to
+  // initials instead of the browser's broken-image icon. Attached after
+  // render() rebuilds the list rather than inline, since module-scoped
+  // functions aren't reachable from an inline onerror="" attribute.
+  list.addEventListener('error',function(e){
+    var img=e.target;
+    if(!img||img.tagName!=='IMG'||!img.closest('.acardPhoto'))return;
+    var box=img.parentElement;
+    box.innerHTML='<span class="ph">'+esc(img.getAttribute('data-fallback')||'?')+'</span>';
+  },true);
+
   function render(rows,term,sport){
     if(!rows.length){
       var name=sport?(sportSel.options[sportSel.selectedIndex]||{}).textContent:'';
@@ -456,7 +480,9 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         pill=searchedBits.length?'<span class="apill done mut">✓ '+searchedBits.join('+')+' searched</span>'
           :(a.status?'<span class="apill">'+esc(a.status)+'</span>':'');
       }
-      return '<button type="button" class="acard" data-i="'+i+'"><div class="amain">'
+      return '<button type="button" class="acard" data-i="'+i+'">'
+        +cardPhoto(a.profile_image_url,a.display_name)
+        +'<div class="amain">'
         +'<div class="aname">'+esc(a.display_name)+pref+'</div>'
         +(meta?'<div class="aline">'+meta+'</div>':'')
         +(loc?'<div class="aloc">'+loc+'</div>':'')

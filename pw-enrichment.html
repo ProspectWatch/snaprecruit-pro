@@ -71,6 +71,9 @@
 .resMeta .searchMeta{font-size:11px;color:var(--ms-muted)}
 .acard{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--ms-surface);border:1px solid var(--ms-border);border-left:3px solid var(--ms-gold-deep);border-radius:14px;padding:13px 16px;margin-bottom:9px;transition:background 120ms}
 .acard:active{background:var(--ms-surface-2)}
+.acardPhoto{flex:0 0 auto;width:52px;height:68px;border-radius:10px;overflow:hidden;background:var(--ms-surface-2);border:1px solid var(--ms-border);display:flex;align-items:center;justify-content:center}
+.acardPhoto img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.acardPhoto .ph{font-size:15px;font-weight:700;letter-spacing:.02em;color:var(--ms-muted)}
 .acard .amain{flex:1;min-width:0}
 .aname{font-size:16px;font-weight:700;overflow-wrap:anywhere}
 .aline{font-size:12px;line-height:1.5;color:var(--ms-text-2);margin-top:3px}
@@ -426,6 +429,24 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     return s.replace(hostRe,'').replace(/\/.*$/,'').replace(/\?.*$/,'') || s;
   }
 
+  function initials(name){
+    var parts=String(name||'').trim().split(/\s+/).filter(Boolean);
+    if(!parts.length)return '?';
+    return (parts[0][0]+(parts.length>1?parts[parts.length-1][0]:'')).toUpperCase();
+  }
+  // Prefer the posed cover shot, then the action shot, then the IG-post
+  // screenshot last — a screenshot usually has UI chrome around the face
+  // rather than being a clean photo, so it's the weakest thumbnail choice.
+  function primaryPhoto(a){
+    var p=a.photos||{};
+    return p.cover||p.action||p.screenshot||null;
+  }
+  function cardPhoto(url,name){
+    return '<div class="acardPhoto">'+(url
+      ?'<img src="'+esc(url)+'" alt="" loading="lazy" data-fallback="'+esc(initials(name))+'">'
+      :'<span class="ph">'+esc(initials(name))+'</span>')+'</div>';
+  }
+
   var lastRows=[];
   function render(rows,term,sport){
     if(!rows.length){
@@ -452,13 +473,23 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         :a.snap_handle?'<span class="apill done">✓ snap:'+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>'
         :a.socials_searched_at?'<span class="apill done mut">✓ Searched</span>'
         :a.committed?'<span class="apill">COMMITTED</span>':'';
-      return '<button type="button" class="acard" data-i="'+i+'"><div class="amain">'
+      return '<button type="button" class="acard" data-i="'+i+'">'
+        +cardPhoto(primaryPhoto(a),a.name)
+        +'<div class="amain">'
         +'<div class="aname">'+esc(a.name)+'</div>'
         +(meta?'<div class="aline">'+meta+'</div>':'')
         +(extra?'<div class="aloc">'+extra+'</div>':'')
         +'</div>'+pill+'</button>';
     }).join('');
   }
+  // Broken/missing image URLs fall back to initials instead of the browser's
+  // broken-image icon. Attached once here, not inline in the markup above —
+  // module-scoped functions aren't reachable from an inline onerror="".
+  list.addEventListener('error',function(e){
+    var img=e.target;
+    if(!img||img.tagName!=='IMG'||!img.closest('.acardPhoto'))return;
+    img.parentElement.innerHTML='<span class="ph">'+esc(img.getAttribute('data-fallback')||'?')+'</span>';
+  },true);
   function rerenderList(){if(lastRows.length&&list.innerHTML)render(lastRows,q.value.trim(),sportSel.value)}
 
   /* ---------- detail sheet ---------- */
