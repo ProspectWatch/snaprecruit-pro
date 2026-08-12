@@ -57,8 +57,13 @@
 .divisionRow select:focus,.filterRow4 select:focus{outline:none;border-color:var(--ms-gold)}
 .divisionRow select.filtering,.filterRow4 select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
 .divisionRow select:disabled,.filterRow4 select:disabled{opacity:.4}
+.photoToggle{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:40px;margin-top:8px;border-radius:11px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:11px;font-weight:700;letter-spacing:.14em}
+.photoToggle .dot{width:7px;height:7px;border-radius:50%;background:var(--ms-border-strong)}
+.photoToggle.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
+.photoToggle.on .dot{background:var(--ms-gold-bright)}
 .controls .bar{margin:12px 0 -6px;opacity:0;transition:opacity 150ms}
 .controls .bar.on{opacity:1}
+.moreBtn{margin:6px 0 16px}
 /* ---- results ---- */
 .results{padding-top:14px}
 .resMeta{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
@@ -163,6 +168,7 @@
         <select id="position" aria-label="Filter by position" disabled><option value="">Position</option></select>
         <select id="gradYear" aria-label="Filter by grad year"><option value="">Grad Year</option></select>
       </div>
+      <button class="photoToggle" id="photoToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS PHOTO ONLY</button>
       <div class="sportNote" id="sportNote" hidden></div>
       <div class="bar indeterminate" id="loadBar"><div class="fill"></div></div>
     </div>
@@ -173,6 +179,7 @@
         <span class="searchMeta" id="resCount"></span>
       </div>
       <div id="list"></div>
+      <button class="btn btn-outline moreBtn" id="moreBtn" type="button" hidden>LOAD NEXT 100</button>
 
       <div class="stateBox" id="stateIdle">
         <span class="chip"><svg width="20" height="20" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="m11 11 3.4 3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
@@ -227,9 +234,16 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var viewUnlock=$('view-unlock'), viewSearch=$('view-search');
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
   var conferenceSel=$('conference'), divisionSel=$('division'), schoolSel=$('school'), positionSel=$('position'), gradYearSel=$('gradYear');
+  var photoToggle=$('photoToggle'), moreBtn=$('moreBtn');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var sportNote=$('sportNote');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
+  var hasPhotoOn=false;
+  // "Load next 100" state — only ever populated in browse mode: the API
+  // only returns `more` there (search mode is a relevance-ranked top-N list,
+  // not a stable sort a page offset could walk through), so `hasMore` stays
+  // falsy after any name search and the button naturally never shows.
+  var PAGE_SIZE=100, offset=0, hasMore=false, loadingMore=false;
 
   var GRAD_YEARS=['2025','2026','2027','2028','2029','2030'];
   GRAD_YEARS.forEach(function(y){
@@ -405,6 +419,16 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     clearTimeout(debounceT);
     debounceT=setTimeout(runSearch,250);
   }
+  function buildAthletesUrl(term,sport,division,conference,school,position,gradYear,hasPhoto,off){
+    return API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)+(sport?'&sport='+encodeURIComponent(sport):'')
+      +(division?'&division='+encodeURIComponent(division):'')
+      +(conference?'&conference='+encodeURIComponent(conference):'')
+      +(school?'&school='+encodeURIComponent(school):'')
+      +(position?'&position='+encodeURIComponent(position):'')
+      +(gradYear?'&grad_year='+encodeURIComponent(gradYear):'')
+      +(hasPhoto?'&has_photo=1':'')
+      +(off?'&offset='+off:'');
+  }
   function runSearch(){
     var term=q.value.trim(), sport=sportSel.value;
     var division=divisionSel.value, conference=conferenceSel.value, school=schoolSel.value, position=positionSel.value, gradYear=gradYearSel.value;
@@ -415,17 +439,18 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     schoolSel.classList.toggle('filtering',!!school);
     positionSel.classList.toggle('filtering',!!position);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+division+' '+conference+' '+school+' '+position+' '+gradYear;
+    var key=term+' '+sport+' '+division+' '+conference+' '+school+' '+position+' '+gradYear+' '+hasPhotoOn;
     if(key===lastKey)return;
     lastKey=key;
+    offset=0;hasMore=false;
     if(inflight)inflight.abort();
 
     // Nothing to ask for: short term and no sport → idle state. (Division/
     // conference/school/position can't be set without a sport — their
     // selects stay disabled until one is picked — so checking sport alone
-    // still covers it. Grad year isn't UI-gated, but browse mode still
-    // requires a sport server-side, so a grad-year-only pick stays idle
-    // until a sport is also picked.)
+    // still covers it. Grad year and Has Photo aren't UI-gated, but browse
+    // mode still requires a sport server-side, so a grad-year- or
+    // photo-only pick stays idle until a sport is also picked.)
     if(term.length<2&&!sport){
       setState('idle');return;
     }
@@ -437,19 +462,15 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     // screen. Every render is gated on still being the latest request.
     var myGen=++searchGen;
     loadBar.classList.add('on');
-    var url=API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)+(sport?'&sport='+encodeURIComponent(sport):'')
-      +(division?'&division='+encodeURIComponent(division):'')
-      +(conference?'&conference='+encodeURIComponent(conference):'')
-      +(school?'&school='+encodeURIComponent(school):'')
-      +(position?'&position='+encodeURIComponent(position):'')
-      +(gradYear?'&grad_year='+encodeURIComponent(gradYear):'');
+    var url=buildAthletesUrl(term,sport,division,conference,school,position,gradYear,hasPhotoOn,0);
     fetch(url,{headers:headers(),signal:ctl.signal}).then(function(res){
       if(res.status===401){forget();return null}
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
     }).then(function(body){
       if(!body||myGen!==searchGen)return;
-      render(body.data||[],term,sport);
+      hasMore=!!body.more;
+      render(body.data||[],term,sport,false);
     }).catch(function(e){
       if(e&&e.name==='AbortError')return;
       if(myGen!==searchGen)return;
@@ -460,12 +481,36 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       if(inflight===ctl){inflight=null;loadBar.classList.remove('on')}
     });
   }
+  // Not gated behind the debounce/generation machinery above — it's an
+  // explicit user tap, not a filter change, and always targets the very
+  // next page after whatever's currently on screen.
+  function loadMoreAthletes(){
+    if(loadingMore||!hasMore)return;
+    loadingMore=true;
+    moreBtn.disabled=true;moreBtn.textContent='LOADING…';
+    var term=q.value.trim(), sport=sportSel.value;
+    var division=divisionSel.value, conference=conferenceSel.value, school=schoolSel.value, position=positionSel.value, gradYear=gradYearSel.value;
+    var nextOffset=offset+PAGE_SIZE;
+    var url=buildAthletesUrl(term,sport,division,conference,school,position,gradYear,hasPhotoOn,nextOffset);
+    fetch(url,{headers:headers()}).then(function(res){
+      if(res.status===401){forget();return null}
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      return res.json();
+    }).then(function(body){
+      if(!body)return;
+      offset=nextOffset;
+      hasMore=!!body.more;
+      render(body.data||[],term,sport,true);
+    }).catch(function(){
+      moreBtn.textContent='COULDN’T LOAD MORE — TAP TO RETRY';
+    }).then(function(){loadingMore=false;moreBtn.disabled=false});
+  }
 
   function setState(s){
     stateIdle.hidden=s!=='idle';
     stateEmpty.hidden=s!=='empty';
     stateErr.hidden=s!=='err';
-    if(s!=='list'){list.innerHTML='';resMeta.hidden=true}
+    if(s!=='list'){list.innerHTML='';resMeta.hidden=true;moreBtn.hidden=true}
   }
 
   function esc(x){return String(x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -491,21 +536,35 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     box.innerHTML='<span class="ph">'+esc(img.getAttribute('data-fallback')||'?')+'</span>';
   },true);
 
-  function render(rows,term,sport){
-    if(!rows.length){
-      var name=sport?(sportSel.options[sportSel.selectedIndex]||{}).textContent:'';
-      $('emptyMsg').textContent=term.length>=2
-        ?('No athletes match “'+term+'”'+(name?' in '+name:'')+'.')
-        :('No athletes in '+(name||'this sport')+' yet.');
-      setState('empty');return;
+  function updateMoreBtn(){
+    moreBtn.hidden=!hasMore;
+    moreBtn.disabled=false;
+    moreBtn.textContent='LOAD NEXT 100';
+  }
+  function render(rows,term,sport,append){
+    if(!append){
+      if(!rows.length){
+        var name=sport?(sportSel.options[sportSel.selectedIndex]||{}).textContent:'';
+        $('emptyMsg').textContent=term.length>=2
+          ?('No athletes match “'+term+'”'+(name?' in '+name:'')+'.')
+          :('No athletes in '+(name||'this sport')+' yet.');
+        setState('empty');return;
+      }
+      setState('list');
+      lastRows=rows;
+    }else{
+      // A page came back empty even though the prior page was full — the
+      // total just happened to land on an exact page boundary. Quietly stop
+      // offering more rather than erroring.
+      if(!rows.length){hasMore=false;updateMoreBtn();return}
+      lastRows=lastRows.concat(rows);
     }
-    setState('list');
-    lastRows=rows;
+    var startIdx=append?lastRows.length-rows.length:0;
     var browsing=term.length<2;
     resLabel.textContent=browsing?'BROWSING A–Z':'RESULTS';
-    resCount.textContent=rows.length+(rows.length===1?' athlete':' athletes');
+    resCount.textContent=lastRows.length+(lastRows.length===1?' athlete':' athletes');
     resMeta.hidden=false;
-    list.innerHTML=rows.map(function(a,i){
+    var html=rows.map(function(a,i){
       var meta=[a.sport&&a.sport.name,a.position,a.current_team,a.school&&a.school.name,a.grad_year?'Class of '+a.grad_year:null]
         .filter(Boolean).map(esc).join(' · ');
       var loc=[a.city,a.state_province,a.country].filter(Boolean).map(esc).join(', ');
@@ -522,7 +581,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         pill=searchedBits.length?'<span class="apill done mut">✓ '+searchedBits.join('+')+' searched</span>'
           :(a.status?'<span class="apill">'+esc(a.status)+'</span>':'');
       }
-      return '<button type="button" class="acard" data-i="'+i+'">'
+      return '<button type="button" class="acard" data-i="'+(startIdx+i)+'">'
         +cardPhoto(a.profile_image_url,a.display_name)
         +'<div class="amain">'
         +'<div class="aname">'+esc(a.display_name)+pref+'</div>'
@@ -532,8 +591,10 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         +pill
         +'</button>';
     }).join('');
+    if(append)list.insertAdjacentHTML('beforeend',html);else list.innerHTML=html;
+    updateMoreBtn();
   }
-  function rerenderList(){if(lastRows.length&&list.innerHTML)render(lastRows,q.value.trim(),sportSel.value)}
+  function rerenderList(){if(lastRows.length&&list.innerHTML)render(lastRows,q.value.trim(),sportSel.value,false)}
 
   /* ---------- detail sheet ---------- */
   var lastRows=[], detailName='', currentAthlete=null, pendingTry=null;
@@ -735,6 +796,13 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   schoolSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   positionSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   gradYearSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  photoToggle.addEventListener('click',function(){
+    hasPhotoOn=!hasPhotoOn;
+    this.classList.toggle('on',hasPhotoOn);
+    this.setAttribute('aria-pressed',String(hasPhotoOn));
+    clearTimeout(debounceT);runSearch();
+  });
+  moreBtn.addEventListener('click',loadMoreAthletes);
   // The installed app can sit alive in the background for days — refresh the
   // sports list when it's still empty and the user returns or taps the picker.
   sportSel.addEventListener('focus',function(){if(pwStored)loadSports()});

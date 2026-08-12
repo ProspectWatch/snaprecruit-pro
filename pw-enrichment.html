@@ -57,7 +57,8 @@
 .filterRow2 input:focus,.filterRow2 select:focus{outline:none;border-color:var(--ms-gold)}
 .filterRow2 input.filtering,.filterRow2 select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
 .filterRow2 input::placeholder{color:var(--ms-muted);text-transform:none}
-.fwToggle{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:40px;margin-top:8px;border-radius:11px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:11px;font-weight:700;letter-spacing:.14em}
+.toggleRow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.fwToggle{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:40px;border-radius:11px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:11px;font-weight:700;letter-spacing:.14em}
 .fwToggle .dot{width:7px;height:7px;border-radius:50%;background:var(--ms-border-strong)}
 .fwToggle.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
 .fwToggle.on .dot{background:var(--ms-gold-bright)}
@@ -66,6 +67,7 @@
 .segBtn.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
 .controls .bar{margin:12px 0 -6px;opacity:0;transition:opacity 150ms}
 .controls .bar.on{opacity:1}
+.moreBtn{margin:6px 0 16px}
 .results{padding-top:14px}
 .resMeta{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
 .resMeta .searchMeta{font-size:11px;color:var(--ms-muted)}
@@ -176,7 +178,10 @@
         <select id="state" aria-label="Filter by state"><option value="">All states</option></select>
         <select id="gradYear" aria-label="Filter by grad year"><option value="">All grad years</option></select>
       </div>
-      <button class="fwToggle" id="fwToggle" type="button" aria-pressed="false"><span class="dot"></span>FUTURE WATCH ONLY</button>
+      <div class="toggleRow">
+        <button class="fwToggle" id="fwToggle" type="button" aria-pressed="false"><span class="dot"></span>FUTURE WATCH ONLY</button>
+        <button class="fwToggle" id="photoToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS PHOTO ONLY</button>
+      </div>
       <div class="segRow" id="searchedRow" role="group" aria-label="Filter by search status">
         <button class="segBtn on" type="button" data-v="">ALL</button>
         <button class="segBtn" type="button" data-v="no">UNSEARCHED</button>
@@ -191,6 +196,7 @@
         <span class="searchMeta" id="resCount"></span>
       </div>
       <div id="list"></div>
+      <button class="btn btn-outline moreBtn" id="moreBtn" type="button" hidden>LOAD NEXT 100</button>
 
       <div class="stateBox" id="stateIdle">
         <span class="chip"><svg width="20" height="20" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="m11 11 3.4 3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
@@ -280,7 +286,12 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
   var stateSel=$('state'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
-  var fwOn=false, searchedFilter='';
+  var photoToggle=$('photoToggle'), moreBtn=$('moreBtn');
+  var fwOn=false, searchedFilter='', hasPhotoOn=false;
+  // "Load next 100" state — every request here (name term or not) is one
+  // paginated PostgREST query, so pagination applies uniformly, unlike
+  // Athlete Search where it's browse-mode only.
+  var PAGE_SIZE=100, offset=0, hasMore=false, loadingMore=false;
 
   // Girls sports only, for now — this list intentionally omits boys-lacrosse.
   // The backend also hard-enforces gender=F server-side (see hs-search.js),
@@ -372,6 +383,16 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   /* ---------- search (public read — no key needed to browse) ---------- */
   var debounceT=null, inflight=null, lastKey='', searchGen=0;
   function scheduleSearch(){clearTimeout(debounceT);debounceT=setTimeout(runSearch,250)}
+  function buildAthletesUrl(term,sport,st,gradYear,hasPhoto,off){
+    return API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)
+      +(sport?'&sport='+encodeURIComponent(sport):'')
+      +(st?'&state='+encodeURIComponent(st):'')
+      +(gradYear?'&grad_year='+encodeURIComponent(gradYear):'')
+      +(fwOn?'&fw=1':'')
+      +(hasPhoto?'&has_photo=1':'')
+      +(searchedFilter?'&searched='+searchedFilter:'')
+      +(off?'&offset='+off:'');
+  }
   function runSearch(){
     var term=q.value.trim(), sport=sportSel.value;
     var st=stateSel.value;
@@ -380,11 +401,12 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     sportSel.classList.toggle('filtering',!!sport);
     stateSel.classList.toggle('filtering',!!st);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+st+' '+gradYear+' '+fwOn+' '+searchedFilter;
+    var key=term+' '+sport+' '+st+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+searchedFilter;
     if(key===lastKey)return;
     lastKey=key;
+    offset=0;hasMore=false;
     if(inflight)inflight.abort();
-    if(term.length<2&&!sport&&!st&&!gradYear&&!fwOn&&!searchedFilter){setState('idle');return}
+    if(term.length<2&&!sport&&!st&&!gradYear&&!fwOn&&!hasPhotoOn&&!searchedFilter){setState('idle');return}
     var ctl=new AbortController();inflight=ctl;
     // A generation counter, not just AbortController: abort() only cancels a
     // fetch that's still pending — it has no effect once the response has
@@ -393,16 +415,15 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     // screen. Every render is gated on still being the latest request.
     var myGen=++searchGen;
     loadBar.classList.add('on');
-    var url=API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)
-      +(sport?'&sport='+encodeURIComponent(sport):'')
-      +(st?'&state='+encodeURIComponent(st):'')
-      +(gradYear?'&grad_year='+encodeURIComponent(gradYear):'')
-      +(fwOn?'&fw=1':'')
-      +(searchedFilter?'&searched='+searchedFilter:'');
+    var url=buildAthletesUrl(term,sport,st,gradYear,hasPhotoOn,0);
     fetch(url,{signal:ctl.signal}).then(function(res){
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
-    }).then(function(body){if(myGen===searchGen)render(body.data||[],term,sport)}).catch(function(e){
+    }).then(function(body){
+      if(myGen!==searchGen)return;
+      hasMore=!!body.more;
+      render(body.data||[],term,sport,false);
+    }).catch(function(e){
       if(e&&e.name==='AbortError')return;
       if(myGen!==searchGen)return;
       lastKey='';
@@ -410,9 +431,30 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       setState('err');
     }).then(function(){if(inflight===ctl){inflight=null;loadBar.classList.remove('on')}});
   }
+  // Not gated behind the debounce/generation machinery above — it's an
+  // explicit user tap, not a filter change, and always targets the very
+  // next page after whatever's currently on screen.
+  function loadMoreAthletes(){
+    if(loadingMore||!hasMore)return;
+    loadingMore=true;
+    moreBtn.disabled=true;moreBtn.textContent='LOADING…';
+    var term=q.value.trim(), sport=sportSel.value, st=stateSel.value, gradYear=gradYearSel.value;
+    var nextOffset=offset+PAGE_SIZE;
+    var url=buildAthletesUrl(term,sport,st,gradYear,hasPhotoOn,nextOffset);
+    fetch(url).then(function(res){
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      return res.json();
+    }).then(function(body){
+      offset=nextOffset;
+      hasMore=!!body.more;
+      render(body.data||[],term,sport,true);
+    }).catch(function(){
+      moreBtn.textContent='COULDN’T LOAD MORE — TAP TO RETRY';
+    }).then(function(){loadingMore=false;moreBtn.disabled=false});
+  }
   function setState(s){
     stateIdle.hidden=s!=='idle';stateEmpty.hidden=s!=='empty';stateErr.hidden=s!=='err';
-    if(s!=='list'){list.innerHTML='';resMeta.hidden=true}
+    if(s!=='list'){list.innerHTML='';resMeta.hidden=true;moreBtn.hidden=true}
   }
   function esc(x){return String(x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 
@@ -448,23 +490,37 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   }
 
   var lastRows=[];
-  function render(rows,term,sport){
-    if(!rows.length){
-      var name=sport?sportLabel(sport):'';
-      var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'']
-        .filter(Boolean).join(', ');
-      $('emptyMsg').textContent=term.length>=2
-        ?('No athletes match “'+term+'”'+(extraBits?' ('+extraBits+')':'')+'.')
-        :('No athletes match '+(extraBits||'those filters')+'.');
-      setState('empty');return;
+  function updateMoreBtn(){
+    moreBtn.hidden=!hasMore;
+    moreBtn.disabled=false;
+    moreBtn.textContent='LOAD NEXT 100';
+  }
+  function render(rows,term,sport,append){
+    if(!append){
+      if(!rows.length){
+        var name=sport?sportLabel(sport):'';
+        var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',hasPhotoOn?'Has Photo':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'']
+          .filter(Boolean).join(', ');
+        $('emptyMsg').textContent=term.length>=2
+          ?('No athletes match “'+term+'”'+(extraBits?' ('+extraBits+')':'')+'.')
+          :('No athletes match '+(extraBits||'those filters')+'.');
+        setState('empty');return;
+      }
+      setState('list');
+      lastRows=rows;
+    }else{
+      // A page came back empty even though the prior page was full — the
+      // total just happened to land on an exact page boundary. Quietly stop
+      // offering more rather than erroring.
+      if(!rows.length){hasMore=false;updateMoreBtn();return}
+      lastRows=lastRows.concat(rows);
     }
-    setState('list');
-    lastRows=rows;
+    var startIdx=append?lastRows.length-rows.length:0;
     var browsing=term.length<2;
     resLabel.textContent=browsing?'BROWSING A–Z':'RESULTS';
-    resCount.textContent=rows.length+(rows.length===1?' athlete':' athletes');
+    resCount.textContent=lastRows.length+(lastRows.length===1?' athlete':' athletes');
     resMeta.hidden=false;
-    list.innerHTML=rows.map(function(a,i){
+    var html=rows.map(function(a,i){
       var meta=[sportLabel(a.sport),a.position,a.school,a.state,a.grad_year?'Class of '+a.grad_year:null]
         .filter(Boolean).map(esc).join(' · ');
       var extra=[a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.future_watch?'★ Future Watch':null]
@@ -473,7 +529,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         :a.snap_handle?'<span class="apill done">✓ snap:'+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>'
         :a.socials_searched_at?'<span class="apill done mut">✓ Searched</span>'
         :a.committed?'<span class="apill">COMMITTED</span>':'';
-      return '<button type="button" class="acard" data-i="'+i+'">'
+      return '<button type="button" class="acard" data-i="'+(startIdx+i)+'">'
         +cardPhoto(primaryPhoto(a),a.name)
         +'<div class="amain">'
         +'<div class="aname">'+esc(a.name)+'</div>'
@@ -481,6 +537,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         +(extra?'<div class="aloc">'+extra+'</div>':'')
         +'</div>'+pill+'</button>';
     }).join('');
+    if(append)list.insertAdjacentHTML('beforeend',html);else list.innerHTML=html;
+    updateMoreBtn();
   }
   // Broken/missing image URLs fall back to initials instead of the browser's
   // broken-image icon. Attached once here, not inline in the markup above —
@@ -490,7 +548,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(!img||img.tagName!=='IMG'||!img.closest('.acardPhoto'))return;
     img.parentElement.innerHTML='<span class="ph">'+esc(img.getAttribute('data-fallback')||'?')+'</span>';
   },true);
-  function rerenderList(){if(lastRows.length&&list.innerHTML)render(lastRows,q.value.trim(),sportSel.value)}
+  function rerenderList(){if(lastRows.length&&list.innerHTML)render(lastRows,q.value.trim(),sportSel.value,false)}
 
   /* ---------- detail sheet ---------- */
   var currentAthlete=null, pendingTry=null, detailName='';
@@ -710,6 +768,13 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     this.setAttribute('aria-pressed',String(fwOn));
     clearTimeout(debounceT);runSearch();
   });
+  photoToggle.addEventListener('click',function(){
+    hasPhotoOn=!hasPhotoOn;
+    this.classList.toggle('on',hasPhotoOn);
+    this.setAttribute('aria-pressed',String(hasPhotoOn));
+    clearTimeout(debounceT);runSearch();
+  });
+  moreBtn.addEventListener('click',loadMoreAthletes);
   searchedRow.addEventListener('click',function(e){
     var b=e.target.closest('.segBtn');
     if(!b)return;
