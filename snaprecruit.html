@@ -590,6 +590,18 @@ async function runScan(){
     const x=state.items[i];
     if(x.read)continue;
     scanUI();
+    // iOS Safari drops File/Blob handles across an app relaunch (see the
+    // persistence note above) — an unread item that survived a restart has
+    // no source left to read. Treat it as an unrecoverable failure via the
+    // normal retry/skip sheet instead of calling fileToDataUrl(null), which
+    // throws at best and has been seen crashing the WebView outright on some
+    // iOS versions — and since this item never becomes `read`, resuming the
+    // saved session would otherwise hit the exact same crash on every launch.
+    if(!x.file){
+      pendingFails.push(i);
+      logRow('fail',`Screenshot ${i+1} — lost after restart, please re-add`);
+      continue;
+    }
     logRow('cur',`Reading screenshot ${i+1}…`);
     try{
       const image=await fileToDataUrl(x.file);
