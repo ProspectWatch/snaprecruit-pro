@@ -61,6 +61,9 @@
 .photoToggle .dot{width:7px;height:7px;border-radius:50%;background:var(--ms-border-strong)}
 .photoToggle.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
 .photoToggle.on .dot{background:var(--ms-gold-bright)}
+.segRow{display:flex;gap:7px;margin-top:8px}
+.segBtn{flex:1;height:38px;border-radius:10px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:10.5px;font-weight:700;letter-spacing:.08em}
+.segBtn.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
 .controls .bar{margin:12px 0 -6px;opacity:0;transition:opacity 150ms}
 .controls .bar.on{opacity:1}
 .moreBtn{margin:6px 0 16px}
@@ -169,6 +172,11 @@
         <select id="gradYear" aria-label="Filter by grad year"><option value="">Grad Year</option></select>
       </div>
       <button class="photoToggle" id="photoToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS PHOTO ONLY</button>
+      <div class="segRow" id="searchedRow" role="group" aria-label="Filter by search status">
+        <button class="segBtn on" type="button" data-v="">ALL</button>
+        <button class="segBtn" type="button" data-v="no">UNSEARCHED</button>
+        <button class="segBtn" type="button" data-v="yes">SEARCHED</button>
+      </div>
       <div class="sportNote" id="sportNote" hidden></div>
       <div class="bar indeterminate" id="loadBar"><div class="fill"></div></div>
     </div>
@@ -234,11 +242,11 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var viewUnlock=$('view-unlock'), viewSearch=$('view-search');
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
   var conferenceSel=$('conference'), divisionSel=$('division'), schoolSel=$('school'), positionSel=$('position'), gradYearSel=$('gradYear');
-  var photoToggle=$('photoToggle'), moreBtn=$('moreBtn');
+  var photoToggle=$('photoToggle'), moreBtn=$('moreBtn'), searchedRow=$('searchedRow');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var sportNote=$('sportNote');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
-  var hasPhotoOn=false;
+  var hasPhotoOn=false, searchedFilter='';
   // "Load next 100" state — only ever populated in browse mode: the API
   // only returns `more` there (search mode is a relevance-ranked top-N list,
   // not a stable sort a page offset could walk through), so `hasMore` stays
@@ -427,6 +435,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       +(position?'&position='+encodeURIComponent(position):'')
       +(gradYear?'&grad_year='+encodeURIComponent(gradYear):'')
       +(hasPhoto?'&has_photo=1':'')
+      +(searchedFilter?'&searched='+searchedFilter:'')
       +(off?'&offset='+off:'');
   }
   function runSearch(){
@@ -439,7 +448,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     schoolSel.classList.toggle('filtering',!!school);
     positionSel.classList.toggle('filtering',!!position);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+division+' '+conference+' '+school+' '+position+' '+gradYear+' '+hasPhotoOn;
+    var key=term+' '+sport+' '+division+' '+conference+' '+school+' '+position+' '+gradYear+' '+hasPhotoOn+' '+searchedFilter;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
@@ -448,9 +457,9 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     // Nothing to ask for: short term and no sport → idle state. (Division/
     // conference/school/position can't be set without a sport — their
     // selects stay disabled until one is picked — so checking sport alone
-    // still covers it. Grad year and Has Photo aren't UI-gated, but browse
-    // mode still requires a sport server-side, so a grad-year- or
-    // photo-only pick stays idle until a sport is also picked.)
+    // still covers it. Grad year, Has Photo and the searched filter aren't
+    // UI-gated, but browse mode still requires a sport server-side, so
+    // picking only one of those stays idle until a sport is also picked.)
     if(term.length<2&&!sport){
       setState('idle');return;
     }
@@ -803,6 +812,13 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     clearTimeout(debounceT);runSearch();
   });
   moreBtn.addEventListener('click',loadMoreAthletes);
+  searchedRow.addEventListener('click',function(e){
+    var b=e.target.closest('.segBtn');
+    if(!b)return;
+    searchedFilter=b.getAttribute('data-v');
+    Array.prototype.forEach.call(searchedRow.querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
+    clearTimeout(debounceT);runSearch();
+  });
   // The installed app can sit alive in the background for days — refresh the
   // sports list when it's still empty and the user returns or taps the picker.
   sportSel.addEventListener('focus',function(){if(pwStored)loadSports()});
