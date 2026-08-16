@@ -97,6 +97,7 @@
 .drow .dv.ig{font-family:var(--f-mono)}
 .drow .dv.ig a{color:var(--ms-gold-bright);text-decoration:underline}
 #dFields{margin-bottom:14px}
+.dHeroPhoto{width:100%;height:auto;max-height:480px;object-fit:contain;border-radius:14px;border:1px solid var(--ms-border);margin-bottom:12px;background:var(--ms-well);display:block;margin-left:auto;margin-right:auto}
 .dSaved{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
 .spill{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--ms-surface-2);border:1px solid var(--ms-gold);color:var(--ms-gold-bright);font-size:10px;font-weight:700;letter-spacing:.1em;border-radius:999px;padding:6px 11px;font-family:var(--f-mono)}
 .spill.mut{border-color:var(--ms-border);color:var(--ms-text-2)}
@@ -220,6 +221,7 @@
 <div class="scrim" id="detailScrim" hidden>
   <div class="sheet gold">
     <h3 id="dName"></h3>
+    <img class="dHeroPhoto" id="dHeroPhoto" alt="" hidden>
     <div class="dSaved" id="dSaved" hidden></div>
     <div class="dConfirm" id="dConfirm" hidden>
       <p>Did <b id="dcHandle"></b> work on <span id="dcPlatform"></span>?</p>
@@ -557,6 +559,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 
   function renderSheet(){
     var a=currentAthlete;
+    var hero=$('dHeroPhoto'), heroUrl=primaryPhoto(a);
+    if(heroUrl){hero.src=heroUrl;hero.hidden=false}else{hero.hidden=true;hero.removeAttribute('src')}
     var saved=[];
     if(a.ig_handle)saved.push('<span class="spill">IG @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>');
     if(a.snap_handle)saved.push('<span class="spill">SNAP '+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>');
