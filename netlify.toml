@@ -30,6 +30,11 @@
   to = "https://main-stage-media.vercel.app/api/admin/athletes/filters"
   status = 200
 
+[[redirects]]
+  from = "/api/athlete-photo"
+  to = "https://main-stage-media.vercel.app/api/admin/athletes/photo"
+  status = 200
+
 # Same-origin proxies to the pw-hs-dashboard API — backs the standalone
 # "PW Data Enrichment" tool only. Kept fully separate from the MainStage
 # proxies above: different upstream, different secret (x-hs-api-key, not

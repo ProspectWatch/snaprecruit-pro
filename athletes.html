@@ -85,6 +85,16 @@
 .drow .dv.ig a{color:var(--ms-gold-bright);text-decoration:underline}
 .dSectionLabel{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted);margin:16px 0 6px}
 .dSectionLabel:first-child{margin-top:0}
+/* staff-uploaded photos (Screenshot/Cover/Action) */
+.photoGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
+.pslot{display:flex;flex-direction:column;align-items:center;gap:7px}
+.pslot .pbox{width:100%;aspect-ratio:3/4;border-radius:14px;background:var(--ms-well);border:1px dashed var(--ms-border);display:flex;align-items:center;justify-content:center;color:var(--ms-muted);overflow:hidden;position:relative}
+.pslot .pbox img{width:100%;height:100%;object-fit:cover}
+.pslot .pbox.has{border-style:solid;border-color:var(--ms-gold)}
+.pslot .pbox .tick{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:var(--ms-gold);color:#0A0A0A;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.pslot .plabel{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ms-text-2)}
+.pslot .pbox.uploading{opacity:.5}
+.pslot input[type=file]{display:none}
 /* detail sheet: scroll + search rows */
 #detailScrim .sheet{max-height:84vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .dListed{margin:-4px 0 10px;font-size:11px;color:var(--ms-muted)}
@@ -223,6 +233,28 @@
     </div>
     <p class="dBio" id="dBio" hidden></p>
     <div id="dFields"></div>
+    <div class="dSearchHead"><span class="eyebrow gold">PHOTOS</span><span class="searchMeta">tap a slot to add</span></div>
+    <div class="photoGrid" id="photoGrid">
+      <div class="pslot" data-slot="cover">
+        <label class="pbox" for="pf-cover"><span class="ph">+</span><input id="pf-cover" type="file" accept="image/*"></label>
+        <span class="plabel">Cover</span>
+      </div>
+      <div class="pslot" data-slot="screenshot">
+        <label class="pbox" for="pf-screenshot"><span class="ph">+</span><input id="pf-screenshot" type="file" accept="image/*"></label>
+        <span class="plabel">Screenshot</span>
+      </div>
+      <div class="pslot" data-slot="action">
+        <label class="pbox" for="pf-action"><span class="ph">+</span><input id="pf-action" type="file" accept="image/*"></label>
+        <span class="plabel">Action</span>
+      </div>
+    </div>
+    <div class="dConfirm" id="dScanConfirm" hidden>
+      <p>Detected from screenshot: <b id="scDetected"></b></p>
+      <div class="dcRow">
+        <button class="btn btn-gold" id="scSave" type="button">SAVE</button>
+        <button class="btn btn-secondary" id="scDismiss" type="button">DISMISS</button>
+      </div>
+    </div>
     <div class="dSearchHead"><span class="eyebrow gold">SEARCH HANDLES</span><span class="searchMeta">SNAP copies + opens · IG opens profile</span></div>
     <div id="dOptions"></div>
     <button class="btn btn-gold" id="dCopy" type="button">COPY NAME</button>
@@ -234,7 +266,7 @@
 import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 (function(){
   var KEY='ms-admin-password';
-  var API_ATHLETES='/api/athletes', API_SPORTS='/api/sports', API_SOCIALS='/api/athlete-socials', API_FILTERS='/api/athlete-filters';
+  var API_ATHLETES='/api/athletes', API_SPORTS='/api/sports', API_SOCIALS='/api/athlete-socials', API_FILTERS='/api/athlete-filters', API_PHOTO='/api/athlete-photo', API_READ_PROFILE='/api/read-profile';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -606,7 +638,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   function rerenderList(){if(lastRows.length&&list.innerHTML)render(lastRows,q.value.trim(),sportSel.value,false)}
 
   /* ---------- detail sheet ---------- */
-  var lastRows=[], detailName='', currentAthlete=null, pendingTry=null;
+  var lastRows=[], detailName='', currentAthlete=null, pendingTry=null, pendingScan=null;
   // The "(School)" suffix baked into imported display names breaks handle
   // suggestions and Snapchat/Instagram searches — strip it for search + copy.
   function coreName(a){return String(a.display_name||'').replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim()}
@@ -636,6 +668,16 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     }).join(''):'<p class="dEmpty">No handle suggestions for this name.</p>';
   }
 
+  function renderPhotoGrid(a){
+    ['screenshot','cover','action'].forEach(function(slot){
+      var box=document.querySelector('#photoGrid [data-slot="'+slot+'"] .pbox');
+      var url=(a.photos||{})[slot];
+      box.classList.toggle('has',!!url);
+      box.innerHTML=(url?'<img src="'+esc(url)+'" alt=""><span class="tick">✓</span>':'<span class="ph">+</span>')
+        +'<input id="pf-'+slot+'" type="file" accept="image/*">';
+    });
+  }
+
   // Rebuilds everything derived from the athlete record (name, photo, bio,
   // bio-fields table) without touching pendingTry/dConfirm — those track an
   // in-flight handle-confirmation and must survive a mid-flow refresh (e.g.
@@ -654,6 +696,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 
     $('dBio').textContent=a.bio||'';
     $('dBio').hidden=!a.bio;
+
+    renderPhotoGrid(a);
 
     var as=(a.athlete_sports||[])[0]||{};
     var ig=socialHandle(a,'instagram');
@@ -695,7 +739,9 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(!a)return;
     currentAthlete=a;
     pendingTry=null;
+    pendingScan=null;
     $('dConfirm').hidden=true;
+    $('dScanConfirm').hidden=true;
     renderDetailFields(a);
     renderSheet();
     $('detailScrim').hidden=false;
@@ -795,6 +841,90 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     $('dConfirm').hidden=true;
     pendingTry=null;
   });
+
+  /* ---------- staff photo upload (Screenshot/Cover/Action) ---------- */
+  async function fileToDataUrl(file){
+    var bmp=await createImageBitmap(file);
+    var max=1600,scale=Math.min(1,max/Math.max(bmp.width,bmp.height));
+    var c=document.createElement('canvas');
+    c.width=Math.round(bmp.width*scale);c.height=Math.round(bmp.height*scale);
+    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',.88);
+  }
+  function postPhoto(a,slot,dataUrl){
+    return fetch(API_PHOTO,{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},headers()),
+      body:JSON.stringify({athlete_id:a.id,dataBase64:dataUrl,contentType:'image/jpeg',slot:slot})
+    }).then(function(res){
+      if(res.status===401){forget();throw new Error('unauthorized')}
+      if(!res.ok)return res.json().catch(function(){return {}}).then(function(b){throw new Error(b.error||('HTTP '+res.status))});
+      return res.json();
+    });
+  }
+  // Every uploaded photo — not just a dedicated "screenshot" slot — gets
+  // sent to the same vision reader SnapRecruit's scanner uses (same-origin
+  // /api/read-profile, no new backend needed): a Cover or Action shot won't
+  // have an IG UI to read and will just come back empty, but a Screenshot
+  // upload (an IG profile screenshot) will, and there's no reason to make
+  // staff pick a special slot to get that for free.
+  function scanScreenshotForHandles(a,dataUrl){
+    fetch(API_READ_PROFILE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl})})
+      .then(function(res){return res.json()})
+      .then(function(data){
+        if(!data||(!data.instagram&&!data.snapchat))return;
+        if(currentAthlete!==a)return; // detail sheet moved on — don't surface a stale result
+        pendingScan={instagram:data.instagram||'',snapchat:data.snapchat||'',full_name:data.full_name||'',athlete:a};
+        var bits=[];
+        if(data.full_name)bits.push(esc(data.full_name));
+        if(data.instagram)bits.push('IG @'+esc(data.instagram));
+        if(data.snapchat)bits.push('Snap '+esc(data.snapchat));
+        $('scDetected').innerHTML=bits.join(' · ');
+        $('dScanConfirm').hidden=false;
+      }).catch(function(){/* scanning is a bonus on top of the upload, not required for it to succeed */});
+  }
+  document.getElementById('photoGrid').addEventListener('change',function(e){
+    var input=e.target.closest('input[type=file]');
+    if(!input||!input.files||!input.files[0])return;
+    var slot=input.closest('.pslot').getAttribute('data-slot');
+    var box=input.closest('.pbox');
+    var a=currentAthlete,file=input.files[0];
+    box.classList.add('uploading');
+    fileToDataUrl(file).then(function(dataUrl){
+      return postPhoto(a,slot,dataUrl).then(function(r){
+        a.photos=a.photos||{};a.photos[slot]=r.url;
+        renderPhotoGrid(a);
+        scanScreenshotForHandles(a,dataUrl);
+      });
+    }).catch(function(err){
+      if(err&&err.message!=='unauthorized')alert((err&&err.message)||'Upload failed — try again.');
+    }).then(function(){box.classList.remove('uploading')});
+  });
+  $('scSave').addEventListener('click',function(){
+    if(!pendingScan)return;
+    var a=pendingScan.athlete,ig=pendingScan.instagram,snap=pendingScan.snapchat,btn=this;
+    var extra={};
+    if(ig)extra.instagram=ig;
+    if(snap)extra.snapchat=snap;
+    btn.disabled=true;btn.textContent='SAVING…';
+    postSocials(a,extra).then(function(){
+      if(ig){a.socials=(a.socials||[]).filter(function(x){return x.platform!=='instagram'});a.socials.push({platform:'instagram',handle:ig})}
+      if(snap){a.socials=(a.socials||[]).filter(function(x){return x.platform!=='snapchat'});a.socials.push({platform:'snapchat',handle:snap})}
+      a.socials_searched_at=a.socials_searched_at||new Date().toISOString();
+      if(ig)a.ig_searched_at=a.ig_searched_at||new Date().toISOString();
+      if(snap)a.snap_searched_at=a.snap_searched_at||new Date().toISOString();
+      if(currentAthlete===a){renderDetailFields(a);renderSheet()}
+      rerenderList();
+      $('dScanConfirm').hidden=true;
+    }).catch(function(){
+      btn.textContent='SAVE FAILED — TRY AGAIN';
+    }).then(function(){
+      btn.disabled=false;
+      setTimeout(function(){btn.textContent='SAVE'},1600);
+      pendingScan=null;
+    });
+  });
+  $('scDismiss').addEventListener('click',function(){$('dScanConfirm').hidden=true;pendingScan=null});
 
   q.addEventListener('input',scheduleSearch);
   q.addEventListener('keydown',function(e){if(e.key==='Enter'){clearTimeout(debounceT);runSearch();q.blur()}});

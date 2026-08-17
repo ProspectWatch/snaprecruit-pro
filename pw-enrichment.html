@@ -76,11 +76,11 @@
 .acardPhoto{flex:0 0 auto;width:92px;height:119px;border-radius:10px;overflow:hidden;background:var(--ms-surface-2);border:1px solid var(--ms-border);display:flex;align-items:center;justify-content:center}
 .acardPhoto img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
 .acardPhoto .ph{font-size:15px;font-weight:700;letter-spacing:.02em;color:var(--ms-muted)}
-.acard .amain{flex:1;min-width:0}
+.acard .amain{flex:1;min-width:90px}
 .aname{font-size:16px;font-weight:700;overflow-wrap:anywhere}
 .aline{font-size:12px;line-height:1.5;color:var(--ms-text-2);margin-top:3px}
 .aloc{font-size:11px;color:var(--ms-muted);margin-top:2px}
-.apill{flex:0 0 auto;max-width:132px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-text-2);font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border-radius:999px;padding:5px 10px}
+.apill{flex:0 1 132px;max-width:132px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-text-2);font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border-radius:999px;padding:5px 10px}
 .apill.done{border-color:var(--ms-gold);color:var(--ms-gold-bright);font-family:var(--f-mono);letter-spacing:.04em;text-transform:none}
 .apill.done.mut{border-color:var(--ms-border);color:var(--ms-success);font-family:var(--f-ui);letter-spacing:.16em;text-transform:uppercase}
 .stateBox{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:44px 20px;color:var(--ms-muted)}
@@ -253,17 +253,24 @@
 
     <div class="dSectHead"><span class="eyebrow gold">PHOTOS</span><span class="searchMeta">tap a slot to add</span></div>
     <div class="photoGrid" id="photoGrid">
-      <div class="pslot" data-slot="screenshot">
-        <label class="pbox" for="pf-screenshot"><span class="ph">+</span><input id="pf-screenshot" type="file" accept="image/*"></label>
-        <span class="plabel">Screenshot</span>
-      </div>
       <div class="pslot" data-slot="cover">
         <label class="pbox" for="pf-cover"><span class="ph">+</span><input id="pf-cover" type="file" accept="image/*"></label>
         <span class="plabel">Cover</span>
       </div>
+      <div class="pslot" data-slot="screenshot">
+        <label class="pbox" for="pf-screenshot"><span class="ph">+</span><input id="pf-screenshot" type="file" accept="image/*"></label>
+        <span class="plabel">Screenshot</span>
+      </div>
       <div class="pslot" data-slot="action">
         <label class="pbox" for="pf-action"><span class="ph">+</span><input id="pf-action" type="file" accept="image/*"></label>
         <span class="plabel">Action</span>
+      </div>
+    </div>
+    <div class="dConfirm" id="dScanConfirm" hidden>
+      <p>Detected from screenshot: <b id="scDetected"></b></p>
+      <div class="dcRow">
+        <button class="btn btn-gold" id="scSave" type="button">SAVE</button>
+        <button class="btn btn-secondary" id="scDismiss" type="button">DISMISS</button>
       </div>
     </div>
 
@@ -607,8 +614,9 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 
   function openDetail(a){
     if(!a)return;
-    currentAthlete=a;pendingTry=null;
+    currentAthlete=a;pendingTry=null;pendingScan=null;
     $('dConfirm').hidden=true;
+    $('dScanConfirm').hidden=true;
     $('dEditForm').hidden=true;$('dFields').hidden=false;$('editSaved').classList.remove('show');
     detailName=a.name;
     $('dName').textContent=a.name;
@@ -742,6 +750,28 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
     return c.toDataURL('image/jpeg',.88);
   }
+  // Every uploaded photo — not just a dedicated "screenshot" slot — gets
+  // sent to the same same-origin vision reader SnapRecruit's scanner uses
+  // (/api/read-profile, no new backend needed): a Cover or Action shot
+  // won't have an IG UI to read and will just come back empty, but a
+  // Screenshot upload (an IG profile screenshot) will, and there's no
+  // reason to make staff pick a special slot to get that for free.
+  var pendingScan=null;
+  function scanScreenshotForHandles(a,dataUrl){
+    fetch('/api/read-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl})})
+      .then(function(res){return res.json()})
+      .then(function(data){
+        if(!data||(!data.instagram&&!data.snapchat))return;
+        if(currentAthlete!==a)return; // detail sheet moved on — don't surface a stale result
+        pendingScan={instagram:data.instagram||'',snapchat:data.snapchat||'',full_name:data.full_name||'',athlete:a};
+        var bits=[];
+        if(data.full_name)bits.push(esc(data.full_name));
+        if(data.instagram)bits.push('IG @'+esc(data.instagram));
+        if(data.snapchat)bits.push('Snap '+esc(data.snapchat));
+        $('scDetected').innerHTML=bits.join(' · ');
+        $('dScanConfirm').hidden=false;
+      }).catch(function(){/* scanning is a bonus on top of the upload, not required for it to succeed */});
+  }
   document.getElementById('photoGrid').addEventListener('change',function(e){
     var input=e.target.closest('input[type=file]');
     if(!input||!input.files||!input.files[0])return;
@@ -751,14 +781,36 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     var a=currentAthlete,file=input.files[0];
     box.classList.add('uploading');
     fileToDataUrl(file).then(function(dataUrl){
-      return postJSON(API_PHOTO,{id:a.id,dataBase64:dataUrl,contentType:'image/jpeg',slot:slot});
-    }).then(function(r){
-      a.photos=a.photos||{};a.photos[slot]=r.url;
-      renderSheet();
+      return postJSON(API_PHOTO,{id:a.id,dataBase64:dataUrl,contentType:'image/jpeg',slot:slot}).then(function(r){
+        a.photos=a.photos||{};a.photos[slot]=r.url;
+        renderSheet();
+        scanScreenshotForHandles(a,dataUrl);
+      });
     }).catch(function(err){
       alert((err&&err.message)||'Upload failed — try again.');
     }).then(function(){box.classList.remove('uploading')});
   });
+  $('scSave').addEventListener('click',function(){
+    if(!pendingScan)return;
+    var a=pendingScan.athlete,ig=pendingScan.instagram,snap=pendingScan.snapchat,btn=this;
+    var extra={id:a.id};
+    if(ig)extra.instagram=ig;
+    if(snap)extra.snapchat=snap;
+    btn.disabled=true;btn.textContent='SAVING…';
+    postJSON(API_SOCIALS,extra).then(function(r){
+      if(r&&r.athlete){a.ig_handle=r.athlete.ig_handle;a.snap_handle=r.athlete.snap_handle;a.socials_searched_at=r.athlete.socials_searched_at}
+      if(currentAthlete===a){renderFields();renderSheet()}
+      rerenderList();
+      $('dScanConfirm').hidden=true;
+    }).catch(function(){
+      btn.textContent='SAVE FAILED — TRY AGAIN';
+    }).then(function(){
+      btn.disabled=false;
+      setTimeout(function(){btn.textContent='SAVE'},1600);
+      pendingScan=null;
+    });
+  });
+  $('scDismiss').addEventListener('click',function(){$('dScanConfirm').hidden=true;pendingScan=null});
 
   q.addEventListener('input',scheduleSearch);
   q.addEventListener('keydown',function(e){if(e.key==='Enter'){clearTimeout(debounceT);runSearch();q.blur()}});
