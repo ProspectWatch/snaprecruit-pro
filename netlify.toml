@@ -1,6 +1,7 @@
 [build]
   publish = "."
   functions = "netlify/functions"
+# deploy-trigger: force a rebuild to pick up the rotated OPENAI_API_KEY
 
 [[redirects]]
   from = "/api/read-profile"
