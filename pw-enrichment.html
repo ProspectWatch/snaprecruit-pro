@@ -527,13 +527,13 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     }
     var startIdx=append?lastRows.length-rows.length:0;
     var browsing=term.length<2;
-    resLabel.textContent=browsing?'BROWSING A–Z':'RESULTS';
+    resLabel.textContent=browsing?(fwOn?'BROWSING BY PW SCORE':'BROWSING A–Z'):'RESULTS';
     resCount.textContent=lastRows.length+(lastRows.length===1?' athlete':' athletes');
     resMeta.hidden=false;
     var html=rows.map(function(a,i){
       var meta=[sportLabel(a.sport),a.position,a.school,a.state,a.grad_year?'Class of '+a.grad_year:null]
         .filter(Boolean).map(esc).join(' · ');
-      var extra=[a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.future_watch?'★ Future Watch':null]
+      var extra=[a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.pw_score?'PW '+a.pw_score+(a.pw_score_label?' '+a.pw_score_label:''):null,a.future_watch?'★ Future Watch':null]
         .filter(Boolean).map(esc).join(' · ');
       var pill=a.ig_handle?'<span class="apill done">✓ @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>'
         :a.snap_handle?'<span class="apill done">✓ snap:'+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>'
@@ -599,6 +599,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       ['Height',a.height],['School',a.school],['State',a.state],['Club team',a.club_team],
       ['National rank',a.national_rank?'#'+a.national_rank:null],
       ['Regional rank',a.regional_rank?'#'+a.regional_rank:null],
+      ['PW score',a.pw_score?a.pw_score+(a.pw_score_label?' · '+a.pw_score_label:''):null],
       ['Committed',a.committed?(a.commit_school||'Yes'):null],
       ['Instagram',ig?'@'+ig:null]
     ].filter(function(x){return x[1]});

@@ -104,18 +104,6 @@
 .dropPanel .dt{font-size:16px;font-weight:700}
 .dropPanel .ds{font-size:12px;color:var(--ms-muted);margin-top:6px}
 #files{display:none}
-.orSep{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--ms-muted);font-size:10px;font-weight:700;letter-spacing:.22em}
-.orSep::before,.orSep::after{content:'';flex:1;height:1px;background:var(--ms-border)}
-.dbPanel{background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:20px;padding:18px}
-.dbPanel .dbT{font-size:15px;font-weight:700}
-.dbPanel .dbS{font-size:12px;line-height:1.5;color:var(--ms-muted);margin-top:4px}
-.dbRow{position:relative;margin-top:10px}
-.dbRow select,.dbRow input{width:100%;height:44px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:11px;color:var(--ms-text);font-size:14px;font-family:var(--f-ui);padding:0 13px}
-.dbRow select{appearance:none;-webkit-appearance:none;padding-right:38px}
-.dbRow select:focus,.dbRow input:focus{outline:none;border-color:var(--ms-gold)}
-.dbRow .caret{position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--ms-muted);pointer-events:none;font-size:11px}
-.dbPanel .btn{margin-top:12px}
-.dbNote{font-size:11.5px;line-height:1.5;color:var(--ms-warn);margin:10px 0 0}
 .pickRow{display:flex;align-items:baseline;justify-content:space-between;margin:16px 0 10px}
 .pickRow .pc{font-size:13px;font-weight:700}
 .pickRow .clear{font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--ms-gold-bright)}
@@ -200,20 +188,6 @@
     <button class="clear" id="clearPick" type="button">CLEAR</button>
   </div>
   <div class="thumbs" id="thumbs"></div>
-
-  <div class="orSep"><span>OR</span></div>
-
-  <section class="dbPanel">
-    <div class="dbT">Load from Athlete Database</div>
-    <div class="dbS">Pick a sport or search a name — athletes load straight from the database, no screenshots needed.</div>
-    <div class="dbRow">
-      <select id="dbSport" aria-label="Sport"><option value="">All sports</option></select>
-      <span class="caret">▾</span>
-    </div>
-    <div class="dbRow"><input id="dbQ" placeholder="Name search (optional)" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
-    <button class="btn btn-outline" id="dbLoadBtn" type="button">LOAD ATHLETES</button>
-    <p class="dbNote" id="dbNote" hidden></p>
-  </section>
 
   <p class="uploadNote">Screenshots and progress are saved on this device.</p>
   <div class="uploadFoot">
@@ -341,7 +315,7 @@ async function save(){
   const c=counts();
   const db=await openDB(),tx=db.transaction(STORE,'readwrite');
   tx.objectStore(STORE).put({
-    items:state.items.map(x=>({ig:x.ig,name:x.name,snap:x.snap,read:!!x.read,outcome:x.outcome||null,searched:x.searched||[],igSearched:x.igSearched||[],hasImg:!!x.img,athleteId:x.athleteId||null,lastSnap:x.lastSnap||''})),
+    items:state.items.map(x=>({ig:x.ig,name:x.name,snap:x.snap,read:!!x.read,outcome:x.outcome||null,searched:x.searched||[],igSearched:x.igSearched||[],hasImg:!!x.img,lastSnap:x.lastSnap||''})),
     index:state.index,added:c.added,notFound:c.notFound,skipped:c.skipped,
     legacyBase:state.legacyBase,startedAt:state.startedAt||null,savedAt:Date.now()
   },'current');
@@ -363,7 +337,7 @@ async function hydrate(saved){
     outcome:x.outcome||null,
     searched:Array.isArray(x.searched)?x.searched:[],
     igSearched:Array.isArray(x.igSearched)?x.igSearched:[],
-    athleteId:x.athleteId||null,lastSnap:x.lastSnap||''
+    lastSnap:x.lastSnap||''
   }));
   // Reattach each scanned screenshot from the durable image store.
   for(let i=0;i<state.items.length;i++){try{state.items[i].img=await getImage(i)}catch{}}
@@ -443,24 +417,53 @@ function showSheet({title,msg,retry=true,skip=0,ret=true}){
 function hideSheet(){$('#sheetScrim').hidden=true}
 
 /* ---------- upload ---------- */
+// Thumbnails are decoded down to a small canvas rather than pointed straight
+// at the original file: a raw iPhone screenshot/photo can be 10+ MB, and
+// assigning that many full-resolution blob URLs to <img> tags at once (up to
+// MAX below) forces the WebView to decode and retain every one at native
+// resolution simultaneously -- exactly the memory pressure that was crashing
+// the page on selection, before scanning ever got a chance to downsize
+// anything. This mirrors the same downsize fileToDataUrl() already does for
+// scanning, just run at selection time instead.
+async function fileThumbUrl(file){
+  const bmp=await createImageBitmap(file);
+  const max=400,scale=Math.min(1,max/Math.max(bmp.width,bmp.height));
+  const c=document.createElement('canvas');
+  c.width=Math.round(bmp.width*scale);c.height=Math.round(bmp.height*scale);
+  c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  if(bmp.close)bmp.close();
+  return c.toDataURL('image/jpeg',.7);
+}
 function renderUpload(){
   const n=state.items.length;
   $('#pickRow').style.display=n?'flex':'none';
   $('#pickCount').textContent=n?`${n} screenshot${n===1?'':'s'} selected${state.trimmed?` · max ${MAX_BATCH} per batch`:''}`:'';
   $('#scanBtn').disabled=!n;
   const t=$('#thumbs');
-  t.querySelectorAll('img').forEach(img=>URL.revokeObjectURL(img.src));
   t.innerHTML='';
   const MAX=11;
-  state.items.slice(0,MAX).forEach((x,i)=>{
+  const items=state.items.slice(0,MAX);
+  const imgs=items.map((x,i)=>{
     const d=document.createElement('div');d.className='thumb';
     const img=document.createElement('img');img.loading='lazy';
-    const src=x.file?URL.createObjectURL(x.file):x.img;
-    if(src)img.src=src;
     const rm=document.createElement('button');rm.className='rm';rm.type='button';rm.textContent='✕';rm.dataset.i=i;
     d.append(img,rm);t.appendChild(d);
+    return img;
   });
   if(n>MAX){const d=document.createElement('div');d.className='thumb more';d.textContent=`+${n-MAX}`;t.appendChild(d)}
+  // One decode in flight at a time -- firing all MAX at once would still
+  // spike memory with that many full-resolution decodes concurrently, the
+  // same crash this function exists to avoid.
+  (async()=>{
+    for(let i=0;i<items.length;i++){
+      if(!t.contains(imgs[i]))return; // a newer render() superseded this one
+      try{
+        const x=items[i];
+        if(x.file)imgs[i].src=await fileThumbUrl(x.file);
+        else if(x.img)imgs[i].src=x.img;
+      }catch{}
+    }
+  })();
 }
 $('#files').onchange=async e=>{
   // Drop any prior session and its stored screenshots before a new batch.
@@ -488,61 +491,6 @@ $('#scanBtn').onclick=()=>{
   if(!state.items.length)return;
   if(!navigator.onLine)return showSheet({title:'You’re offline',msg:'Scanning needs a network connection. Reconnect and tap Scan again — your selected screenshots are still here.',retry:true,skip:0,ret:false});
   show('scanning');runScan();
-};
-
-/* ---------- load a session straight from the athlete database ---------- */
-const ADMIN_KEY='ms-admin-password';
-const adminPw=()=>{try{return localStorage.getItem(ADMIN_KEY)||''}catch{return ''}};
-const coreName=s=>String(s||'').replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();
-const socialOf=(a,p)=>{const s=(a.socials||[]).find(x=>x.platform===p);return (s&&s.handle)||''};
-let dbSportsLoaded=false;
-async function loadDbSports(){
-  if(dbSportsLoaded||!adminPw())return;
-  try{
-    const r=await fetch('/api/sports',{headers:{'x-admin-password':adminPw()},cache:'no-store'});
-    if(!r.ok)return;
-    const b=await r.json();
-    if(!b.data||!b.data.length)return;
-    const sel=$('#dbSport');
-    while(sel.options.length>1)sel.remove(1);
-    b.data.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;sel.appendChild(o)});
-    dbSportsLoaded=true;
-  }catch{}
-}
-$('#dbSport').addEventListener('focus',()=>loadDbSports());
-loadDbSports();
-$('#dbLoadBtn').onclick=async()=>{
-  const note=$('#dbNote');
-  const showNote=t=>{note.textContent=t;note.hidden=false};
-  note.hidden=true;
-  if(!adminPw())return showNote('Unlock Athlete Search once first (it saves the admin password on this device), then come back here.');
-  const term=$('#dbQ').value.trim(),sport=$('#dbSport').value;
-  if(term.length<2&&!sport)return showNote('Pick a sport or type at least two letters of a name.');
-  if(!navigator.onLine)return showNote('You look offline — reconnect to load athletes.');
-  const btn=$('#dbLoadBtn');btn.disabled=true;btn.textContent='LOADING…';
-  try{
-    const url='/api/athletes?q='+encodeURIComponent(term.length<2?'':term)+(sport?'&sport='+encodeURIComponent(sport):'');
-    const r=await fetch(url,{headers:{'x-admin-password':adminPw()}});
-    if(r.status===401)return showNote('The saved admin password was rejected — re-enter it in Athlete Search.');
-    if(!r.ok)return showNote('Database error (HTTP '+r.status+') — try again in a moment.');
-    const b=await r.json();
-    const rows=b.data||[];
-    if(!rows.length)return showNote('No athletes matched — adjust the sport or name.');
-    const trimmed=rows.length>MAX_BATCH;
-    await clearSaved();
-    state.items=rows.slice(0,MAX_BATCH).map(a=>({
-      file:null,img:null,athleteId:a.id,
-      ig:socialOf(a,'instagram'),name:coreName(a.display_name),snap:socialOf(a,'snapchat'),
-      read:true,outcome:null,searched:[],igSearched:[]
-    }));
-    state.index=0;state.legacyBase={added:0,notFound:0,skipped:0};state.startedAt=Date.now();state.trimmed=trimmed;completeTotals=null;
-    await save();
-    show('review');
-  }catch(e){
-    showNote('Couldn’t reach the database — check your connection and try again.');
-  }finally{
-    btn.disabled=false;btn.textContent='LOAD ATHLETES';
-  }
 };
 
 /* ---------- scan engine (locked: downsize + /api/read-profile contract from scanner-v14) ---------- */
@@ -782,29 +730,9 @@ function setShotMissing(on){$('#viewer').classList.toggle('noimg',on)}
 $('#shot').onerror=()=>setShotMissing(true);
 $('#shot').onclick=()=>{if($('#viewer').classList.contains('noimg'))return;$('#fsImg').src=$('#shot').src;$('#fsOverlay').hidden=false};
 $('#fsOverlay').onclick=()=>{$('#fsOverlay').hidden=true};
-/* ---------- database write-back ----------
-   For sessions loaded from the athlete database (items carry athleteId),
-   ADDED enriches the athlete: the last Snapchat handle actually searched is
-   saved as their Snapchat, and any known Instagram handle is saved too.
-   NOT FOUND just stamps the athlete as searched. Fire-and-forget. */
-function reportOutcome(x,type){
-  if(!x.athleteId||!adminPw()||type==='skip')return;
-  const body={athlete_id:x.athleteId};
-  if(type==='added'){
-    const snapHandle=x.lastSnap||x.snap||(x.searched&&x.searched[x.searched.length-1])||'';
-    if(snapHandle)body.snapchat=snapHandle;
-    if(x.ig)body.instagram=x.ig;
-  }
-  fetch('/api/athlete-socials',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','x-admin-password':adminPw()},
-    body:JSON.stringify(body)
-  }).catch(()=>{});
-}
 async function decide(type){
   const x=state.items[state.index];
   x.outcome=type;
-  reportOutcome(x,type);
   await save();
   const n=nextUndecidedAfter(state.index);
   if(n===-1){
