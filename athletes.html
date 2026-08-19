@@ -57,7 +57,8 @@
 .divisionRow select:focus,.filterRow4 select:focus{outline:none;border-color:var(--ms-gold)}
 .divisionRow select.filtering,.filterRow4 select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
 .divisionRow select:disabled,.filterRow4 select:disabled{opacity:.4}
-.photoToggle{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:40px;margin-top:8px;border-radius:11px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:11px;font-weight:700;letter-spacing:.14em}
+.toggleRow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.photoToggle{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:40px;border-radius:11px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:11px;font-weight:700;letter-spacing:.14em}
 .photoToggle .dot{width:7px;height:7px;border-radius:50%;background:var(--ms-border-strong)}
 .photoToggle.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
 .photoToggle.on .dot{background:var(--ms-gold-bright)}
@@ -181,7 +182,10 @@
         <select id="position" aria-label="Filter by position" disabled><option value="">Position</option></select>
         <select id="gradYear" aria-label="Filter by grad year"><option value="">Grad Year</option></select>
       </div>
-      <button class="photoToggle" id="photoToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS PHOTO ONLY</button>
+      <div class="toggleRow">
+        <button class="photoToggle" id="photoToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS PHOTO ONLY</button>
+        <button class="photoToggle" id="igToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS IG ONLY</button>
+      </div>
       <div class="segRow" id="searchedRow" role="group" aria-label="Filter by search status">
         <button class="segBtn on" type="button" data-v="">ALL</button>
         <button class="segBtn" type="button" data-v="no">UNSEARCHED</button>
@@ -274,11 +278,11 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var viewUnlock=$('view-unlock'), viewSearch=$('view-search');
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
   var conferenceSel=$('conference'), divisionSel=$('division'), schoolSel=$('school'), positionSel=$('position'), gradYearSel=$('gradYear');
-  var photoToggle=$('photoToggle'), moreBtn=$('moreBtn'), searchedRow=$('searchedRow');
+  var photoToggle=$('photoToggle'), igToggle=$('igToggle'), moreBtn=$('moreBtn'), searchedRow=$('searchedRow');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var sportNote=$('sportNote');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
-  var hasPhotoOn=false, searchedFilter='';
+  var hasPhotoOn=false, hasIgOn=false, searchedFilter='';
   // "Load next 100" state — only ever populated in browse mode: the API
   // only returns `more` there (search mode is a relevance-ranked top-N list,
   // not a stable sort a page offset could walk through), so `hasMore` stays
@@ -467,6 +471,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       +(position?'&position='+encodeURIComponent(position):'')
       +(gradYear?'&grad_year='+encodeURIComponent(gradYear):'')
       +(hasPhoto?'&has_photo=1':'')
+      +(hasIgOn?'&has_instagram=1':'')
       +(searchedFilter?'&searched='+searchedFilter:'')
       +(off?'&offset='+off:'');
   }
@@ -480,7 +485,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     schoolSel.classList.toggle('filtering',!!school);
     positionSel.classList.toggle('filtering',!!position);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+division+' '+conference+' '+school+' '+position+' '+gradYear+' '+hasPhotoOn+' '+searchedFilter;
+    var key=term+' '+sport+' '+division+' '+conference+' '+school+' '+position+' '+gradYear+' '+hasPhotoOn+' '+hasIgOn+' '+searchedFilter;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
@@ -939,6 +944,12 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     hasPhotoOn=!hasPhotoOn;
     this.classList.toggle('on',hasPhotoOn);
     this.setAttribute('aria-pressed',String(hasPhotoOn));
+    clearTimeout(debounceT);runSearch();
+  });
+  igToggle.addEventListener('click',function(){
+    hasIgOn=!hasIgOn;
+    this.classList.toggle('on',hasIgOn);
+    this.setAttribute('aria-pressed',String(hasIgOn));
     clearTimeout(debounceT);runSearch();
   });
   moreBtn.addEventListener('click',loadMoreAthletes);
