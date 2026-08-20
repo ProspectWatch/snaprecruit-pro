@@ -57,7 +57,7 @@
 .filterRow2 input:focus,.filterRow2 select:focus{outline:none;border-color:var(--ms-gold)}
 .filterRow2 input.filtering,.filterRow2 select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
 .filterRow2 input::placeholder{color:var(--ms-muted);text-transform:none}
-.toggleRow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.toggleRow{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
 .fwToggle{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:40px;border-radius:11px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:10px;font-weight:700;letter-spacing:.1em;padding:0 4px}
 .fwToggle .dot{width:7px;height:7px;border-radius:50%;background:var(--ms-border-strong)}
 .fwToggle.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
@@ -183,6 +183,7 @@
         <button class="fwToggle" id="fwToggle" type="button" aria-pressed="false"><span class="dot"></span>FUTURE WATCH</button>
         <button class="fwToggle" id="photoToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS PHOTO</button>
         <button class="fwToggle" id="igToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS IG</button>
+        <button class="fwToggle" id="committedToggle" type="button" aria-pressed="false"><span class="dot"></span>COMMITTED</button>
       </div>
       <div class="segRow" id="searchedRow" role="group" aria-label="Filter by search status">
         <button class="segBtn on" type="button" data-v="">ALL</button>
@@ -224,6 +225,7 @@
     <h3 id="dName"></h3>
     <img class="dHeroPhoto" id="dHeroPhoto" alt="" hidden>
     <div class="dSaved" id="dSaved" hidden></div>
+    <button class="fwToggle" id="dFwToggle" type="button" aria-pressed="false" style="margin-bottom:12px"><span class="dot"></span>FUTURE WATCH</button>
     <div class="dConfirm" id="dConfirm" hidden>
       <p>Did <b id="dcHandle"></b> work on <span id="dcPlatform"></span>?</p>
       <div class="dcRow">
@@ -301,8 +303,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
   var stateSel=$('state'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
-  var photoToggle=$('photoToggle'), igToggle=$('igToggle'), moreBtn=$('moreBtn');
-  var fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false;
+  var photoToggle=$('photoToggle'), igToggle=$('igToggle'), committedToggle=$('committedToggle'), moreBtn=$('moreBtn');
+  var fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false;
   // "Load next 100" state — every request here (name term or not) is one
   // paginated PostgREST query, so pagination applies uniformly, unlike
   // Athlete Search where it's browse-mode only.
@@ -418,6 +420,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       +(fwOn?'&fw=1':'')
       +(hasPhoto?'&has_photo=1':'')
       +(hasIgOn?'&has_instagram=1':'')
+      +(hasCommittedOn?'&has_committed=1':'')
       +(searchedFilter?'&searched='+searchedFilter:'')
       +(off?'&offset='+off:'');
   }
@@ -429,12 +432,12 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     sportSel.classList.toggle('filtering',!!sport);
     stateSel.classList.toggle('filtering',!!st);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+st+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+searchedFilter;
+    var key=term+' '+sport+' '+st+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+searchedFilter;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
     if(inflight)inflight.abort();
-    if(term.length<2&&!sport&&!st&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!searchedFilter){setState('idle');return}
+    if(term.length<2&&!sport&&!st&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!searchedFilter){setState('idle');return}
     var ctl=new AbortController();inflight=ctl;
     // A generation counter, not just AbortController: abort() only cancels a
     // fetch that's still pending — it has no effect once the response has
@@ -527,7 +530,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(!append){
       if(!rows.length){
         var name=sport?sportLabel(sport):'';
-        var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',hasPhotoOn?'Has Photo':'',hasIgOn?'Has Instagram':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'']
+        var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',hasPhotoOn?'Has Photo':'',hasIgOn?'Has Instagram':'',hasCommittedOn?'Committed':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'']
           .filter(Boolean).join(', ');
         $('emptyMsg').textContent=term.length>=2
           ?('No athletes match “'+term+'”'+(extraBits?' ('+extraBits+')':'')+'.')
@@ -593,6 +596,9 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(!saved.length&&a.socials_searched_at)saved.push('<span class="spill mut">✓ SEARCHED</span>');
     $('dSaved').innerHTML=saved.join('');
     $('dSaved').hidden=!saved.length;
+    $('dFwToggle').classList.toggle('on',!!a.future_watch);
+    $('dFwToggle').setAttribute('aria-pressed',String(!!a.future_watch));
+    $('dFwToggle').innerHTML='<span class="dot"></span>'+(a.future_watch?'★ FUTURE WATCH':'TAG AS FUTURE WATCH');
     var opts=buildSuggestions({name:a.name,instagram:displayHandle(a.ig_handle,'instagram'),snapchat:displayHandle(a.snap_handle,'snapchat')});
     $('dOptions').innerHTML=opts.length?opts.map(function(o){
       return '<div class="srow"><span class="shandle">'+esc(o.handle)+'</span><span class="sbtns">'
@@ -656,6 +662,23 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(navigator.clipboard&&navigator.clipboard.writeText)
       navigator.clipboard.writeText(detailName).then(function(){done(true)},function(){done(false)});
     else done(false);
+  });
+
+  // One-tap tag/untag -- writes straight through, no Edit-mode detour, since
+  // it's a single boolean with nothing else to fill in alongside it. Wired
+  // to the same hs-athlete-edit route + fw stats key that the Future Watch
+  // filter and pw_score sort already read (hs-search.js: `future_watch:
+  // !!stats.fw`), so tagging here immediately shows up in that filter/sort.
+  $('dFwToggle').addEventListener('click',function(){
+    if(!pwStored){showUnlock();return}
+    var a=currentAthlete,btn=this,next=!a.future_watch;
+    btn.disabled=true;
+    postJSON(API_EDIT,{id:a.id,future_watch:next}).then(function(r){
+      a.future_watch=r&&r.athlete?!!r.athlete.future_watch:next;
+      renderSheet();rerenderList();
+    }).catch(function(e){
+      alert((e&&e.message)||'Failed to update Future Watch — try again.');
+    }).then(function(){btn.disabled=false});
   });
 
   /* ---------- profile edit (club, height, position, school, state, grad year) ---------- */
@@ -857,6 +880,12 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     hasIgOn=!hasIgOn;
     this.classList.toggle('on',hasIgOn);
     this.setAttribute('aria-pressed',String(hasIgOn));
+    clearTimeout(debounceT);runSearch();
+  });
+  committedToggle.addEventListener('click',function(){
+    hasCommittedOn=!hasCommittedOn;
+    this.classList.toggle('on',hasCommittedOn);
+    this.setAttribute('aria-pressed',String(hasCommittedOn));
     clearTimeout(debounceT);runSearch();
   });
   moreBtn.addEventListener('click',loadMoreAthletes);
