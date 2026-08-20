@@ -125,7 +125,7 @@
 .dcRow{display:flex;gap:9px}
 .dcRow .btn{height:46px;font-size:12px}
 /* photo slots */
-.photoGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
+.photoGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:6px}
 .pslot{display:flex;flex-direction:column;align-items:center;gap:7px}
 .pslot .pbox{width:100%;aspect-ratio:3/4;border-radius:14px;background:var(--ms-well);border:1px dashed var(--ms-border);display:flex;align-items:center;justify-content:center;color:var(--ms-muted);overflow:hidden;position:relative}
 .pslot .pbox img{width:100%;height:100%;object-fit:cover}
@@ -245,6 +245,7 @@
       </div>
       <div class="efield"><label for="eSchool">School</label><input id="eSchool" type="text" maxlength="120"></div>
       <div class="efield"><label for="eClub">Club team</label><input id="eClub" type="text" maxlength="80"></div>
+      <div class="efield"><label for="eCommitSchool">Committed to</label><input id="eCommitSchool" type="text" maxlength="120" placeholder="Leave blank if not committed"></div>
       <p class="formErr" id="editErr"></p>
       <div class="dcRow">
         <button class="btn btn-gold" id="eSave" type="button">SAVE CHANGES</button>
@@ -265,6 +266,10 @@
       <div class="pslot" data-slot="action">
         <label class="pbox" for="pf-action"><span class="ph">+</span><input id="pf-action" type="file" accept="image/*"></label>
         <span class="plabel">Action</span>
+      </div>
+      <div class="pslot" data-slot="commitment">
+        <label class="pbox" for="pf-commitment"><span class="ph">+</span><input id="pf-commitment" type="file" accept="image/*"></label>
+        <span class="plabel">Commitment</span>
       </div>
     </div>
     <div class="dConfirm" id="dScanConfirm" hidden>
@@ -584,7 +589,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         +'<button type="button" class="pbtn" data-p="instagram" data-h="'+esc(o.handle)+'">IG</button>'
         +'</span></div>';
     }).join(''):'<p class="dEmpty">No handle suggestions for this name.</p>';
-    ['screenshot','cover','action'].forEach(function(slot){
+    ['screenshot','cover','action','commitment'].forEach(function(slot){
       var box=document.querySelector('#photoGrid [data-slot="'+slot+'"] .pbox');
       var url=(a.photos||{})[slot];
       box.classList.toggle('has',!!url);
@@ -652,6 +657,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     $('eState').value=a.state||'';
     $('eSchool').value=a.school||'';
     $('eClub').value=a.club_team||'';
+    $('eCommitSchool').value=a.commit_school||'';
     $('editErr').classList.remove('show');
     $('editSaved').classList.remove('show');
     $('dFields').hidden=true;
@@ -670,14 +676,16 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       height:$('eHeight').value.trim(),
       state:$('eState').value.trim(),
       school:$('eSchool').value.trim(),
-      club:$('eClub').value.trim()
+      club:$('eClub').value.trim(),
+      commit_school:$('eCommitSchool').value.trim()
     };
     btn.disabled=true;btn.textContent='SAVING…';
     postJSON(API_EDIT,body).then(function(r){
       if(r&&r.athlete){
         Object.assign(a,{
           position:r.athlete.position,grad_year:r.athlete.grad_year,height:r.athlete.height,
-          state:r.athlete.state,school:r.athlete.school,club_team:r.athlete.club_team
+          state:r.athlete.state,school:r.athlete.school,club_team:r.athlete.club_team,
+          committed:r.athlete.committed,commit_school:r.athlete.commit_school
         });
       }
       renderFields();rerenderList();
