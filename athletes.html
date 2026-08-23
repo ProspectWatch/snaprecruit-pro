@@ -628,7 +628,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
           :(a.status?'<span class="apill">'+esc(a.status)+'</span>':'');
       }
       return '<button type="button" class="acard" data-i="'+(startIdx+i)+'">'
-        +cardPhoto(a.profile_image_url,a.display_name)
+        +cardPhoto(primaryPhoto(a),a.display_name)
         +'<div class="amain">'
         +'<div class="aname">'+esc(a.display_name)+pref+'</div>'
         +(meta?'<div class="aline">'+meta+'</div>':'')
@@ -653,6 +653,15 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   }
   function openLink(href){var a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove()}
   function kgToLbs(kg){return kg?Math.round(kg*2.20462)+' lbs':null}
+  function cmToFeetInches(cm){
+    if(!cm)return null;
+    var totalIn=Math.round(cm/2.54);
+    return Math.floor(totalIn/12)+"'"+(totalIn%12)+'"';
+  }
+  // Falls back to a staff-uploaded cover photo when the scraped roster photo
+  // is missing -- lets staff fill the gap themselves via the Photos grid
+  // instead of the card/hero staying blank forever.
+  function primaryPhoto(a){return a.profile_image_url||(a.photos&&a.photos.cover)||null}
 
   function renderSheet(){
     var a=currentAthlete;
@@ -695,8 +704,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     $('dListed').textContent=detailName!==a.display_name?'Listed as: '+a.display_name:'';
     $('dListed').hidden=detailName===a.display_name;
 
-    var photo=$('dPhoto');
-    if(a.profile_image_url){photo.src=a.profile_image_url;photo.hidden=false}
+    var photo=$('dPhoto'), heroUrl=primaryPhoto(a);
+    if(heroUrl){photo.src=heroUrl;photo.hidden=false}
     else{photo.hidden=true;photo.removeAttribute('src')}
 
     $('dBio').textContent=a.bio||'';
@@ -706,36 +715,27 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 
     var as=(a.athlete_sports||[])[0]||{};
     var ig=socialHandle(a,'instagram');
+    var schoolSite=a.school&&a.school.website;
+    // Team and School are the same value in this data (per staff review) --
+    // one row, not two. School links out to the athletics site when known
+    // (backfilled from the domain of the athlete's own roster photo).
     var f=[
-      ['Sport',a.sport&&a.sport.name],
-      ['Team',a.current_team],
-      ['School',a.school&&a.school.name],
-      ['Grad year',a.grad_year],
-      ['Location',[a.city,a.state_province,a.country].filter(Boolean).join(', ')],
-      ['Status',a.status],
-      ['Instagram',ig?'@'+ig:null],
-      ['Gender',a.gender],
-      ['Weight',kgToLbs(a.weight_kg)],
-      ['Handedness',a.handedness],
-      ['Citizenship',a.citizenship],
-      ['Conference',as.conference],
-      ['Division',as.division],
-      ['League',as.league],
-      ['NCAA eligibility',a.ncaa_eligibility_year],
-      ['Transfer portal',a.transfer_portal_status],
-      ['GPA',a.gpa],
-      ['SAT',a.sat_score],
-      ['ACT',a.act_score],
-      ['Academic honors',a.academic_honors],
-      ['Graduation status',a.graduation_status]
+      ['Position',a.position,null],
+      ['Height',cmToFeetInches(a.height_cm),null],
+      ['Hometown',a.hometown,null],
+      ['School',a.school&&a.school.name,schoolSite],
+      ['Grad year',a.grad_year,null],
+      ['Conference',as.conference,null],
+      ['Instagram',ig?'@'+ig:null,ig?('https://www.instagram.com/'+encodeURIComponent(ig)+'/'):null]
     ].filter(function(x){return x[1]});
     $('dFields').innerHTML=f.length
       ?f.map(function(x){
-        var isIg=x[0]==='Instagram';
-        var val=isIg
-          ?'<a href="https://www.instagram.com/'+encodeURIComponent(ig)+'/" target="_blank" rel="noopener noreferrer">'+esc(x[1])+'</a>'
-          :esc(x[1]);
-        return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv'+(isIg?' ig':'')+'">'+val+'</span></div>';
+        var label=x[0],val=x[1],href=x[2];
+        var isIg=label==='Instagram';
+        var content=href
+          ?'<a href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(val)+'</a>'
+          :esc(val);
+        return '<div class="drow"><span class="dl">'+esc(label)+'</span><span class="dv'+(isIg?' ig':'')+'">'+content+'</span></div>';
       }).join('')
       :'';
   }
@@ -898,7 +898,11 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     fileToDataUrl(file).then(function(dataUrl){
       return postPhoto(a,slot,dataUrl).then(function(r){
         a.photos=a.photos||{};a.photos[slot]=r.url;
-        renderPhotoGrid(a);
+        // A cover upload can be the athlete's first-ever photo (no scraped
+        // profile_image_url) -- refresh the hero photo too, not just the
+        // grid, so it shows up immediately instead of waiting for the next
+        // time the sheet happens to reopen.
+        renderDetailFields(a);
         scanScreenshotForHandles(a,dataUrl);
       });
     }).catch(function(err){
