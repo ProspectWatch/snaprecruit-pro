@@ -53,6 +53,7 @@
 .sportRow select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
 .sportRow .caret{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ms-muted);pointer-events:none}
 .filterRow2{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;margin-top:8px}
+.filterRow2.oneCol{grid-template-columns:1fr}
 .filterRow2 input,.filterRow2 select{width:100%;height:44px;appearance:none;-webkit-appearance:none;background:var(--ms-surface);border:1px solid var(--ms-border);border-radius:12px;color:var(--ms-text);font-size:14px;font-family:var(--f-ui);padding:0 13px}
 .filterRow2 input:focus,.filterRow2 select:focus{outline:none;border-color:var(--ms-gold)}
 .filterRow2 input.filtering,.filterRow2 select.filtering{border-color:var(--ms-gold);color:var(--ms-gold-bright)}
@@ -179,6 +180,9 @@
         <select id="state" aria-label="Filter by state"><option value="">All states</option></select>
         <select id="gradYear" aria-label="Filter by grad year"><option value="">All grad years</option></select>
       </div>
+      <div class="filterRow2 oneCol">
+        <input id="school" type="text" placeholder="Filter by school" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Filter by school">
+      </div>
       <div class="toggleRow">
         <button class="fwToggle" id="fwToggle" type="button" aria-pressed="false"><span class="dot"></span>FUTURE WATCH</button>
         <button class="fwToggle" id="photoToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS PHOTO</button>
@@ -302,7 +306,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
-  var stateSel=$('state'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
+  var stateSel=$('state'), schoolInput=$('school'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
   var photoToggle=$('photoToggle'), igToggle=$('igToggle'), committedToggle=$('committedToggle'), moreBtn=$('moreBtn');
   var fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false;
   // "Load next 100" state — every request here (name term or not) is one
@@ -414,10 +418,11 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   /* ---------- search (public read — no key needed to browse) ---------- */
   var debounceT=null, inflight=null, lastKey='', searchGen=0;
   function scheduleSearch(){clearTimeout(debounceT);debounceT=setTimeout(runSearch,250)}
-  function buildAthletesUrl(term,sport,st,gradYear,hasPhoto,off){
+  function buildAthletesUrl(term,sport,st,school,gradYear,hasPhoto,off){
     return API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)
       +(sport?'&sport='+encodeURIComponent(sport):'')
       +(st?'&state='+encodeURIComponent(st):'')
+      +(school?'&school='+encodeURIComponent(school):'')
       +(gradYear?'&grad_year='+encodeURIComponent(gradYear):'')
       +(fwOn?'&fw=1':'')
       +(hasPhoto?'&has_photo=1':'')
@@ -429,17 +434,19 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   function runSearch(){
     var term=q.value.trim(), sport=sportSel.value;
     var st=stateSel.value;
+    var school=schoolInput.value.trim();
     var gradYear=gradYearSel.value;
     qClear.classList.toggle('show',!!q.value);
     sportSel.classList.toggle('filtering',!!sport);
     stateSel.classList.toggle('filtering',!!st);
+    schoolInput.classList.toggle('filtering',!!school);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+st+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+searchedFilter;
+    var key=term+' '+sport+' '+st+' '+school+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+searchedFilter;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
     if(inflight)inflight.abort();
-    if(term.length<2&&!sport&&!st&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!searchedFilter){setState('idle');return}
+    if(term.length<2&&!sport&&!st&&!school&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!searchedFilter){setState('idle');return}
     var ctl=new AbortController();inflight=ctl;
     // A generation counter, not just AbortController: abort() only cancels a
     // fetch that's still pending — it has no effect once the response has
@@ -448,7 +455,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     // screen. Every render is gated on still being the latest request.
     var myGen=++searchGen;
     loadBar.classList.add('on');
-    var url=buildAthletesUrl(term,sport,st,gradYear,hasPhotoOn,0);
+    var url=buildAthletesUrl(term,sport,st,school,gradYear,hasPhotoOn,0);
     fetch(url,{signal:ctl.signal}).then(function(res){
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
@@ -471,9 +478,9 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(loadingMore||!hasMore)return;
     loadingMore=true;
     moreBtn.disabled=true;moreBtn.textContent='LOADING…';
-    var term=q.value.trim(), sport=sportSel.value, st=stateSel.value, gradYear=gradYearSel.value;
+    var term=q.value.trim(), sport=sportSel.value, st=stateSel.value, school=schoolInput.value.trim(), gradYear=gradYearSel.value;
     var nextOffset=offset+PAGE_SIZE;
-    var url=buildAthletesUrl(term,sport,st,gradYear,hasPhotoOn,nextOffset);
+    var url=buildAthletesUrl(term,sport,st,school,gradYear,hasPhotoOn,nextOffset);
     fetch(url).then(function(res){
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
@@ -865,6 +872,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   qClear.addEventListener('click',function(){q.value='';q.focus();runSearch()});
   sportSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   stateSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  schoolInput.addEventListener('input',scheduleSearch);
   gradYearSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   fwToggle.addEventListener('click',function(){
     fwOn=!fwOn;
