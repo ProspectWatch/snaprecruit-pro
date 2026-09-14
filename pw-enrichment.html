@@ -615,6 +615,18 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   // only drafts the message and hands off two taps (copy, open Instagram);
   // it never sends anything itself.
   function firstName(n){return String(n||'').trim().split(/\s+/)[0]||'there'}
+  function claimLink(a){
+    // ?id=/&name=/&grad= skips straight past the search step (the athlete is
+    // already known); fresh=1 is pages/claim.js's explicit signal for a
+    // first-claim outreach link, as opposed to an already-claimed athlete's
+    // "update my profile" link -- see its comment on isFreshClaim.
+    var params=new URLSearchParams();
+    params.set('id',a.id);
+    if(a.name)params.set('name',a.name);
+    if(a.grad_year)params.set('grad',a.grad_year);
+    params.set('fresh','1');
+    return CLAIM_URL+'?'+params.toString();
+  }
   function buildClaimDm(a){
     var first=firstName(a.name);
     var bits=[];
@@ -623,7 +635,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(a.grad_year)bits.push('Class of '+a.grad_year);
     var context=bits.length?' ('+bits.join(' · ')+')':'';
     return 'Hey '+first+'! 👋 This is the ProspectWatch team — we’ve been building out your recruiting profile'+context+' and want to make sure it’s accurate before coaches see it.\n\n'
-      +'It only takes a couple minutes to claim it and add your own stats, highlights, and info: '+CLAIM_URL+'\n\n'
+      +'It only takes a couple minutes to claim it and add your own stats, highlights, and info: '+claimLink(a)+'\n\n'
       +'Questions? Just reply to this DM!';
   }
 
