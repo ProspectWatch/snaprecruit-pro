@@ -110,6 +110,10 @@
 .efield label{display:block;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted);margin-bottom:6px}
 .efield input,.efield select{width:100%;height:44px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:11px;color:var(--ms-text);font-size:14px;padding:0 12px;font-family:var(--f-ui)}
 .efield input:focus,.efield select:focus{outline:none;border-color:var(--ms-gold)}
+.dmBox{width:100%;min-height:120px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:11px;color:var(--ms-text);font-size:13px;line-height:1.55;padding:12px;font-family:var(--f-ui);resize:vertical;margin-bottom:10px}
+.dmBox:focus{outline:none;border-color:var(--ms-gold)}
+.dmReset{display:block;margin:-2px 0 10px;font-size:11px;font-weight:600;color:var(--ms-muted);background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:2px}
+.dmHint{margin:0 0 10px;font-size:11px;color:var(--ms-muted)}
 .efield2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .editSaved{font-size:11px;color:var(--ms-success);margin:-4px 0 12px;display:none}
 .editSaved.show{display:block}
@@ -289,6 +293,16 @@
     <div class="dSectHead"><span class="eyebrow gold">SEARCH HANDLES</span><span class="searchMeta">SNAP copies + opens · IG opens profile</span></div>
     <div id="dOptions"></div>
     <button class="btn btn-gold" id="dCopy" type="button">COPY NAME</button>
+
+    <div class="dSectHead"><span class="eyebrow gold">PROFILE CLAIM DM</span><span class="searchMeta">edit before sending</span></div>
+    <p class="dmHint" id="dmNoHandle" hidden>No Instagram handle on file yet — OPEN INSTAGRAM will search their name instead.</p>
+    <textarea class="dmBox" id="dmText" rows="6"></textarea>
+    <button type="button" class="dmReset" id="dmReset">RESET TO DEFAULT MESSAGE</button>
+    <div class="dcRow">
+      <button class="btn btn-gold" id="dmCopy" type="button">COPY DM</button>
+      <button class="btn btn-secondary" id="dmOpenIg" type="button">OPEN INSTAGRAM</button>
+    </div>
+
     <button class="btn btn-secondary" id="dClose" type="button">CLOSE</button>
   </div>
 </div>
@@ -298,6 +312,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 (function(){
   var KEY='ms-hs-api-key';
   var API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit';
+  var CLAIM_URL='https://verified.prospect-watch.com/claim';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -595,6 +610,23 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   function socialsFromRow(a){return {instagram:a.ig_handle||'',snapchat:a.snap_handle||''}}
   function openLink(href){var el=document.createElement('a');el.href=href;el.target='_blank';el.rel='noopener noreferrer';document.body.appendChild(el);el.click();el.remove()}
 
+  // Staff-composed outreach DM inviting the athlete/family to the existing
+  // public claim flow (see pw-hs-dashboard's pages/claim.js) -- this tool
+  // only drafts the message and hands off two taps (copy, open Instagram);
+  // it never sends anything itself.
+  function firstName(n){return String(n||'').trim().split(/\s+/)[0]||'there'}
+  function buildClaimDm(a){
+    var first=firstName(a.name);
+    var bits=[];
+    var sport=sportLabel(a.sport);
+    if(sport)bits.push(sport);
+    if(a.grad_year)bits.push('Class of '+a.grad_year);
+    var context=bits.length?' ('+bits.join(' · ')+')':'';
+    return 'Hey '+first+'! 👋 This is the ProspectWatch team — we’ve been building out your recruiting profile'+context+' and want to make sure it’s accurate before coaches see it.\n\n'
+      +'It only takes a couple minutes to claim it and add your own stats, highlights, and info: '+CLAIM_URL+'\n\n'
+      +'Questions? Just reply to this DM!';
+  }
+
   function renderSheet(){
     var a=currentAthlete;
     var hero=$('dHeroPhoto'), heroUrl=primaryPhoto(a);
@@ -657,6 +689,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     $('dName').textContent=a.name;
     renderFields();
     renderSheet();
+    $('dmText').value=buildClaimDm(a);
+    $('dmNoHandle').hidden=!!a.ig_handle;
     $('detailScrim').hidden=false;
   }
   list.addEventListener('click',function(e){
@@ -671,6 +705,22 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(navigator.clipboard&&navigator.clipboard.writeText)
       navigator.clipboard.writeText(detailName).then(function(){done(true)},function(){done(false)});
     else done(false);
+  });
+  $('dmReset').addEventListener('click',function(){
+    if(currentAthlete)$('dmText').value=buildClaimDm(currentAthlete);
+  });
+  $('dmCopy').addEventListener('click',function(){
+    var btn=this;
+    function done(ok){btn.textContent=ok?'COPIED ✓':'COPY FAILED';setTimeout(function(){btn.textContent='COPY DM'},1400)}
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText($('dmText').value).then(function(){done(true)},function(){done(false)});
+    else done(false);
+  });
+  $('dmOpenIg').addEventListener('click',function(){
+    var a=currentAthlete;if(!a)return;
+    var ig=displayHandle(a.ig_handle,'instagram');
+    if(ig)openLink('https://www.instagram.com/'+encodeURIComponent(ig)+'/');
+    else openLink('https://www.instagram.com/explore/search/keyword/?q='+encodeURIComponent(a.name));
   });
 
   // One-tap tag/untag -- writes straight through, no Edit-mode detour, since
