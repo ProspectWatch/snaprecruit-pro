@@ -256,6 +256,11 @@
       <div class="efield"><label for="eSchool">School</label><input id="eSchool" type="text" maxlength="120"></div>
       <div class="efield"><label for="eClub">Club team</label><input id="eClub" type="text" maxlength="80"></div>
       <div class="efield"><label for="eCommitSchool">Committed to</label><input id="eCommitSchool" type="text" maxlength="120" placeholder="Leave blank if not committed" list="commitSchoolList" autocomplete="off"><datalist id="commitSchoolList"></datalist></div>
+      <div class="efield" id="eEmailWrap">
+        <label for="eEmail">Email</label>
+        <input id="eEmail" type="email" maxlength="120" placeholder="Public email from IG bio or recruiting profile">
+        <p class="dmHint" id="eEmailOnFile" hidden>✓ Already on file.</p>
+      </div>
       <p class="formErr" id="editErr"></p>
       <div class="dcRow">
         <button class="btn btn-gold" id="eSave" type="button">SAVE CHANGES</button>
@@ -763,6 +768,13 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     $('eSchool').value=a.school||'';
     $('eClub').value=a.club_team||'';
     $('eCommitSchool').value=a.commit_school||'';
+    // The value itself is never available here -- hs-search.js only ever
+    // returns has_email (a boolean), never the address (see its comment) --
+    // so when one's already on file this hides the input entirely rather
+    // than risk a blank field silently clearing a value it can't see.
+    $('eEmail').value='';
+    $('eEmail').hidden=!!a.has_email;
+    $('eEmailOnFile').hidden=!a.has_email;
     $('editErr').classList.remove('show');
     $('editSaved').classList.remove('show');
     $('dFields').hidden=true;
@@ -771,9 +783,12 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   $('eCancel').addEventListener('click',function(){
     $('dEditForm').hidden=true;$('dFields').hidden=false;
   });
+  var EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   $('eSave').addEventListener('click',function(){
     var a=currentAthlete,btn=this,err=$('editErr');
     err.classList.remove('show');
+    var emailVal=$('eEmail').hidden?'':$('eEmail').value.trim();
+    if(emailVal&&!EMAIL_RE.test(emailVal)){err.textContent='Enter a valid email.';err.classList.add('show');return}
     var body={
       id:a.id,
       position:$('ePosition').value.trim(),
@@ -782,7 +797,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       state:$('eState').value.trim(),
       school:$('eSchool').value.trim(),
       club:$('eClub').value.trim(),
-      commit_school:$('eCommitSchool').value.trim()
+      commit_school:$('eCommitSchool').value.trim(),
+      contact_email:emailVal
     };
     btn.disabled=true;btn.textContent='SAVING…';
     postJSON(API_EDIT,body).then(function(r){
@@ -790,7 +806,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         Object.assign(a,{
           position:r.athlete.position,grad_year:r.athlete.grad_year,height:r.athlete.height,
           state:r.athlete.state,school:r.athlete.school,club_team:r.athlete.club_team,
-          committed:r.athlete.committed,commit_school:r.athlete.commit_school
+          committed:r.athlete.committed,commit_school:r.athlete.commit_school,
+          has_email:r.athlete.has_email
         });
       }
       renderFields();rerenderList();

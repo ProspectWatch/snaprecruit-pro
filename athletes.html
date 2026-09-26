@@ -116,6 +116,9 @@
 .dConfirm b{font-family:var(--f-mono);font-weight:500;color:var(--ms-gold-bright)}
 .dcRow{display:flex;gap:9px}
 .dcRow .btn{height:46px;font-size:12px}
+.emailBox{width:100%;height:46px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:12px;color:var(--ms-text);font-size:14px;padding:0 13px;font-family:var(--f-ui);margin-bottom:10px}
+.emailBox:focus{outline:none;border-color:var(--ms-gold)}
+.emailOnFile{margin:0 0 12px;font-size:12px;color:var(--ms-text-2)}
 .apill.done{border-color:var(--ms-gold);color:var(--ms-gold-bright);font-family:var(--f-mono);letter-spacing:.04em;text-transform:none}
 .apill.done.mut{border-color:var(--ms-border);color:var(--ms-success);font-family:var(--f-ui);letter-spacing:.16em;text-transform:uppercase}
 .acardPhoto{flex:0 0 auto;width:92px;height:119px;border-radius:10px;overflow:hidden;background:var(--ms-surface-2);border:1px solid var(--ms-border);display:flex;align-items:center;justify-content:center}
@@ -237,6 +240,13 @@
     </div>
     <p class="dBio" id="dBio" hidden></p>
     <div id="dFields"></div>
+    <div class="dSearchHead"><span class="eyebrow gold">CONTACT EMAIL</span></div>
+    <p class="emailOnFile" id="eEmailOnFile" hidden>✓ Already on file.</p>
+    <div id="eEmailBox">
+      <input class="emailBox" id="eEmail" type="email" maxlength="120" placeholder="Public email from IG bio or recruiting profile">
+      <button class="btn btn-gold" id="eEmailSave" type="button">SAVE EMAIL</button>
+      <p class="formErr" id="eEmailErr"></p>
+    </div>
     <div class="dSearchHead"><span class="eyebrow gold">PHOTOS</span><span class="searchMeta">tap a slot to add</span></div>
     <div class="photoGrid" id="photoGrid">
       <div class="pslot" data-slot="cover">
@@ -270,7 +280,7 @@
 import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 (function(){
   var KEY='ms-admin-password';
-  var API_ATHLETES='/api/athletes', API_SPORTS='/api/sports', API_SOCIALS='/api/athlete-socials', API_FILTERS='/api/athlete-filters', API_PHOTO='/api/athlete-photo', API_READ_PROFILE='/api/read-profile';
+  var API_ATHLETES='/api/athletes', API_SPORTS='/api/sports', API_SOCIALS='/api/athlete-socials', API_FILTERS='/api/athlete-filters', API_PHOTO='/api/athlete-photo', API_READ_PROFILE='/api/read-profile', API_CONTACT_EMAIL='/api/athlete-contact-email';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -738,6 +748,16 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         return '<div class="drow"><span class="dl">'+esc(label)+'</span><span class="dv'+(isIg?' ig':'')+'">'+content+'</span></div>';
       }).join('')
       :'';
+
+    $('eEmailErr').classList.remove('show');
+    $('eEmail').value='';
+    if(a.email){
+      $('eEmailOnFile').hidden=false;
+      $('eEmailBox').hidden=true;
+    } else {
+      $('eEmailOnFile').hidden=true;
+      $('eEmailBox').hidden=false;
+    }
   }
 
   function openDetail(a){
@@ -763,6 +783,36 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(navigator.clipboard&&navigator.clipboard.writeText)
       navigator.clipboard.writeText(detailName).then(function(){done(true)},function(){done(false)});
     else done(false);
+  });
+
+  // Captures a publicly-posted email (IG bio, recruiting profile, etc.)
+  // found while doing enrichment work -- only ever adds one when none is on
+  // file yet; the input is hidden entirely once a.email is set (see
+  // renderDetailFields), and the server independently refuses to overwrite
+  // an existing contact email either way.
+  var EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  $('eEmailSave').addEventListener('click',function(){
+    var a=currentAthlete,btn=this,err=$('eEmailErr');
+    err.classList.remove('show');
+    var email=$('eEmail').value.trim();
+    if(!email||!EMAIL_RE.test(email)){err.textContent='Enter a valid email.';err.classList.add('show');return}
+    btn.disabled=true;btn.textContent='SAVING…';
+    fetch(API_CONTACT_EMAIL,{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},headers()),
+      body:JSON.stringify({athlete_id:a.id,email:email})
+    }).then(function(res){
+      return res.json().then(function(body){
+        if(!res.ok)throw new Error(body&&body.error||'HTTP '+res.status);
+        return body;
+      });
+    }).then(function(r){
+      a.email=r.email;
+      if(currentAthlete===a)renderDetailFields(a);
+    }).catch(function(e){
+      err.textContent=(e&&e.message)||'Save failed — try again.';
+      err.classList.add('show');
+    }).then(function(){btn.disabled=false;btn.textContent='SAVE EMAIL'});
   });
 
   /* ---------- social search + write-back ---------- */
