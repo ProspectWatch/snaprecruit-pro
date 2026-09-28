@@ -524,7 +524,12 @@ function sheetFor(e,failCount){
   if(e&&(e.status===429||e.status===529))return{title:'Provider limit reached',msg:'The vision reader is rate-limited right now. Wait a moment and retry — your batch is saved.',retry:true,skip:failCount,ret:true};
   if(e&&e.status===402)return{title:'Provider limit reached',msg:'The vision reader account is out of credit. Your batch is saved — retry once it’s topped up.',retry:true,skip:failCount,ret:true};
   const n=failCount||1,total=state.items.length;
-  return{title:n>1?`Couldn’t read ${n} screenshots`:'Couldn’t read this screenshot',msg:`${n>1?`${n} of ${total} profiles`:`One of ${total} profiles`} failed. The rest of your batch is safe and the session is saved on this device.`,retry:true,skip:n,ret:true};
+  // The raw reader error (e.g. a missing/invalid API key, or which provider
+  // actually answered) is otherwise silently dropped -- surfacing it here
+  // turns "couldn't read" from a dead end into something staff can act on
+  // or report back accurately, without needing a repro session each time.
+  const detail=e&&e.message?` (${e.message})`:'';
+  return{title:n>1?`Couldn’t read ${n} screenshots`:'Couldn’t read this screenshot',msg:`${n>1?`${n} of ${total} profiles`:`One of ${total} profiles`} failed${detail}. The rest of your batch is safe and the session is saved on this device.`,retry:true,skip:n,ret:true};
 }
 async function runScan(){
   if(scanning)return;
