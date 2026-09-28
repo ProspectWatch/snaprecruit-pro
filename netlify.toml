@@ -2,6 +2,12 @@
   publish = "."
   functions = "netlify/functions"
 # deploy-trigger: force a rebuild to pick up the rotated OPENAI_API_KEY
+# deploy-trigger 2026-09-28: read-profile.mjs (OpenAI) is the sole
+# /api/read-profile implementation in the repo (verified -- no Anthropic
+# reference remains anywhere), but screenshot scanning is reportedly still
+# hitting Anthropic in production. Forcing a clean rebuild in case the
+# deployed function bundle is stale from before the read-profile.js
+# (Anthropic) duplicate was removed (ea8063a).
 
 [[redirects]]
   from = "/api/read-profile"
