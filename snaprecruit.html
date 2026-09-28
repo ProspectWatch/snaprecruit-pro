@@ -521,8 +521,16 @@ function logRow(kind,text){
 }
 function sheetFor(e,failCount){
   if(e&&(e.kind==='network'||!navigator.onLine))return{title:'Network unavailable',msg:'SnapRecruit couldn’t reach the reader. Your batch and completed profiles are saved on this device.',retry:true,skip:0,ret:true};
-  if(e&&(e.status===429||e.status===529))return{title:'Provider limit reached',msg:'The vision reader is rate-limited right now. Wait a moment and retry — your batch is saved.',retry:true,skip:failCount,ret:true};
-  if(e&&e.status===402)return{title:'Provider limit reached',msg:'The vision reader account is out of credit. Your batch is saved — retry once it’s topped up.',retry:true,skip:failCount,ret:true};
+  if(e&&(e.status===429||e.status===529)){
+    // OpenAI returns 429 for both a true short-term rate limit AND an
+    // exhausted/unbilled quota -- retrying helps for the former and does
+    // nothing for the latter, so this can't be told apart from the status
+    // code alone. The raw message (e.g. "insufficient_quota" vs "rate_limit
+    // exceeded") is the only way to tell staff which one they're looking at.
+    const quota=e.message&&/quota|billing/i.test(e.message);
+    return{title:quota?'Vision reader is out of quota':'Provider limit reached',msg:(quota?'The OpenAI account has no usable quota left -- retrying won’t help until billing is fixed.':'The vision reader is rate-limited right now. Wait a moment and retry.')+(e.message?` (${e.message})`:'')+' Your batch is saved.',retry:true,skip:failCount,ret:true};
+  }
+  if(e&&e.status===402)return{title:'Provider limit reached',msg:`The vision reader account is out of credit${e.message?` (${e.message})`:''}. Your batch is saved — retry once it’s topped up.`,retry:true,skip:failCount,ret:true};
   const n=failCount||1,total=state.items.length;
   // The raw reader error (e.g. a missing/invalid API key, or which provider
   // actually answered) is otherwise silently dropped -- surfacing it here
