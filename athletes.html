@@ -185,6 +185,14 @@
         <select id="position" aria-label="Filter by position" disabled><option value="">Position</option></select>
         <select id="gradYear" aria-label="Filter by grad year"><option value="">Grad Year</option></select>
       </div>
+      <div class="divisionRow">
+        <select id="missingInfo" aria-label="Filter by missing information">
+          <option value="">All (no missing-info filter)</option>
+          <option value="position">Missing position</option>
+          <option value="height">Missing height</option>
+          <option value="school">Missing school</option>
+        </select>
+      </div>
       <div class="toggleRow">
         <button class="photoToggle" id="photoToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS PHOTO ONLY</button>
         <button class="photoToggle" id="igToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS IG ONLY</button>
@@ -287,7 +295,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var $=function(id){return document.getElementById(id)};
   var viewUnlock=$('view-unlock'), viewSearch=$('view-search');
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
-  var conferenceSel=$('conference'), divisionSel=$('division'), schoolSel=$('school'), positionSel=$('position'), gradYearSel=$('gradYear');
+  var conferenceSel=$('conference'), divisionSel=$('division'), schoolSel=$('school'), positionSel=$('position'), gradYearSel=$('gradYear'), missingInfoSel=$('missingInfo');
   var photoToggle=$('photoToggle'), igToggle=$('igToggle'), moreBtn=$('moreBtn'), searchedRow=$('searchedRow');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var sportNote=$('sportNote');
@@ -473,7 +481,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     clearTimeout(debounceT);
     debounceT=setTimeout(runSearch,250);
   }
-  function buildAthletesUrl(term,sport,division,conference,school,position,gradYear,hasPhoto,off){
+  function buildAthletesUrl(term,sport,division,conference,school,position,gradYear,hasPhoto,missingInfo,off){
     return API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)+(sport?'&sport='+encodeURIComponent(sport):'')
       +(division?'&division='+encodeURIComponent(division):'')
       +(conference?'&conference='+encodeURIComponent(conference):'')
@@ -483,11 +491,13 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       +(hasPhoto?'&has_photo=1':'')
       +(hasIgOn?'&has_instagram=1':'')
       +(searchedFilter?'&searched='+searchedFilter:'')
+      +(missingInfo?'&missing='+encodeURIComponent(missingInfo):'')
       +(off?'&offset='+off:'');
   }
   function runSearch(){
     var term=q.value.trim(), sport=sportSel.value;
     var division=divisionSel.value, conference=conferenceSel.value, school=schoolSel.value, position=positionSel.value, gradYear=gradYearSel.value;
+    var missingInfo=missingInfoSel.value;
     qClear.classList.toggle('show',!!q.value);
     sportSel.classList.toggle('filtering',!!sport);
     divisionSel.classList.toggle('filtering',!!division);
@@ -495,7 +505,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     schoolSel.classList.toggle('filtering',!!school);
     positionSel.classList.toggle('filtering',!!position);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+division+' '+conference+' '+school+' '+position+' '+gradYear+' '+hasPhotoOn+' '+hasIgOn+' '+searchedFilter;
+    missingInfoSel.classList.toggle('filtering',!!missingInfo);
+    var key=term+' '+sport+' '+division+' '+conference+' '+school+' '+position+' '+gradYear+' '+hasPhotoOn+' '+hasIgOn+' '+searchedFilter+' '+missingInfo;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
@@ -504,9 +515,10 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     // Nothing to ask for: short term and no sport → idle state. (Division/
     // conference/school/position can't be set without a sport — their
     // selects stay disabled until one is picked — so checking sport alone
-    // still covers it. Grad year, Has Photo and the searched filter aren't
-    // UI-gated, but browse mode still requires a sport server-side, so
-    // picking only one of those stays idle until a sport is also picked.)
+    // still covers it. Grad year, Has Photo, missing-info and the searched
+    // filter aren't UI-gated, but browse mode still requires a sport
+    // server-side, so picking only one of those stays idle until a sport is
+    // also picked.)
     if(term.length<2&&!sport){
       setState('idle');return;
     }
@@ -518,7 +530,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     // screen. Every render is gated on still being the latest request.
     var myGen=++searchGen;
     loadBar.classList.add('on');
-    var url=buildAthletesUrl(term,sport,division,conference,school,position,gradYear,hasPhotoOn,0);
+    var url=buildAthletesUrl(term,sport,division,conference,school,position,gradYear,hasPhotoOn,missingInfo,0);
     fetch(url,{headers:headers(),signal:ctl.signal}).then(function(res){
       if(res.status===401){forget();return null}
       if(!res.ok)throw new Error('HTTP '+res.status);
@@ -546,8 +558,9 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     moreBtn.disabled=true;moreBtn.textContent='LOADING…';
     var term=q.value.trim(), sport=sportSel.value;
     var division=divisionSel.value, conference=conferenceSel.value, school=schoolSel.value, position=positionSel.value, gradYear=gradYearSel.value;
+    var missingInfo=missingInfoSel.value;
     var nextOffset=offset+PAGE_SIZE;
-    var url=buildAthletesUrl(term,sport,division,conference,school,position,gradYear,hasPhotoOn,nextOffset);
+    var url=buildAthletesUrl(term,sport,division,conference,school,position,gradYear,hasPhotoOn,missingInfo,nextOffset);
     fetch(url,{headers:headers()}).then(function(res){
       if(res.status===401){forget();return null}
       if(!res.ok)throw new Error('HTTP '+res.status);
@@ -994,6 +1007,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   schoolSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   positionSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   gradYearSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
+  missingInfoSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   photoToggle.addEventListener('click',function(){
     hasPhotoOn=!hasPhotoOn;
     this.classList.toggle('on',hasPhotoOn);

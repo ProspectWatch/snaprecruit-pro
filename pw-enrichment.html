@@ -187,6 +187,14 @@
       <div class="filterRow2 oneCol">
         <input id="school" type="text" placeholder="Filter by school" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Filter by school">
       </div>
+      <div class="filterRow2 oneCol">
+        <select id="missingInfo" aria-label="Filter by missing information">
+          <option value="">All (no missing-info filter)</option>
+          <option value="position">Missing position</option>
+          <option value="height">Missing height</option>
+          <option value="school">Missing school</option>
+        </select>
+      </div>
       <div class="toggleRow">
         <button class="fwToggle" id="fwToggle" type="button" aria-pressed="false"><span class="dot"></span>FUTURE WATCH</button>
         <button class="fwToggle" id="photoToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS PHOTO</button>
@@ -326,7 +334,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var q=$('q'), qClear=$('qClear'), sportSel=$('sport'), loadBar=$('loadBar');
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
-  var stateSel=$('state'), schoolInput=$('school'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
+  var stateSel=$('state'), schoolInput=$('school'), missingInfoSel=$('missingInfo'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
   var photoToggle=$('photoToggle'), igToggle=$('igToggle'), committedToggle=$('committedToggle'), moreBtn=$('moreBtn');
   var fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false;
   // "Load next 100" state — every request here (name term or not) is one
@@ -438,7 +446,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   /* ---------- search (public read — no key needed to browse) ---------- */
   var debounceT=null, inflight=null, lastKey='', searchGen=0;
   function scheduleSearch(){clearTimeout(debounceT);debounceT=setTimeout(runSearch,250)}
-  function buildAthletesUrl(term,sport,st,school,gradYear,hasPhoto,off){
+  function buildAthletesUrl(term,sport,st,school,gradYear,hasPhoto,missingInfo,off){
     return API_ATHLETES+'?q='+encodeURIComponent(term.length<2?'':term)
       +(sport?'&sport='+encodeURIComponent(sport):'')
       +(st?'&state='+encodeURIComponent(st):'')
@@ -449,24 +457,27 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       +(hasIgOn?'&has_instagram=1':'')
       +(hasCommittedOn?'&has_committed=1':'')
       +(searchedFilter?'&searched='+searchedFilter:'')
+      +(missingInfo?'&missing='+encodeURIComponent(missingInfo):'')
       +(off?'&offset='+off:'');
   }
   function runSearch(){
     var term=q.value.trim(), sport=sportSel.value;
     var st=stateSel.value;
     var school=schoolInput.value.trim();
+    var missingInfo=missingInfoSel.value;
     var gradYear=gradYearSel.value;
     qClear.classList.toggle('show',!!q.value);
     sportSel.classList.toggle('filtering',!!sport);
     stateSel.classList.toggle('filtering',!!st);
     schoolInput.classList.toggle('filtering',!!school);
+    missingInfoSel.classList.toggle('filtering',!!missingInfo);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+st+' '+school+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+searchedFilter;
+    var key=term+' '+sport+' '+st+' '+school+' '+missingInfo+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+searchedFilter;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
     if(inflight)inflight.abort();
-    if(term.length<2&&!sport&&!st&&!school&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!searchedFilter){setState('idle');return}
+    if(term.length<2&&!sport&&!st&&!school&&!missingInfo&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!searchedFilter){setState('idle');return}
     var ctl=new AbortController();inflight=ctl;
     // A generation counter, not just AbortController: abort() only cancels a
     // fetch that's still pending — it has no effect once the response has
@@ -475,7 +486,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     // screen. Every render is gated on still being the latest request.
     var myGen=++searchGen;
     loadBar.classList.add('on');
-    var url=buildAthletesUrl(term,sport,st,school,gradYear,hasPhotoOn,0);
+    var url=buildAthletesUrl(term,sport,st,school,gradYear,hasPhotoOn,missingInfo,0);
     fetch(url,{signal:ctl.signal}).then(function(res){
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
@@ -498,9 +509,9 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(loadingMore||!hasMore)return;
     loadingMore=true;
     moreBtn.disabled=true;moreBtn.textContent='LOADING…';
-    var term=q.value.trim(), sport=sportSel.value, st=stateSel.value, school=schoolInput.value.trim(), gradYear=gradYearSel.value;
+    var term=q.value.trim(), sport=sportSel.value, st=stateSel.value, school=schoolInput.value.trim(), missingInfo=missingInfoSel.value, gradYear=gradYearSel.value;
     var nextOffset=offset+PAGE_SIZE;
-    var url=buildAthletesUrl(term,sport,st,school,gradYear,hasPhotoOn,nextOffset);
+    var url=buildAthletesUrl(term,sport,st,school,gradYear,hasPhotoOn,missingInfo,nextOffset);
     fetch(url).then(function(res){
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
@@ -577,13 +588,20 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     }
     var startIdx=append?lastRows.length-rows.length:0;
     var browsing=term.length<2;
-    resLabel.textContent=browsing?(fwOn?'BROWSING BY PW SCORE':'BROWSING A–Z'):'RESULTS';
+    resLabel.textContent=browsing?(fwOn?'BROWSING BY FW RANK':'BROWSING A–Z'):'RESULTS';
     resCount.textContent=lastRows.length+(lastRows.length===1?' athlete':' athletes');
     resMeta.hidden=false;
     var html=rows.map(function(a,i){
       var meta=[sportLabel(a.sport),a.position,a.school,a.state,a.grad_year?'Class of '+a.grad_year:null]
         .filter(Boolean).map(esc).join(' · ');
-      var extra=[a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.pw_score?'PW '+a.pw_score+(a.pw_score_label?' '+a.pw_score_label:''):null,a.future_watch?'★ Future Watch':null]
+      // Once the Future Watch toggle is on, every row already has
+      // future_watch=true (redundant to call out again) -- show its rank in
+      // that list instead, since that's the whole reason to sort by FW.
+      // Off-toggle, an individual future_watch row still gets the star.
+      var fwBit=fwOn
+        ?(a.fw_rank!=null?'#'+a.fw_rank+' '+(a.fw_rank_source==='final'?'FINAL':'AUTO'):'Unranked')
+        :(a.future_watch?'★ Future Watch':null);
+      var extra=[fwBit,a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.pw_score?'PW '+a.pw_score+(a.pw_score_label?' '+a.pw_score_label:''):null]
         .filter(Boolean).map(esc).join(' · ');
       var pill=a.ig_handle?'<span class="apill done">✓ @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>'
         :a.snap_handle?'<span class="apill done">✓ snap:'+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>'
@@ -681,6 +699,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       ['Height',a.height],['School',a.school],['State',a.state],['Club team',a.club_team],
       ['National rank',a.national_rank?'#'+a.national_rank:null],
       ['Regional rank',a.regional_rank?'#'+a.regional_rank:null],
+      ['FW rank',a.fw_rank!=null?'#'+a.fw_rank+' ('+(a.fw_rank_source==='final'?'FINAL':'AUTO')+')':null],
       ['PW score',a.pw_score?a.pw_score+(a.pw_score_label?' · '+a.pw_score_label:''):null],
       ['Committed',a.committed?(a.commit_school||'Yes'):null],
       ['Instagram',ig?'@'+ig:null]
@@ -952,6 +971,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   sportSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   stateSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   schoolInput.addEventListener('input',scheduleSearch);
+  missingInfoSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   gradYearSel.addEventListener('change',function(){clearTimeout(debounceT);runSearch()});
   fwToggle.addEventListener('click',function(){
     fwOn=!fwOn;
