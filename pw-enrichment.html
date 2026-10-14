@@ -114,6 +114,11 @@
 .dmBox:focus{outline:none;border-color:var(--ms-gold)}
 .dmReset{display:block;margin:-2px 0 10px;font-size:11px;font-weight:600;color:var(--ms-muted);background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:2px}
 .dmHint{margin:0 0 10px;font-size:11px;color:var(--ms-muted)}
+/* One-tap MaxPreps check in the player sheet (profile, or a name+school search) */
+.mpBtn{display:flex;align-items:center;justify-content:center;gap:8px;margin:12px 0 6px;padding:12px 14px;border-radius:12px;border:1px solid var(--ms-gold-bright);background:rgba(212,175,55,.1);color:var(--ms-gold-bright);font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;text-decoration:none}
+.mpBtn.search{background:transparent;border-color:var(--ms-border)}
+.mpNote{margin:0 0 4px;font-size:11px;color:var(--ms-muted);text-align:center}
+.mpNote.auto{color:var(--ms-gold-bright)}
 .efield2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .editSaved{font-size:11px;color:var(--ms-success);margin:-4px 0 12px;display:none}
 .editSaved.show{display:block}
@@ -251,6 +256,8 @@
     </div>
     <div class="dSectHead"><span class="eyebrow gold">PROFILE</span><button type="button" class="editToggle" id="editToggle">EDIT</button></div>
     <div id="dFields"></div>
+    <a class="mpBtn" id="dMaxpreps" target="_blank" rel="noopener noreferrer" href="#">📊 MAXPREPS</a>
+    <p class="mpNote" id="dMaxprepsNote" hidden></p>
     <p class="editSaved" id="editSaved">✓ Profile updated</p>
     <div class="dEditForm" id="dEditForm" hidden>
       <div class="efield2">
@@ -691,6 +698,25 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     });
   }
 
+  // MaxPreps button: the link /api/hs-search picked (lib/maxprepsProfile.js in
+  // pw-hs-dashboard -- saved profile, never one marked wrong), else a MaxPreps
+  // search for name + school. Only https maxpreps.com URLs are ever used.
+  function maxprepsFor(a){
+    var m=a.maxpreps||{};
+    var ok=typeof m.url==='string'&&/^https:\/\/(www\.)?maxpreps\.com\//i.test(m.url);
+    if(ok)return {kind:m.kind==='auto'||m.kind==='search'?m.kind:'profile',url:m.url,label:m.kind==='search'?'Search MaxPreps':'MaxPreps profile',note:m.note||''};
+    var q=[a.name,a.school].filter(Boolean).join(' ');
+    return {kind:'search',url:'https://www.maxpreps.com/search/?search='+encodeURIComponent(q),label:'Search MaxPreps',note:'No MaxPreps profile on file.'};
+  }
+  function renderMaxpreps(){
+    var mp=maxprepsFor(currentAthlete),btn=$('dMaxpreps'),note=$('dMaxprepsNote');
+    btn.href=mp.url;btn.setAttribute('data-maxpreps',mp.kind);
+    btn.className='mpBtn'+(mp.kind==='search'?' search':'');
+    btn.textContent='📊 '+mp.label+' ↗';
+    note.textContent=mp.note;note.hidden=!mp.note;
+    note.className='mpNote'+(mp.kind==='auto'?' auto':'');
+  }
+
   function renderFields(){
     var a=currentAthlete;
     var ig=displayHandle(a.ig_handle,'instagram');
@@ -724,6 +750,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     detailName=a.name;
     $('dName').textContent=a.name;
     renderFields();
+    renderMaxpreps();
     renderSheet();
     $('dmText').value=buildClaimDm(a);
     $('dmNoHandle').hidden=!!a.ig_handle;
