@@ -450,7 +450,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     showUnlock();
   }
 
-  /* ---------- search (public read — no key needed to browse) ---------- */
+  /* ---------- search (needs the access key since pw-hs-dashboard #255) ---------- */
   var debounceT=null, inflight=null, lastKey='', searchGen=0;
   function scheduleSearch(){clearTimeout(debounceT);debounceT=setTimeout(runSearch,250)}
   function buildAthletesUrl(term,sport,st,school,gradYear,hasPhoto,missingInfo,off){
@@ -494,7 +494,10 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     var myGen=++searchGen;
     loadBar.classList.add('on');
     var url=buildAthletesUrl(term,sport,st,school,gradYear,hasPhotoOn,missingInfo,0);
-    fetch(url,{signal:ctl.signal}).then(function(res){
+    // /api/hs-search requires x-hs-api-key (pw-hs-dashboard #255). A 401
+    // means the saved key is wrong, not a connection problem.
+    fetch(url,{signal:ctl.signal,headers:headers()}).then(function(res){
+      if(res.status===401){var e401=new Error('unauthorized');e401.unauthorized=true;throw e401}
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
     }).then(function(body){
@@ -505,7 +508,10 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       if(e&&e.name==='AbortError')return;
       if(myGen!==searchGen)return;
       lastKey='';
-      $('errMsg').textContent=navigator.onLine===false?'You look offline. Reconnect and try again.':'Check your connection and try again.';
+      if(e&&e.unauthorized){forget();return}
+      $('errMsg').textContent=navigator.onLine===false?'You look offline. Reconnect and try again.'
+        :(e&&/^HTTP /.test(e.message||''))?'The athlete database didn’t answer ('+e.message+'). Try again in a moment.'
+        :'Check your connection and try again.';
       setState('err');
     }).then(function(){if(inflight===ctl){inflight=null;loadBar.classList.remove('on')}});
   }
@@ -519,7 +525,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     var term=q.value.trim(), sport=sportSel.value, st=stateSel.value, school=schoolInput.value.trim(), missingInfo=missingInfoSel.value, gradYear=gradYearSel.value;
     var nextOffset=offset+PAGE_SIZE;
     var url=buildAthletesUrl(term,sport,st,school,gradYear,hasPhotoOn,missingInfo,nextOffset);
-    fetch(url).then(function(res){
+    fetch(url,{headers:headers()}).then(function(res){
+      if(res.status===401){forget();throw new Error('unauthorized')}
       if(!res.ok)throw new Error('HTTP '+res.status);
       return res.json();
     }).then(function(body){
