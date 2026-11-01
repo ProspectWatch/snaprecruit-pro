@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/tokens.css">
-<title>PW Data Enrichment — MainStage Athletes</title>
+<title>PW Data Enrichment · MainStage Athletes</title>
 <style>
 /* Standalone tool: a copy of Athlete Search's visual language, not a shared
    file with it — this screen has its own password (x-hs-api-key), its own
@@ -162,7 +162,7 @@
     <div class="unlockCard">
       <span class="chip"><svg width="20" height="20" viewBox="0 0 17 17" fill="none"><circle cx="6" cy="8.5" r="3.4" stroke="currentColor" stroke-width="1.5"/><path d="M9.4 8.5H15M13 8.5v2.6M15 8.5v1.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
       <h2>Enter PW HS access key</h2>
-      <p>This tool searches the national PW HS athlete database (PW_HSdata_maxxpreps) — a separate system from Athlete Search. Enter the key once — it's saved on this device.</p>
+      <p>This tool searches the national PW HS athlete database (PW_HSdata_maxxpreps), a separate system from Athlete Search. Enter the key once; it's saved on this device.</p>
       <div class="field">
         <label for="pw">Access key</label>
         <input id="pw" type="password" autocomplete="current-password" enterkeyhint="go">
@@ -250,7 +250,7 @@
     <div class="dConfirm" id="dConfirm" hidden>
       <p>Did <b id="dcHandle"></b> work on <span id="dcPlatform"></span>?</p>
       <div class="dcRow">
-        <button class="btn btn-gold" id="dcYes" type="button">YES — SAVE IT</button>
+        <button class="btn btn-gold" id="dcYes" type="button">YES, SAVE IT</button>
         <button class="btn btn-secondary" id="dcNo" type="button">NO</button>
       </div>
     </div>
@@ -262,7 +262,7 @@
     <div class="dEditForm" id="dEditForm" hidden>
       <div class="efield2">
         <div class="efield"><label for="ePosition">Position</label><input id="ePosition" type="text" maxlength="20" autocapitalize="characters"></div>
-        <div class="efield"><label for="eGradYear">Grad year</label><select id="eGradYear"><option value="">—</option></select></div>
+        <div class="efield"><label for="eGradYear">Grad year</label><select id="eGradYear"><option value="">Not set</option></select></div>
       </div>
       <div class="efield2">
         <div class="efield"><label for="eHeight">Height</label><input id="eHeight" type="text" maxlength="12" placeholder="e.g. 5'10&quot;"></div>
@@ -315,7 +315,7 @@
     <button class="btn btn-gold" id="dCopy" type="button">COPY NAME</button>
 
     <div class="dSectHead"><span class="eyebrow gold">PROFILE CLAIM DM</span><span class="searchMeta">edit before sending</span></div>
-    <p class="dmHint" id="dmNoHandle" hidden>No Instagram handle on file yet — OPEN INSTAGRAM will search their name instead.</p>
+    <p class="dmHint" id="dmNoHandle" hidden>No Instagram handle on file yet. OPEN INSTAGRAM will search their name instead.</p>
     <textarea class="dmBox" id="dmText" rows="6"></textarea>
     <button type="button" class="dmReset" id="dmReset">RESET TO DEFAULT MESSAGE</button>
     <div class="dcRow">
@@ -534,7 +534,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       hasMore=!!body.more;
       render(body.data||[],term,sport,true);
     }).catch(function(){
-      moreBtn.textContent='COULDN’T LOAD MORE — TAP TO RETRY';
+      moreBtn.textContent='COULDN’T LOAD MORE. TAP TO RETRY';
     }).then(function(){loadingMore=false;moreBtn.disabled=false});
   }
   function setState(s){
@@ -664,6 +664,10 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     params.set('fresh','1');
     return CLAIM_URL+'?'+params.toString();
   }
+  // CEO-approved copy, 2026-11-01: claim the profile, and claim the Founding
+  // Athlete offer. Price, lock-in and cancellation wording match the approved
+  // DM master in pw-hs-dashboard (lib/foundingDm.js, CEO offer decisions
+  // 2026-10-26). No em dashes (CEO copy standard).
   function buildClaimDm(a){
     var first=firstName(a.name);
     var bits=[];
@@ -671,9 +675,13 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     if(sport)bits.push(sport);
     if(a.grad_year)bits.push('Class of '+a.grad_year);
     var context=bits.length?' ('+bits.join(' · ')+')':'';
-    return 'Hey '+first+'! 👋 This is the ProspectWatch team — we’ve been building out your recruiting profile'+context+' and want to make sure it’s accurate before coaches see it.\n\n'
-      +'It only takes a couple minutes to claim it and add your own stats, highlights, and info: '+claimLink(a)+'\n\n'
-      +'Questions? Just reply to this DM!';
+    return 'Hey '+first+', it’s Stuart from Prospect Watch 👋\n\n'
+      +'We’ve built your recruiting profile'+context+'. Two things are waiting for you:\n\n'
+      +'1. Claim your profile. It’s free and takes a couple of minutes. Check your info and add your own stats, highlights and photo before coaches see it.\n\n'
+      +'2. Claim your Founding Athlete offer. You’re invited to be one of our first Founding Athletes: PW Verified and the full Athlete Center for $249/year instead of $299/year. Your $249 is locked in as long as your membership stays active, and you can cancel any time before it renews by emailing info@prospect-watch.com.\n\n'
+      +'Start here: '+claimLink(a)+'\n\n'
+      +'This isn’t a ranking or a Future Watch selection. Take a look with your parents, and reply here with any questions.\n\n'
+      +'Stuart\nProspect Watch';
   }
 
   function renderSheet(){
@@ -745,7 +753,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
           :esc(x[1]);
         return '<div class="drow"><span class="dl">'+esc(x[0])+'</span><span class="dv'+(isIg?' ig':'')+'">'+val+'</span></div>';
       }).join('')
-      :'<p class="dEmpty">Nothing on file yet — tap EDIT to add some.</p>';
+      :'<p class="dEmpty">Nothing on file yet. Tap EDIT to add some.</p>';
   }
 
   function openDetail(a){
@@ -806,7 +814,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       a.future_watch=r&&r.athlete?!!r.athlete.future_watch:next;
       renderSheet();rerenderList();
     }).catch(function(e){
-      alert((e&&e.message)||'Failed to update Future Watch — try again.');
+      alert((e&&e.message)||'Failed to update Future Watch. Try again.');
     }).then(function(){btn.disabled=false});
   });
 
@@ -867,7 +875,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       $('dEditForm').hidden=true;$('dFields').hidden=false;
       $('editSaved').classList.add('show');
     }).catch(function(e){
-      err.textContent=(e&&e.message)||'Save failed — try again.';
+      err.textContent=(e&&e.message)||'Save failed. Try again.';
       err.classList.add('show');
     }).then(function(){btn.disabled=false;btn.textContent='SAVE CHANGES'});
   });
@@ -919,10 +927,10 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       renderFields();renderSheet();rerenderList();
       $('dConfirm').hidden=true;
     }).catch(function(){
-      btn.textContent='SAVE FAILED — TRY AGAIN';
+      btn.textContent='SAVE FAILED. TRY AGAIN';
     }).then(function(){
       btn.disabled=false;
-      setTimeout(function(){btn.textContent='YES — SAVE IT'},1600);
+      setTimeout(function(){btn.textContent='YES, SAVE IT'},1600);
       pendingTry=null;
     });
   });
@@ -974,7 +982,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         scanScreenshotForHandles(a,dataUrl);
       });
     }).catch(function(err){
-      alert((err&&err.message)||'Upload failed — try again.');
+      alert((err&&err.message)||'Upload failed. Try again.');
     }).then(function(){box.classList.remove('uploading')});
   });
   $('scSave').addEventListener('click',function(){
@@ -990,7 +998,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       rerenderList();
       $('dScanConfirm').hidden=true;
     }).catch(function(){
-      btn.textContent='SAVE FAILED — TRY AGAIN';
+      btn.textContent='SAVE FAILED. TRY AGAIN';
     }).then(function(){
       btn.disabled=false;
       setTimeout(function(){btn.textContent='SAVE'},1600);
