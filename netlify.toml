@@ -72,6 +72,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/hs-athlete-offer-sent"
+  to = "https://pw-hs-dashboard.vercel.app/api/hs-athlete-offer-sent"
+  status = 200
+
+[[redirects]]
   from = "/snaprecruit"
   to = "/snaprecruit.html"
   status = 200
