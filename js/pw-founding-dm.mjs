@@ -11,8 +11,8 @@
 //   Mirrors pw-hs-dashboard lib/foundingInvite.js.
 // - Other sports keep the direct claim link (the Athlete Center is volleyball
 //   only).
-// Copy: CEO-approved 2026-11-01 claim DM; price, lock-in and cancellation
-// wording match pw-hs-dashboard lib/foundingDm.js. No em dashes.
+// Copy: shortened for Instagram (CEO 2026-11-02); the volleyball DM is the
+// pw-hs-dashboard lib/foundingDm.js master word for word. No em dashes.
 
 export const INVITE_URL = 'https://verified.prospect-watch.com/invite';
 export const CLAIM_URL = 'https://verified.prospect-watch.com/claim';
@@ -74,19 +74,33 @@ export function claimLink(a) {
 /** The link the DM carries: personal invite for volleyball, claim link otherwise. */
 export const dmLink = (a) => (isVolleyball(a.sport) ? inviteLink(a) : claimLink(a));
 
-/** The DM. sportLabel turns a sport value into its display label. */
+/** Instagram caps a DM at 1,000 characters (CEO 2026-11-02: "the DM is too long for IG"). */
+export const DM_MAX_CHARS = 1000;
+
+/**
+ * The DM, short enough for Instagram. Volleyball: the Founding Athlete DM,
+ * word for word the pw-hs-dashboard lib/foundingDm.js master, with the
+ * athlete's personal invite link. Other sports (no Athlete Center yet): a
+ * claim-only version with the direct claim link. Price and terms live on the
+ * page the link opens, never in the DM. sportLabel turns a sport value into
+ * its display label.
+ */
 export function buildClaimDm(a, sportLabel = (s) => s) {
   const first = cleanPart(splitName(a.name).first) || 'there';
+  const close = "\n\nThis isn't a ranking or Future Watch selection. Questions? Reply here or email " + CONTACT_EMAIL + '\n\nStephanie\nProspect Watch';
+  if (isVolleyball(a.sport)) {
+    return "Hey " + first + ", it's Stephanie from Prospect Watch 👋\n\n"
+      + 'Our staff has selected you for our Founding Athlete offer: first access to the new Prospect Watch Athlete Center. Claiming your profile is free.\n\n'
+      + 'Take a look here: ' + inviteLink(a)
+      + close;
+  }
   const bits = [];
   const sport = a.sport ? sportLabel(a.sport) : '';
   if (sport) bits.push(sport);
   if (a.grad_year) bits.push('Class of ' + a.grad_year);
   const context = bits.length ? ' (' + bits.join(' · ') + ')' : '';
-  return 'Hey ' + first + ', it’s Stephanie from Prospect Watch 👋\n\n'
-    + 'We’ve built your recruiting profile' + context + '. Two things are waiting for you:\n\n'
-    + '1. Claim your profile. It’s free and takes a couple of minutes. Check your info and add your own stats, highlights and photo before coaches see it.\n\n'
-    + '2. Claim your Founding Athlete offer. You’re invited to be one of our first Founding Athletes: PW Verified and the full Athlete Center for $249/year instead of $299/year. Your $249 is locked in as long as your membership stays active, and you can cancel any time before it renews by emailing info@prospect-watch.com.\n\n'
-    + 'Start here: ' + dmLink(a) + '\n\n'
-    + 'This isn’t a ranking or a Future Watch selection. Take a look with your parents, and reply here or email me at ' + CONTACT_EMAIL + ' with any questions.\n\n'
-    + 'Stephanie\nProspect Watch';
+  return "Hey " + first + ", it's Stephanie from Prospect Watch 👋\n\n"
+    + "We've built your recruiting profile" + context + '. Claiming it is free: check your info and add your own stats, highlights and photo.\n\n'
+    + 'Claim it here: ' + claimLink(a)
+    + close;
 }
