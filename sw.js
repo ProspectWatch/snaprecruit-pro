@@ -1,7 +1,7 @@
 // MainStage Athletes — minimal shell service worker.
 // Network-first for everything it touches; never caches /api/* or non-GET.
 // IndexedDB remains the only source of truth for session data.
-const CACHE = 'mainstage-shell-v6';
+const CACHE = 'mainstage-shell-v7';
 const SHELL = [
   '/', '/index.html', '/snaprecruit.html', '/submissions.html', '/media.html',
   '/athletes.html', '/pw-enrichment.html',

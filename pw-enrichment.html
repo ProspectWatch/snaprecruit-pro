@@ -110,6 +110,7 @@
 .efield label{display:block;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ms-muted);margin-bottom:6px}
 .efield input,.efield select{width:100%;height:44px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:11px;color:var(--ms-text);font-size:14px;padding:0 12px;font-family:var(--f-ui)}
 .efield input:focus,.efield select:focus{outline:none;border-color:var(--ms-gold)}
+.fwDmTag{font-size:11px;font-weight:700;color:var(--ms-gold);border:1px solid currentColor;border-radius:4px;padding:1px 6px;margin-left:8px;white-space:nowrap}
 .dmBox{width:100%;min-height:120px;background:var(--ms-well);border:1px solid var(--ms-border);border-radius:11px;color:var(--ms-text);font-size:13px;line-height:1.55;padding:12px;font-family:var(--f-ui);resize:vertical;margin-bottom:10px}
 .dmBox:focus{outline:none;border-color:var(--ms-gold)}
 .dmReset{display:block;margin:-2px 0 10px;font-size:11px;font-weight:600;color:var(--ms-muted);background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:2px}
@@ -325,7 +326,7 @@
     <div id="dOptions"></div>
     <button class="btn btn-gold" id="dCopy" type="button">COPY NAME</button>
 
-    <div class="dSectHead"><span class="eyebrow gold">PROFILE CLAIM DM</span><span class="searchMeta">edit before sending</span></div>
+    <div class="dSectHead"><span class="eyebrow gold">PROFILE CLAIM DM</span><span class="fwDmTag" id="dmFwTag" hidden></span><span class="searchMeta">edit before sending</span></div>
     <p class="dmHint" id="dmNoHandle" hidden>No Instagram handle on file yet. OPEN INSTAGRAM will search their name instead.</p>
     <textarea class="dmBox" id="dmText" rows="6"></textarea>
     <button type="button" class="dmReset" id="dmReset">RESET TO DEFAULT MESSAGE</button>
@@ -341,7 +342,7 @@
 
 <script type="module">
 import {buildSuggestions} from '/js/snaprecruit-core.mjs';
-import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
+import {buildClaimDm as buildFoundingDm, rankedDmRank} from '/js/pw-founding-dm.mjs';
 (function(){
   var KEY='ms-hs-api-key';
   var API_OFFER='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit';
@@ -667,6 +668,12 @@ import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
   // drafts the message and hands off two taps (copy, open Instagram); it never
   // sends anything itself.
   function buildClaimDm(a){return buildFoundingDm(a,sportLabel)}
+  // Small "Future Watch #N" label when the RANKED DM is in use (a.fw_dm_rank
+  // from /api/hs-search: FINAL rank 1 to 100 on Future Watch, volleyball).
+  function showFwDmTag(a){
+    var r=rankedDmRank(a),t=$('dmFwTag');
+    t.textContent=r?'Future Watch #'+r:'';t.hidden=!r;
+  }
 
   function renderSheet(){
     var a=currentAthlete;
@@ -753,6 +760,7 @@ import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
     renderMaxpreps();
     renderSheet();
     $('dmText').value=buildClaimDm(a);
+    showFwDmTag(a);
     $('dmNoHandle').hidden=!!a.ig_handle;
     $('detailScrim').hidden=false;
   }
