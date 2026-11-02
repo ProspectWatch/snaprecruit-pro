@@ -133,6 +133,12 @@
 .dConfirm p{margin:0 0 11px;font-size:13px;color:var(--ms-text)}
 .dConfirm b{font-family:var(--f-mono);font-weight:500;color:var(--ms-gold-bright)}
 .dcRow{display:flex;gap:9px}
+/* Offer sent (CEO 2026-11-02): marks the Founding Athlete DM as sent by hand. */
+.offerRow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0 4px}
+.offerRow .btn{flex:1 1 auto}
+.offerDone{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:12px;border:1px solid var(--ms-gold);color:var(--ms-gold-bright);font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.offerUndo{font-size:12px;font-weight:600;color:var(--ms-muted);background:none;border:0;padding:6px 2px;text-decoration:underline;text-underline-offset:2px}
+.offerErr{flex-basis:100%;margin:0;font-size:12px;color:var(--ms-danger,#E0554B)}
 .dcRow .btn{height:46px;font-size:12px}
 /* photo slots */
 .photoGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:6px}
@@ -210,6 +216,11 @@
         <button class="segBtn on" type="button" data-v="">ALL</button>
         <button class="segBtn" type="button" data-v="no">UNSEARCHED</button>
         <button class="segBtn" type="button" data-v="yes">SEARCHED</button>
+      </div>
+      <div class="segRow" id="offerFilterRow" role="group" aria-label="Filter by Founding Athlete DM">
+        <button class="segBtn on" type="button" data-v="">ALL</button>
+        <button class="segBtn" type="button" data-v="unsent">OFFER NOT SENT</button>
+        <button class="segBtn" type="button" data-v="sent">OFFER SENT</button>
       </div>
       <div class="bar indeterminate" id="loadBar"><div class="fill"></div></div>
     </div>
@@ -322,6 +333,7 @@
       <button class="btn btn-gold" id="dmCopy" type="button">COPY DM</button>
       <button class="btn btn-secondary" id="dmOpenIg" type="button">OPEN INSTAGRAM</button>
     </div>
+    <div class="offerRow" id="offerRow"></div>
 
     <button class="btn btn-secondary" id="dClose" type="button">CLOSE</button>
   </div>
@@ -332,7 +344,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
 (function(){
   var KEY='ms-hs-api-key';
-  var API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit';
+  var API_OFFER='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -343,7 +355,7 @@ import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
   var stateSel=$('state'), schoolInput=$('school'), missingInfoSel=$('missingInfo'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
   var photoToggle=$('photoToggle'), igToggle=$('igToggle'), committedToggle=$('committedToggle'), moreBtn=$('moreBtn');
-  var fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false;
+  var offerFilter='', fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false;
   // "Load next 100" state — every request here (name term or not) is one
   // paginated PostgREST query, so pagination applies uniformly, unlike
   // Athlete Search where it's browse-mode only.
@@ -464,6 +476,7 @@ import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
       +(hasIgOn?'&has_instagram=1':'')
       +(hasCommittedOn?'&has_committed=1':'')
       +(searchedFilter?'&searched='+searchedFilter:'')
+      +(offerFilter?'&offer='+offerFilter:'')
       +(missingInfo?'&missing='+encodeURIComponent(missingInfo):'')
       +(off?'&offset='+off:'');
   }
@@ -479,12 +492,12 @@ import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
     schoolInput.classList.toggle('filtering',!!school);
     missingInfoSel.classList.toggle('filtering',!!missingInfo);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+st+' '+school+' '+missingInfo+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+searchedFilter;
+    var key=term+' '+sport+' '+st+' '+school+' '+missingInfo+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+searchedFilter+' '+offerFilter;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
     if(inflight)inflight.abort();
-    if(term.length<2&&!sport&&!st&&!school&&!missingInfo&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!searchedFilter){setState('idle');return}
+    if(term.length<2&&!sport&&!st&&!school&&!missingInfo&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!searchedFilter&&!offerFilter){setState('idle');return}
     var ctl=new AbortController();inflight=ctl;
     // A generation counter, not just AbortController: abort() only cancels a
     // fetch that's still pending — it has no effect once the response has
@@ -584,7 +597,7 @@ import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
     if(!append){
       if(!rows.length){
         var name=sport?sportLabel(sport):'';
-        var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',hasPhotoOn?'Has Photo':'',hasIgOn?'Has Instagram':'',hasCommittedOn?'Committed':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'']
+        var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',hasPhotoOn?'Has Photo':'',hasIgOn?'Has Instagram':'',hasCommittedOn?'Committed':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'',offerFilter==='unsent'?'Offer not sent':offerFilter==='sent'?'Offer sent':'']
           .filter(Boolean).join(', ');
         $('emptyMsg').textContent=term.length>=2
           ?('No athletes match “'+term+'”'+(extraBits?' ('+extraBits+')':'')+'.')
@@ -617,7 +630,8 @@ import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
         :(a.future_watch?'★ Future Watch':null);
       var extra=[fwBit,a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.pw_score?'PW '+a.pw_score+(a.pw_score_label?' '+a.pw_score_label:''):null]
         .filter(Boolean).map(esc).join(' · ');
-      var pill=a.ig_handle?'<span class="apill done">✓ @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>'
+      var pill=a.offer_sent_at?'<span class="apill done mut">✓ Offer sent</span>'
+        :a.ig_handle?'<span class="apill done">✓ @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>'
         :a.snap_handle?'<span class="apill done">✓ snap:'+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>'
         :a.socials_searched_at?'<span class="apill done mut">✓ Searched</span>'
         :a.committed?'<span class="apill">COMMITTED</span>':'';
@@ -681,6 +695,7 @@ import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
       box.innerHTML=(url?'<img src="'+esc(url)+'" alt=""><span class="tick">✓</span>':'<span class="ph">+</span>')
         +'<input id="pf-'+slot+'" type="file" accept="image/*">';
     });
+    offerErr='';renderOffer();
   }
 
   // MaxPreps button: the link /api/hs-search picked (lib/maxprepsProfile.js in
@@ -1017,6 +1032,44 @@ import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
     Array.prototype.forEach.call(searchedRow.querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
     clearTimeout(debounceT);runSearch();
   });
+  $('offerFilterRow').addEventListener('click',function(e){
+    var b=e.target.closest('.segBtn');
+    if(!b)return;
+    offerFilter=b.getAttribute('data-v');
+    Array.prototype.forEach.call($('offerFilterRow').querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
+    clearTimeout(debounceT);runSearch();
+  });
+
+  // Offer sent (CEO 2026-11-02): records that the Founding Athlete DM went out
+  // by hand (pw-hs-dashboard /api/hs-athlete-offer-sent, one row per athlete).
+  // Undo removes it. Nothing is sent from here.
+  var offerBusy=false, offerErr='';
+  function fmtDate(iso){try{return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric'})}catch(_){return ''}}
+  function renderOffer(){
+    var a=currentAthlete,row=$('offerRow');
+    if(!a){row.innerHTML='';return}
+    row.innerHTML=(a.offer_sent_at
+      ?'<span class="offerDone">✓ OFFER SENT'+(fmtDate(a.offer_sent_at)?' · '+esc(fmtDate(a.offer_sent_at)):'')+'</span>'
+        +'<button type="button" class="offerUndo" id="offerUndo"'+(offerBusy?' disabled':'')+'>Undo</button>'
+      :'<button class="btn btn-gold" id="offerMark" type="button"'+(offerBusy?' disabled':'')+'>'+(offerBusy?'SAVING…':'OFFER SENT')+'</button>')
+      +(offerErr?'<p class="offerErr">'+esc(offerErr)+'</p>':'');
+  }
+  function setOffer(sent){
+    var a=currentAthlete;
+    if(!a||offerBusy)return;
+    if(!sent&&!window.confirm('Mark this offer as not sent?'))return;
+    offerBusy=true;offerErr='';renderOffer();
+    postJSON(API_OFFER,{id:a.id,sent:sent}).then(function(r){
+      a.offer_sent_at=r&&r.sent?(r.sent_at||new Date().toISOString()):null;
+    }).catch(function(e){
+      offerErr=e&&e.message==='unauthorized'?'Sign in again to save.':'Could not save. Try again.';
+    }).then(function(){offerBusy=false;renderOffer();rerenderList()});
+  }
+  $('offerRow').addEventListener('click',function(e){
+    if(e.target.closest('#offerMark'))setOffer(true);
+    else if(e.target.closest('#offerUndo'))setOffer(false);
+  });
+
   $('retryBtn').addEventListener('click',function(){lastKey='';runSearch()});
 
   if(pwStored)showSearch();else showUnlock();
