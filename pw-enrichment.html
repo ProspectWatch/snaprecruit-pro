@@ -329,10 +329,10 @@
 
 <script type="module">
 import {buildSuggestions} from '/js/snaprecruit-core.mjs';
+import {buildClaimDm as buildFoundingDm} from '/js/pw-founding-dm.mjs';
 (function(){
   var KEY='ms-hs-api-key';
   var API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit';
-  var CLAIM_URL='https://verified.prospect-watch.com/claim';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -647,42 +647,12 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   function socialsFromRow(a){return {instagram:a.ig_handle||'',snapchat:a.snap_handle||''}}
   function openLink(href){var el=document.createElement('a');el.href=href;el.target='_blank';el.rel='noopener noreferrer';document.body.appendChild(el);el.click();el.remove()}
 
-  // Staff-composed outreach DM inviting the athlete/family to the existing
-  // public claim flow (see pw-hs-dashboard's pages/claim.js) -- this tool
-  // only drafts the message and hands off two taps (copy, open Instagram);
-  // it never sends anything itself.
-  function firstName(n){return String(n||'').trim().split(/\s+/)[0]||'there'}
-  function claimLink(a){
-    // ?id=/&name=/&grad= skips straight past the search step (the athlete is
-    // already known); fresh=1 is pages/claim.js's explicit signal for a
-    // first-claim outreach link, as opposed to an already-claimed athlete's
-    // "update my profile" link -- see its comment on isFreshClaim.
-    var params=new URLSearchParams();
-    params.set('id',a.id);
-    if(a.name)params.set('name',a.name);
-    if(a.grad_year)params.set('grad',a.grad_year);
-    params.set('fresh','1');
-    return CLAIM_URL+'?'+params.toString();
-  }
-  // CEO-approved copy, 2026-11-01: claim the profile, and claim the Founding
-  // Athlete offer. Price, lock-in and cancellation wording match the approved
-  // DM master in pw-hs-dashboard (lib/foundingDm.js, CEO offer decisions
-  // 2026-10-26). No em dashes (CEO copy standard).
-  function buildClaimDm(a){
-    var first=firstName(a.name);
-    var bits=[];
-    var sport=sportLabel(a.sport);
-    if(sport)bits.push(sport);
-    if(a.grad_year)bits.push('Class of '+a.grad_year);
-    var context=bits.length?' ('+bits.join(' · ')+')':'';
-    return 'Hey '+first+', it’s Stuart from Prospect Watch 👋\n\n'
-      +'We’ve built your recruiting profile'+context+'. Two things are waiting for you:\n\n'
-      +'1. Claim your profile. It’s free and takes a couple of minutes. Check your info and add your own stats, highlights and photo before coaches see it.\n\n'
-      +'2. Claim your Founding Athlete offer. You’re invited to be one of our first Founding Athletes: PW Verified and the full Athlete Center for $249/year instead of $299/year. Your $249 is locked in as long as your membership stays active, and you can cancel any time before it renews by emailing info@prospect-watch.com.\n\n'
-      +'Start here: '+claimLink(a)+'\n\n'
-      +'This isn’t a ranking or a Future Watch selection. Take a look with your parents, and reply here with any questions.\n\n'
-      +'Stuart\nProspect Watch';
-  }
+  // Staff-composed outreach DM: the claim + Founding Athlete offer message,
+  // signed by Stephanie, carrying the athlete's personal Prospect Watch invite
+  // link for volleyball (js/pw-founding-dm.mjs, CEO 2026-11-02). This tool only
+  // drafts the message and hands off two taps (copy, open Instagram); it never
+  // sends anything itself.
+  function buildClaimDm(a){return buildFoundingDm(a,sportLabel)}
 
   function renderSheet(){
     var a=currentAthlete;
