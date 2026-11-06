@@ -3,19 +3,25 @@
 // id so the claim opens this profile); other sports keep the claim link.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildClaimDm, inviteLink, dmLink, cleanPart, DM_MAX_CHARS, rankedDmRank, stateNameOf, FOUNDING_DM_GENERAL_TEMPLATE, FOUNDING_DM_FW_RANKED_TEMPLATE } from '../js/pw-founding-dm.mjs';
+import { holdText, buildClaimDm, buildClaimDmDetailed, inviteLink, dmLink, cleanPart, DM_MAX_CHARS, rankedDmRank, stateNameOf, FOUNDING_DM_GENERAL_TEMPLATE, FOUNDING_DM_FW_RANKED_TEMPLATE, DM_STOP_LINE, DM_SENDER_FOOTER, FOUNDING_DM_TEMPLATE_VERSION } from '../js/pw-founding-dm.mjs';
 
-const vb = { id: 'a644edf6-e95b-42d9-b77c-4b5993f244d2', name: 'Abby Bunyan', grad_year: 2029, sport: 'volleyball', state: 'TX' };
-const linkOf = (dm) => dm.match(/\n\n(https:\S+)\n\n/)[1];
+const CLOSE = `${DM_STOP_LINE}\n${DM_SENDER_FOOTER}`;
+
+const vb = { id: 'a644edf6-e95b-42d9-b77c-4b5993f244d2', name: 'Abby Bunyan', grad_year: 2029, sport: 'volleyball', state: 'TX', contact_hold: false };
+const linkOf = (dm) => dm.match(/\n(https:\S+)\n/)[1];
 const label = (s) => ({ volleyball: 'Volleyball', lacrosse: 'Lacrosse' })[s] || s;
 
 test('volleyball DM: the GENERAL Founding DM from Stephanie with the personal invite link', () => {
   const dm = buildClaimDm(vb, label);
   assert.equal(dm, FOUNDING_DM_GENERAL_TEMPLATE.replace('{firstName}', 'Abby').replace('{personalLink}', inviteLink(vb)));
   assert.match(dm, /^Hey Abby, it's Stephanie from Prospect Watch 👋/);
-  assert.match(dm, /you've been selected for our Founding Athlete offer/);
+  assert.match(dm, /You've been selected as a Founding Athlete/);
   assert.match(dm, /email stephanie@prospect-watch\.com/);
-  assert.match(dm, /\n\nStephanie, Prospect Watch$/);
+  assert.ok(dm.endsWith(CLOSE), 'STOP line and sender footer close the DM');
+  assert.equal(DM_STOP_LINE, 'Reply STOP to stop our marketing messages on Instagram and email. Account and security messages may continue.');
+  assert.equal(DM_SENDER_FOOTER, 'Stephanie, on behalf of Prospect Watch, 2248 Broadway #1314, New York, NY 10024\nverified.prospect-watch.com/trust');
+  assert.equal([...FOUNDING_DM_GENERAL_TEMPLATE].length, 722, 'the approved template length');
+  assert.equal(buildClaimDmDetailed(vb, label).version, FOUNDING_DM_TEMPLATE_VERSION);
   assert.ok(!/Stuart|\$\d|\u2014/.test(dm), 'no Stuart, no price, no em dash');
   const link = linkOf(dm);
   const u = new URL(link);
@@ -27,24 +33,31 @@ test('volleyball DM: the GENERAL Founding DM from Stephanie with the personal in
   assert.equal(u.searchParams.get('utm_medium'), 'dm');
 });
 
-test('every DM fits Instagram, even with a long name: at most 800 characters, 520 without the link', () => {
-  const long = { id: vb.id, name: 'Mariaguadalupe Fernandez-Castellanos', grad_year: 2030, state: 'NC' };
+test('every DM fits Instagram (1,000 characters) with the longest real link; RANKED v1.3 fits it, the GENERAL fallback stays as a guard', () => {
+  const long = { id: vb.id, name: 'Mariaguadalupe Fernandez-Castellanos', grad_year: 2030, state: 'NC', contact_hold: false };
+  assert.equal(inviteLink({ ...long, sport: 'volleyball' }).length, 246, 'the longest real invite link');
   for (const a of [{ ...long, sport: 'volleyball' }, { ...long, sport: 'volleyball', fw_dm_rank: 100 }, { ...long, sport: 'lacrosse' }]) {
-    const dm = buildClaimDm(a, label);
-    const n = [...dm].length;
-    assert.ok(n <= DM_MAX_CHARS && n <= 800, `${a.sport} ${a.fw_dm_rank || ''}: ${n} characters`);
-    const withoutLink = [...dm.replace(dmLink(a), '')].length;
-    assert.ok(withoutLink <= 520, `${a.sport} ${a.fw_dm_rank || ''}: ${withoutLink} characters without the link`);
-    assert.ok(!/\$\d|\u2014/.test(dm), 'no price, no em dash');
+    const r = buildClaimDmDetailed(a, label);
+    assert.ok(r.text, `${a.sport}: a DM renders`);
+    assert.ok(r.chars <= DM_MAX_CHARS, `${a.sport} ${a.fw_dm_rank || ''}: ${r.chars} characters`);
+    assert.ok(r.text.endsWith(CLOSE), 'STOP line and footer');
+    assert.ok(!/\$\d|\u2014/.test(r.text), 'no price, no em dash');
   }
+  const ranked = buildClaimDmDetailed({ ...long, sport: 'volleyball', fw_dm_rank: 100 }, label);
+  assert.equal(ranked.variant, 'RANKED');
+  assert.equal(ranked.version, 'pw-founding-dm/2026-11-06.v1.3');
 });
 
-test('volleyball on Future Watch ranked 1 to 100 gets the RANKED DM with rank, state and class', () => {
-  const dm = buildClaimDm({ ...vb, fw_dm_rank: 12 }, label);
-  assert.equal(dm, FOUNDING_DM_FW_RANKED_TEMPLATE.replace('{firstName}', 'Abby').replace('{rank}', '12')
-    .replace('{stateName}', 'Texas').replace('{grad}', '2029').replace('{personalLink}', inviteLink(vb)));
-  assert.match(dm, /Congrats! You're #12 in the Texas Class of 2029 on our Future Watch list 🎉/);
-  assert.match(dm, /Your ranking doesn't depend on this offer\./);
+test('RANKED v1.3: the approved wording is filled and fits with a real invite link', () => {
+  const filled = FOUNDING_DM_FW_RANKED_TEMPLATE.replace('{firstName}', 'Abby').replace('{rank}', '12')
+    .replace('{stateName}', 'Texas').replace('{grad}', '2029');
+  assert.match(filled, /Congrats! You're #12 in the Texas Class of 2029 on our Future Watch list\. Your ranking doesn't depend on this offer\.\n/);
+  assert.doesNotMatch(filled, /majors you want/, 'RANKED drops the majors line; GENERAL keeps it');
+  const r = buildClaimDmDetailed({ ...vb, fw_dm_rank: 12 }, label);
+  assert.ok(inviteLink(vb).length > 200);
+  assert.equal(r.variant, 'RANKED');
+  assert.ok(r.chars <= DM_MAX_CHARS);
+  assert.equal(r.text, filled.replace('{personalLink}', inviteLink(vb)));
   assert.equal(rankedDmRank({ ...vb, fw_dm_rank: 12 }), 12);
 });
 
@@ -76,11 +89,36 @@ test('other sports keep the direct claim link', () => {
   assert.match(dm, /\(Lacrosse · Class of 2029\)/);
   assert.match(dm, /Claim it here: https:\/\/verified\.prospect-watch\.com\/claim\?/);
   assert.doesNotMatch(dm, /Founding Athlete/, 'no Athlete Center offer outside volleyball');
-  assert.match(dm, /Stephanie\nProspect Watch$/);
+  assert.ok(dm.endsWith(CLOSE), 'STOP line and footer on every enrichment DM');
 });
 
 test('no name: a neutral greeting and a link without a name', () => {
-  const dm = buildClaimDm({ id: vb.id, name: '', sport: 'volleyball' }, label);
+  const dm = buildClaimDm({ id: vb.id, name: '', sport: 'volleyball', contact_hold: false }, label);
   assert.match(dm, /^Hey there,/);
   assert.equal(new URL(linkOf(dm)).searchParams.get('firstName'), null);
+});
+
+// Any STOP stops every channel (final sign-off Schedule 5): a held athlete gets no DM.
+test('contact hold: no DM for do not contact, an email opt-out, a STOP, or an unknown check; fails closed', () => {
+  for (const reasons of [['do_not_contact'], ['email_opt_out'], ['stop_on_ledger'], ['unknown']]) {
+    const r = buildClaimDmDetailed({ ...vb, contact_hold: true, contact_hold_reasons: reasons }, label);
+    assert.equal(r.text, null, reasons[0]);
+    assert.equal(r.variant, 'CONTACT_HOLD');
+    assert.equal(buildClaimDm({ ...vb, contact_hold: true, contact_hold_reasons: reasons }, label), '');
+  }
+  for (const missing of [undefined, null, 'false', 0]) {
+    assert.equal(buildClaimDmDetailed({ ...vb, contact_hold: missing }, label).variant, 'CONTACT_HOLD', `contact_hold ${missing} is held`);
+  }
+  assert.equal(holdText(['email_opt_out']), 'Do not message this athlete: the family opted out of Prospect Watch messages.');
+  assert.match(holdText(), /could not be completed/);
+});
+
+test('the enrichment page rechecks the hold right before copying, and fails closed', async () => {
+  const { readFileSync } = await import('node:fs');
+  const page = readFileSync(new URL('../pw-enrichment.html', import.meta.url), 'utf8');
+  assert.match(page, /var API_HOLD='\/api\/hs-contact-hold'/);
+  assert.match(page, /fetch\(API_HOLD\+'\?id='/, 'copy asks the server first');
+  assert.match(page, /if\(!h\|\|h\.contact_hold!==false\)/, 'anything but an explicit clear is held');
+  const toml = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
+  assert.match(toml, /from = "\/api\/hs-contact-hold"\n  to = "https:\/\/pw-hs-dashboard\.vercel\.app\/api\/hs-contact-hold"/);
 });

@@ -342,10 +342,10 @@
 
 <script type="module">
 import {buildSuggestions} from '/js/snaprecruit-core.mjs';
-import {buildClaimDm as buildFoundingDm, rankedDmRank} from '/js/pw-founding-dm.mjs';
+import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-founding-dm.mjs';
 (function(){
   var KEY='ms-hs-api-key';
-  var API_OFFER='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit';
+  var API_HOLD='/api/hs-contact-hold', API_OFFER='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -759,7 +759,10 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank} from '/js/pw-founding-dm.
     renderFields();
     renderMaxpreps();
     renderSheet();
-    $('dmText').value=buildClaimDm(a);
+    // Held athletes get no DM (do not contact, email opt-out or a STOP).
+    $('dmText').value=a.contact_hold===false?buildClaimDm(a):holdText(a.contact_hold_reasons);
+    $('dmText').readOnly=a.contact_hold!==false;
+    $('dmCopy').disabled=a.contact_hold!==false;
     showFwDmTag(a);
     $('dmNoHandle').hidden=!!a.ig_handle;
     $('detailScrim').hidden=false;
@@ -778,14 +781,25 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank} from '/js/pw-founding-dm.
     else done(false);
   });
   $('dmReset').addEventListener('click',function(){
-    if(currentAthlete)$('dmText').value=buildClaimDm(currentAthlete);
+    if(currentAthlete)$('dmText').value=currentAthlete.contact_hold===false?buildClaimDm(currentAthlete):holdText(currentAthlete.contact_hold_reasons);
   });
+  // Copy-time recheck (final sign-off Schedule 5): just before copying, ask
+  // pw-hs-dashboard whether the athlete is still clear to contact, so a STOP
+  // or opt-out recorded after the search loaded is honoured. Fails closed.
   $('dmCopy').addEventListener('click',function(){
-    var btn=this;
+    var btn=this,a=currentAthlete;
     function done(ok){btn.textContent=ok?'COPIED ✓':'COPY FAILED';setTimeout(function(){btn.textContent='COPY DM'},1400)}
-    if(navigator.clipboard&&navigator.clipboard.writeText)
-      navigator.clipboard.writeText($('dmText').value).then(function(){done(true)},function(){done(false)});
-    else done(false);
+    if(!a||a.contact_hold!==false){done(false);return}
+    btn.textContent='CHECKING…';
+    fetch(API_HOLD+'?id='+encodeURIComponent(a.id),{headers:headers()}).then(function(res){return res.ok?res.json():{contact_hold:true,reasons:['unknown']}}).then(function(h){
+      if(!h||h.contact_hold!==false){
+        a.contact_hold=true;a.contact_hold_reasons=(h&&h.reasons)||['unknown'];
+        $('dmText').value=holdText(a.contact_hold_reasons);$('dmText').readOnly=true;btn.disabled=true;btn.textContent='HELD';return;
+      }
+      if(navigator.clipboard&&navigator.clipboard.writeText)
+        navigator.clipboard.writeText($('dmText').value).then(function(){done(true)},function(){done(false)});
+      else done(false);
+    },function(){btn.textContent='HELD';btn.disabled=true;$('dmText').value=holdText(['unknown']);$('dmText').readOnly=true});
   });
   $('dmOpenIg').addEventListener('click',function(){
     var a=currentAthlete;if(!a)return;

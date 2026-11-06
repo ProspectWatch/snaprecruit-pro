@@ -56,6 +56,13 @@
   to = "https://pw-hs-dashboard.vercel.app/api/hs-search"
   status = 200
 
+# Copy-time contact recheck (final sign-off Schedule 5): is this athlete
+# still clear to contact? Same auth as /api/hs-athletes (x-hs-api-key).
+[[redirects]]
+  from = "/api/hs-contact-hold"
+  to = "https://pw-hs-dashboard.vercel.app/api/hs-contact-hold"
+  status = 200
+
 [[redirects]]
   from = "/api/hs-athlete-socials"
   to = "https://pw-hs-dashboard.vercel.app/api/hs-athlete-socials"
