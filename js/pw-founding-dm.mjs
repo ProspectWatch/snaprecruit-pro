@@ -79,29 +79,32 @@ export const dmLink = (a) => (isVolleyball(a.sport) ? inviteLink(a) : claimLink(
 /** Instagram caps a DM at 1,000 characters (CEO 2026-11-02: "the DM is too long for IG"). */
 export const DM_MAX_CHARS = 1000;
 
-// Word for word pw-hs-dashboard lib/foundingDm.js FOUNDING_DM_MASTER_TEMPLATE.
+// Final sign-off PW-S05-LCS-20261105 v1.2, Template 1 (CEO 2026-11-06),
+// word for word pw-hs-dashboard lib/foundingDm.js (the source of truth):
+// every DM closes with the shortened STOP line and the sender footer.
+export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-06.v1.2';
+export const DM_STOP_LINE = 'Reply STOP to stop our marketing messages on Instagram and email. Account and security messages may continue.';
+export const DM_SENDER_FOOTER = 'Stephanie, on behalf of Prospect Watch, 2248 Broadway #1314, New York, NY 10024\nverified.prospect-watch.com/trust';
+const DM_CLOSE = `Questions? Reply here or email stephanie@prospect-watch.com
+${DM_STOP_LINE}
+${DM_SENDER_FOOTER}`;
+const DM_BODY = `You've been selected as a Founding Athlete: first access to our Athlete Center, so you can see where you fit in college volleyball instead of guessing.
+🏐 How you compare with D1 players at your position and grade
+📚 Schools with the majors you want
+🗺️ A Recruiting Roadmap with your next step
+🔎 Every D1 program, plus your own college list
+Claiming your profile is free.
+{personalLink}`;
+
 export const FOUNDING_DM_GENERAL_TEMPLATE = `Hey {firstName}, it's Stephanie from Prospect Watch 👋
+${DM_BODY}
+${DM_CLOSE}`;
 
-We help student athletes navigate NCAA recruiting, and you've been selected for our Founding Athlete offer: first access to our Athlete Center to build your college list and research every D1 program. Claiming your profile is free.
-
-{personalLink}
-
-Questions? Reply here or email stephanie@prospect-watch.com
-
-Stephanie, Prospect Watch`;
-
-// Word for word pw-hs-dashboard lib/foundingDm.js FOUNDING_DM_FW_RANKED_TEMPLATE.
 export const FOUNDING_DM_FW_RANKED_TEMPLATE = `Hey {firstName}, it's Stephanie from Prospect Watch 👋
-
-Congrats! You're #{rank} in the {stateName} Class of {grad} on our Future Watch list 🎉
-
-We help student athletes navigate NCAA recruiting, and you've been selected for our Founding Athlete offer: first access to our Athlete Center to build your college list and research every D1 program. Claiming your profile is free.
-
-{personalLink}
-
-Your ranking doesn't depend on this offer. Questions? Reply here or email stephanie@prospect-watch.com
-
-Stephanie, Prospect Watch`;
+Congrats! You're #{rank} in the {stateName} Class of {grad} on our Future Watch list
+${DM_BODY}
+Your ranking doesn't depend on this offer.
+${DM_CLOSE}`;
 
 const STATE_NAMES = {
   AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut',
@@ -131,31 +134,51 @@ export function rankedDmRank(a) {
   return r;
 }
 
+const count = (t) => [...t].length;
+
 /**
- * The DM, short enough for Instagram. Volleyball: the RANKED Founding DM for
- * a Future Watch athlete ranked 1 to 100, else the GENERAL one, each word for
- * word pw-hs-dashboard lib/foundingDm.js, with the personal invite link.
- * Other sports (no Athlete Center yet): a claim-only version with the direct
- * claim link. Price and terms live on the page the link opens, never in the
- * DM. sportLabel turns a sport value into its display label.
+ * The DM as { text, variant, version, chars }, never over DM_MAX_CHARS.
+ * Volleyball: the RANKED Founding DM for a Future Watch athlete ranked 1 to
+ * 100, else GENERAL, each word for word pw-hs-dashboard lib/foundingDm.js,
+ * with the personal invite link. The approved RANKED wording does not fit
+ * Instagram's cap with a long invite link (229 characters and up), so then
+ * the GENERAL text is used (variant GENERAL_LENGTH_FALLBACK), exactly as
+ * renderFoundingDmDetailed does. Other sports (no Athlete Center yet): a
+ * claim-only version with the direct claim link, closing with the same STOP
+ * line and footer. Price and terms live on the page the link opens.
  */
-export function buildClaimDm(a, sportLabel = (s) => s) {
+export function buildClaimDmDetailed(a, sportLabel = (s) => s) {
   const first = cleanPart(splitName(a.name).first) || 'there';
   if (isVolleyball(a.sport)) {
+    const link = inviteLink(a);
+    const general = FOUNDING_DM_GENERAL_TEMPLATE.replace('{firstName}', first).replace('{personalLink}', link);
     const rank = rankedDmRank(a);
-    const tpl = rank ? FOUNDING_DM_FW_RANKED_TEMPLATE : FOUNDING_DM_GENERAL_TEMPLATE;
-    return tpl.replace('{firstName}', first).replace('{rank}', String(rank))
-      .replace('{stateName}', stateNameOf(a.state)).replace('{grad}', String(Number(a.grad_year)))
-      .replace('{personalLink}', inviteLink(a));
+    if (rank) {
+      const ranked = FOUNDING_DM_FW_RANKED_TEMPLATE.replace('{firstName}', first).replace('{rank}', String(rank))
+        .replace('{stateName}', stateNameOf(a.state)).replace('{grad}', String(Number(a.grad_year))).replace('{personalLink}', link);
+      if (count(ranked) <= DM_MAX_CHARS) return { text: ranked, variant: 'RANKED', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(ranked) };
+      if (count(general) <= DM_MAX_CHARS) return { text: general, variant: 'GENERAL_LENGTH_FALLBACK', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(general) };
+      return { text: null, variant: 'TOO_LONG', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(general) };
+    }
+    if (count(general) <= DM_MAX_CHARS) return { text: general, variant: 'GENERAL', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(general) };
+    return { text: null, variant: 'TOO_LONG', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(general) };
   }
-  const close = "\n\nThis isn't a ranking or Future Watch selection. Questions? Reply here or email " + CONTACT_EMAIL + '\n\nStephanie\nProspect Watch';
   const bits = [];
   const sport = a.sport ? sportLabel(a.sport) : '';
   if (sport) bits.push(sport);
   if (a.grad_year) bits.push('Class of ' + a.grad_year);
   const context = bits.length ? ' (' + bits.join(' · ') + ')' : '';
-  return "Hey " + first + ", it's Stephanie from Prospect Watch 👋\n\n"
-    + "We've built your recruiting profile" + context + '. Claiming it is free: check your info and add your own stats, highlights and photo.\n\n'
-    + 'Claim it here: ' + claimLink(a)
-    + close;
+  const text = "Hey " + first + ", it's Stephanie from Prospect Watch 👋\n"
+    + "We've built your recruiting profile" + context + '. Claiming it is free: check your info and add your own stats, highlights and photo.\n'
+    + 'Claim it here: ' + claimLink(a) + '\n'
+    + "This isn't a ranking or Future Watch selection.\n"
+    + DM_CLOSE;
+  return count(text) <= DM_MAX_CHARS
+    ? { text, variant: 'CLAIM_ONLY', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(text) }
+    : { text: null, variant: 'TOO_LONG', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(text) };
+}
+
+/** The DM text only (see buildClaimDmDetailed). Empty string when no approved text fits. */
+export function buildClaimDm(a, sportLabel = (s) => s) {
+  return buildClaimDmDetailed(a, sportLabel).text || '';
 }
