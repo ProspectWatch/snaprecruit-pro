@@ -33,7 +33,7 @@ test('volleyball DM: the GENERAL Founding DM from Stephanie with the personal in
   assert.equal(u.searchParams.get('utm_medium'), 'dm');
 });
 
-test('every DM fits Instagram (1,000 characters) with the longest real link; RANKED falls back to GENERAL when it would not fit', () => {
+test('every DM fits Instagram (1,000 characters) with the longest real link; RANKED v1.3 fits it, the GENERAL fallback stays as a guard', () => {
   const long = { id: vb.id, name: 'Mariaguadalupe Fernandez-Castellanos', grad_year: 2030, state: 'NC', contact_hold: false };
   assert.equal(inviteLink({ ...long, sport: 'volleyball' }).length, 246, 'the longest real invite link');
   for (const a of [{ ...long, sport: 'volleyball' }, { ...long, sport: 'volleyball', fw_dm_rank: 100 }, { ...long, sport: 'lacrosse' }]) {
@@ -43,22 +43,21 @@ test('every DM fits Instagram (1,000 characters) with the longest real link; RAN
     assert.ok(r.text.endsWith(CLOSE), 'STOP line and footer');
     assert.ok(!/\$\d|\u2014/.test(r.text), 'no price, no em dash');
   }
-  assert.equal(buildClaimDmDetailed({ ...long, sport: 'volleyball', fw_dm_rank: 100 }, label).variant, 'GENERAL_LENGTH_FALLBACK');
+  const ranked = buildClaimDmDetailed({ ...long, sport: 'volleyball', fw_dm_rank: 100 }, label);
+  assert.equal(ranked.variant, 'RANKED');
+  assert.equal(ranked.version, 'pw-founding-dm/2026-11-06.v1.3');
 });
 
-test('RANKED: the approved wording is filled when it fits; with a real invite link it does not fit, so GENERAL is sent', () => {
-  // The template itself, filled, is exact (the shape a shorter link would get).
+test('RANKED v1.3: the approved wording is filled and fits with a real invite link', () => {
   const filled = FOUNDING_DM_FW_RANKED_TEMPLATE.replace('{firstName}', 'Abby').replace('{rank}', '12')
     .replace('{stateName}', 'Texas').replace('{grad}', '2029');
-  assert.match(filled, /Congrats! You're #12 in the Texas Class of 2029 on our Future Watch list\n/);
-  assert.match(filled, /Your ranking doesn't depend on this offer\./);
-  // A real invite link (221 characters for this athlete) leaves no room:
-  // the approved RANKED text would pass 1,000 characters, so GENERAL is used.
+  assert.match(filled, /Congrats! You're #12 in the Texas Class of 2029 on our Future Watch list\. Your ranking doesn't depend on this offer\.\n/);
+  assert.doesNotMatch(filled, /majors you want/, 'RANKED drops the majors line; GENERAL keeps it');
   const r = buildClaimDmDetailed({ ...vb, fw_dm_rank: 12 }, label);
   assert.ok(inviteLink(vb).length > 200);
-  assert.equal(r.variant, 'GENERAL_LENGTH_FALLBACK');
+  assert.equal(r.variant, 'RANKED');
   assert.ok(r.chars <= DM_MAX_CHARS);
-  assert.ok([...filled.replace('{personalLink}', inviteLink(vb))].length > DM_MAX_CHARS, 'RANKED with the real link is over the cap');
+  assert.equal(r.text, filled.replace('{personalLink}', inviteLink(vb)));
   assert.equal(rankedDmRank({ ...vb, fw_dm_rank: 12 }), 12);
 });
 

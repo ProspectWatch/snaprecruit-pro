@@ -82,7 +82,7 @@ export const DM_MAX_CHARS = 1000;
 // Final sign-off PW-S05-LCS-20261105 v1.2, Template 1 (CEO 2026-11-06),
 // word for word pw-hs-dashboard lib/foundingDm.js (the source of truth):
 // every DM closes with the shortened STOP line and the sender footer.
-export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-06.v1.2';
+export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-06.v1.3';
 export const DM_STOP_LINE = 'Reply STOP to stop our marketing messages on Instagram and email. Account and security messages may continue.';
 export const DM_SENDER_FOOTER = 'Stephanie, on behalf of Prospect Watch, 2248 Broadway #1314, New York, NY 10024\nverified.prospect-watch.com/trust';
 const DM_CLOSE = `Questions? Reply here or email stephanie@prospect-watch.com
@@ -100,10 +100,17 @@ export const FOUNDING_DM_GENERAL_TEMPLATE = `Hey {firstName}, it's Stephanie fro
 ${DM_BODY}
 ${DM_CLOSE}`;
 
+// v1.3 (CEO 2026-11-06 release GO): RANKED shortened so the longest real
+// invite link (246 characters) fits under 1,000 with the STOP line and footer
+// unchanged; the majors line is dropped from RANKED only.
 export const FOUNDING_DM_FW_RANKED_TEMPLATE = `Hey {firstName}, it's Stephanie from Prospect Watch 👋
-Congrats! You're #{rank} in the {stateName} Class of {grad} on our Future Watch list
-${DM_BODY}
-Your ranking doesn't depend on this offer.
+Congrats! You're #{rank} in the {stateName} Class of {grad} on our Future Watch list. Your ranking doesn't depend on this offer.
+You're a Founding Athlete, with first access to our Athlete Center:
+🏐 How you compare with D1 players at your position and grade
+🗺️ A Recruiting Roadmap with your next step
+🔎 Every D1 program, plus your own college list
+Claiming your profile is free.
+{personalLink}
 ${DM_CLOSE}`;
 
 const STATE_NAMES = {
@@ -140,9 +147,9 @@ const count = (t) => [...t].length;
  * The DM as { text, variant, version, chars }, never over DM_MAX_CHARS.
  * Volleyball: the RANKED Founding DM for a Future Watch athlete ranked 1 to
  * 100, else GENERAL, each word for word pw-hs-dashboard lib/foundingDm.js,
- * with the personal invite link. The approved RANKED wording does not fit
- * Instagram's cap with a long invite link (229 characters and up), so then
- * the GENERAL text is used (variant GENERAL_LENGTH_FALLBACK), exactly as
+ * with the personal invite link. RANKED v1.3 fits the longest real invite
+ * link (246 characters); if a link were ever longer still, the GENERAL text
+ * is used (variant GENERAL_LENGTH_FALLBACK), exactly as
  * renderFoundingDmDetailed does. Other sports (no Athlete Center yet): a
  * claim-only version with the direct claim link, closing with the same STOP
  * line and footer. Price and terms live on the page the link opens.
