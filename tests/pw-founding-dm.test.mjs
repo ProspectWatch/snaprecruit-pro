@@ -3,11 +3,11 @@
 // id so the claim opens this profile); other sports keep the claim link.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildClaimDm, buildClaimDmDetailed, inviteLink, dmLink, cleanPart, DM_MAX_CHARS, rankedDmRank, stateNameOf, FOUNDING_DM_GENERAL_TEMPLATE, FOUNDING_DM_FW_RANKED_TEMPLATE, DM_STOP_LINE, DM_SENDER_FOOTER, FOUNDING_DM_TEMPLATE_VERSION } from '../js/pw-founding-dm.mjs';
+import { holdText, buildClaimDm, buildClaimDmDetailed, inviteLink, dmLink, cleanPart, DM_MAX_CHARS, rankedDmRank, stateNameOf, FOUNDING_DM_GENERAL_TEMPLATE, FOUNDING_DM_FW_RANKED_TEMPLATE, DM_STOP_LINE, DM_SENDER_FOOTER, FOUNDING_DM_TEMPLATE_VERSION } from '../js/pw-founding-dm.mjs';
 
 const CLOSE = `${DM_STOP_LINE}\n${DM_SENDER_FOOTER}`;
 
-const vb = { id: 'a644edf6-e95b-42d9-b77c-4b5993f244d2', name: 'Abby Bunyan', grad_year: 2029, sport: 'volleyball', state: 'TX' };
+const vb = { id: 'a644edf6-e95b-42d9-b77c-4b5993f244d2', name: 'Abby Bunyan', grad_year: 2029, sport: 'volleyball', state: 'TX', contact_hold: false };
 const linkOf = (dm) => dm.match(/\n(https:\S+)\n/)[1];
 const label = (s) => ({ volleyball: 'Volleyball', lacrosse: 'Lacrosse' })[s] || s;
 
@@ -34,7 +34,7 @@ test('volleyball DM: the GENERAL Founding DM from Stephanie with the personal in
 });
 
 test('every DM fits Instagram (1,000 characters) with the longest real link; RANKED falls back to GENERAL when it would not fit', () => {
-  const long = { id: vb.id, name: 'Mariaguadalupe Fernandez-Castellanos', grad_year: 2030, state: 'NC' };
+  const long = { id: vb.id, name: 'Mariaguadalupe Fernandez-Castellanos', grad_year: 2030, state: 'NC', contact_hold: false };
   assert.equal(inviteLink({ ...long, sport: 'volleyball' }).length, 246, 'the longest real invite link');
   for (const a of [{ ...long, sport: 'volleyball' }, { ...long, sport: 'volleyball', fw_dm_rank: 100 }, { ...long, sport: 'lacrosse' }]) {
     const r = buildClaimDmDetailed(a, label);
@@ -94,7 +94,32 @@ test('other sports keep the direct claim link', () => {
 });
 
 test('no name: a neutral greeting and a link without a name', () => {
-  const dm = buildClaimDm({ id: vb.id, name: '', sport: 'volleyball' }, label);
+  const dm = buildClaimDm({ id: vb.id, name: '', sport: 'volleyball', contact_hold: false }, label);
   assert.match(dm, /^Hey there,/);
   assert.equal(new URL(linkOf(dm)).searchParams.get('firstName'), null);
+});
+
+// Any STOP stops every channel (final sign-off Schedule 5): a held athlete gets no DM.
+test('contact hold: no DM for do not contact, an email opt-out, a STOP, or an unknown check; fails closed', () => {
+  for (const reasons of [['do_not_contact'], ['email_opt_out'], ['stop_on_ledger'], ['unknown']]) {
+    const r = buildClaimDmDetailed({ ...vb, contact_hold: true, contact_hold_reasons: reasons }, label);
+    assert.equal(r.text, null, reasons[0]);
+    assert.equal(r.variant, 'CONTACT_HOLD');
+    assert.equal(buildClaimDm({ ...vb, contact_hold: true, contact_hold_reasons: reasons }, label), '');
+  }
+  for (const missing of [undefined, null, 'false', 0]) {
+    assert.equal(buildClaimDmDetailed({ ...vb, contact_hold: missing }, label).variant, 'CONTACT_HOLD', `contact_hold ${missing} is held`);
+  }
+  assert.equal(holdText(['email_opt_out']), 'Do not message this athlete: the family opted out of Prospect Watch messages.');
+  assert.match(holdText(), /could not be completed/);
+});
+
+test('the enrichment page rechecks the hold right before copying, and fails closed', async () => {
+  const { readFileSync } = await import('node:fs');
+  const page = readFileSync(new URL('../pw-enrichment.html', import.meta.url), 'utf8');
+  assert.match(page, /var API_HOLD='\/api\/hs-contact-hold'/);
+  assert.match(page, /fetch\(API_HOLD\+'\?id='/, 'copy asks the server first');
+  assert.match(page, /if\(!h\|\|h\.contact_hold!==false\)/, 'anything but an explicit clear is held');
+  const toml = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
+  assert.match(toml, /from = "\/api\/hs-contact-hold"\n  to = "https:\/\/pw-hs-dashboard\.vercel\.app\/api\/hs-contact-hold"/);
 });

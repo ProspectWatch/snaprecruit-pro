@@ -147,7 +147,22 @@ const count = (t) => [...t].length;
  * claim-only version with the direct claim link, closing with the same STOP
  * line and footer. Price and terms live on the page the link opens.
  */
+// Any STOP stops every channel (U-05; final sign-off Schedule 5): an athlete
+// /api/hs-search marks contact_hold (do not contact, a family email opted
+// out, or a STOP on the contact ledger) gets no DM at all.
+export const HOLD_REASON_TEXT = {
+  do_not_contact: 'marked do not contact',
+  email_opt_out: 'the family opted out of Prospect Watch messages',
+  stop_on_ledger: 'a STOP is on record',
+  unknown: 'the contact check could not be completed',
+};
+export const holdText = (reasons) => 'Do not message this athlete: ' + ((reasons && reasons.length ? reasons : ['unknown']).map((r) => HOLD_REASON_TEXT[r] || r).join('; ')) + '.';
+
 export function buildClaimDmDetailed(a, sportLabel = (s) => s) {
+  if (!a || a.contact_hold !== false) {
+    // Fail closed: a row without an explicit contact_hold false is held.
+    return { text: null, variant: 'CONTACT_HOLD', version: FOUNDING_DM_TEMPLATE_VERSION, chars: 0, reasons: (a && a.contact_hold_reasons) || ['unknown'] };
+  }
   const first = cleanPart(splitName(a.name).first) || 'there';
   if (isVolleyball(a.sport)) {
     const link = inviteLink(a);
