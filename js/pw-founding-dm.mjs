@@ -4,13 +4,13 @@
 //   ("make the messages signed as Stephanie with contact email as
 //   stephanie@prospect-watch.com"). Cancellation stays at
 //   info@prospect-watch.com, the address the Membership Terms name.
-// - Volleyball athletes get their personal Prospect Watch invitation link
-//   (/invite): their name animated in, then the Athlete Center landing with
-//   its screens and the Founding Athlete offer. The link carries the HS
-//   profile id so "Claim your profile" opens this athlete's own profile.
-//   Mirrors pw-hs-dashboard lib/foundingInvite.js.
-// - Other sports keep the direct claim link (the Athlete Center is volleyball
-//   only).
+// - Every DM carries the short link /c/<code> (v1.4, CEO GO 2026-11-07),
+//   which pw-hs-dashboard resolves on the server: volleyball to the id-only
+//   /invite (the Athlete Center landing with the Founding Athlete offer, and
+//   "Claim your profile" opens this athlete's own profile), other sports to
+//   the direct claim link (the Athlete Center is volleyball only). The full
+//   inviteLink and claimLink below are kept as the fallback for an unusable
+//   id. Mirrors pw-hs-dashboard lib/foundingInvite.js.
 // Copy: shortened for Instagram (CEO 2026-11-02). The two volleyball DMs
 // mirror pw-hs-dashboard lib/foundingDm.js word for word (the source of
 // truth): RANKED for a Future Watch athlete with a FINAL rank of 1 to 100
@@ -73,45 +73,56 @@ export function claimLink(a) {
   return `${CLAIM_URL}?${p.toString()}`;
 }
 
-/** The link the DM carries: personal invite for volleyball, claim link otherwise. */
-export const dmLink = (a) => (isVolleyball(a.sport) ? inviteLink(a) : claimLink(a));
+// Short DM link (v1.4, CEO GO 2026-11-07): https://verified.prospect-watch.com/c/<code>,
+// code = the first 10 hex characters of the HS profile id (dashes removed),
+// the same as pw-hs-dashboard lib/foundingInvite.js shortCode. pw-hs-dashboard
+// resolves it on the server to the id-only /invite link (volleyball) or the
+// direct claim link (other sports); an unknown or ambiguous code never
+// reaches another athlete. No name, class or other personal detail is in it.
+export const SHORT_URL = 'https://verified.prospect-watch.com/c/';
+export const SHORT_CODE_LEN = 10;
+export const shortCode = (id) => (typeof id === 'string' && UUID.test(id) ? id.toLowerCase().replace(/-/g, '').slice(0, SHORT_CODE_LEN) : '');
+export const shortLink = (id) => { const c = shortCode(id); return c ? SHORT_URL + c : ''; };
+
+/** The link the DM carries: the short link; the full invite or claim link only if the id is unusable. */
+export const dmLink = (a) => shortLink(a && a.id) || (isVolleyball(a.sport) ? inviteLink(a) : claimLink(a));
 
 /** Instagram caps a DM at 1,000 characters (CEO 2026-11-02: "the DM is too long for IG"). */
 export const DM_MAX_CHARS = 1000;
 
-// Final sign-off PW-S05-LCS-20261105 v1.2, Template 1 (CEO 2026-11-06),
-// word for word pw-hs-dashboard lib/foundingDm.js (the source of truth):
-// every DM closes with the shortened STOP line and the sender footer.
-export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-06.v1.3';
+// v1.4 (CEO GO 2026-11-07, "DM go as drafted"), word for word
+// pw-hs-dashboard lib/foundingDm.js (the source of truth): short blocks with
+// blank lines between them and the short link. The STOP line and sender
+// footer are unchanged, byte for byte (counsel-approved).
+export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-07.v1.4';
 export const DM_STOP_LINE = 'Reply STOP to stop our marketing messages on Instagram and email. Account and security messages may continue.';
 export const DM_SENDER_FOOTER = 'Stephanie, on behalf of Prospect Watch, 2248 Broadway #1314, New York, NY 10024\nverified.prospect-watch.com/trust';
 const DM_CLOSE = `Questions? Reply here or email stephanie@prospect-watch.com
+
 ${DM_STOP_LINE}
 ${DM_SENDER_FOOTER}`;
-const DM_BODY = `You've been selected as a Founding Athlete: first access to our Athlete Center, so you can see where you fit in college volleyball instead of guessing.
-🏐 How you compare with D1 players at your position and grade
-📚 Schools with the majors you want
-🗺️ A Recruiting Roadmap with your next step
-🔎 Every D1 program, plus your own college list
-Claiming your profile is free.
-{personalLink}`;
+const DM_GREETING = "Hey {firstName} 👋 It's Stephanie from Prospect Watch.";
+const DM_RANK_PARAGRAPH = "Congrats! You're ranked #{rank} in {stateName}'s Class of {grad} on our Future Watch list. Your ranking doesn't depend on whether you sign up.";
+const DM_BODY = `You've been picked as a Founding Athlete, which means early access to our Athlete Center:
 
-export const FOUNDING_DM_GENERAL_TEMPLATE = `Hey {firstName}, it's Stephanie from Prospect Watch 👋
-${DM_BODY}
-${DM_CLOSE}`;
+🏐 See how you compare with D1 players at your position and grade
+🗺️ Get a Recruiting Roadmap with your next step
+🔎 Browse every D1 program and build your college list
 
-// v1.3 (CEO 2026-11-06 release GO): RANKED shortened so the longest real
-// invite link (246 characters) fits under 1,000 with the STOP line and footer
-// unchanged; the majors line is dropped from RANKED only.
-export const FOUNDING_DM_FW_RANKED_TEMPLATE = `Hey {firstName}, it's Stephanie from Prospect Watch 👋
-Congrats! You're #{rank} in the {stateName} Class of {grad} on our Future Watch list. Your ranking doesn't depend on this offer.
-You're a Founding Athlete, with first access to our Athlete Center:
-🏐 How you compare with D1 players at your position and grade
-🗺️ A Recruiting Roadmap with your next step
-🔎 Every D1 program, plus your own college list
-Claiming your profile is free.
+Claim your free profile here:
 {personalLink}
+
 ${DM_CLOSE}`;
+
+export const FOUNDING_DM_GENERAL_TEMPLATE = `${DM_GREETING}
+
+${DM_BODY}`;
+
+export const FOUNDING_DM_FW_RANKED_TEMPLATE = `${DM_GREETING}
+
+${DM_RANK_PARAGRAPH}
+
+${DM_BODY}`;
 
 const STATE_NAMES = {
   AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut',
@@ -172,7 +183,7 @@ export function buildClaimDmDetailed(a, sportLabel = (s) => s) {
   }
   const first = cleanPart(splitName(a.name).first) || 'there';
   if (isVolleyball(a.sport)) {
-    const link = inviteLink(a);
+    const link = dmLink(a);
     const general = FOUNDING_DM_GENERAL_TEMPLATE.replace('{firstName}', first).replace('{personalLink}', link);
     const rank = rankedDmRank(a);
     if (rank) {
@@ -192,7 +203,7 @@ export function buildClaimDmDetailed(a, sportLabel = (s) => s) {
   const context = bits.length ? ' (' + bits.join(' · ') + ')' : '';
   const text = "Hey " + first + ", it's Stephanie from Prospect Watch 👋\n"
     + "We've built your recruiting profile" + context + '. Claiming it is free: check your info and add your own stats, highlights and photo.\n'
-    + 'Claim it here: ' + claimLink(a) + '\n'
+    + 'Claim it here: ' + dmLink(a) + '\n'
     + "This isn't a ranking or Future Watch selection.\n"
     + DM_CLOSE;
   return count(text) <= DM_MAX_CHARS
