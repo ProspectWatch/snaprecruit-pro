@@ -13,7 +13,7 @@
 <title>PW Data Enrichment · MainStage Athletes</title>
 <style>
 /* Standalone tool: a copy of Athlete Search's visual language, not a shared
-   file with it — this screen has its own password (x-hs-api-key), its own
+   file with it: this screen has its own password (x-hs-api-key), its own
    database (PW_HSdata_maxxpreps), and must stay fully independent of both
    Athlete Search (athletes.html) and SnapRecruit (snaprecruit.html). */
 .app{max-width:560px;margin:auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 10px) 22px calc(env(safe-area-inset-bottom) + 22px)}
@@ -357,16 +357,16 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
   var stateSel=$('state'), schoolInput=$('school'), missingInfoSel=$('missingInfo'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
   var photoToggle=$('photoToggle'), igToggle=$('igToggle'), committedToggle=$('committedToggle'), moreBtn=$('moreBtn');
   var offerFilter='', fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false;
-  // "Load next 100" state — every request here (name term or not) is one
+  // "Load next 100" state; every request here (name term or not) is one
   // paginated PostgREST query, so pagination applies uniformly, unlike
   // Athlete Search where it's browse-mode only.
   var PAGE_SIZE=100, offset=0, hasMore=false, loadingMore=false;
 
-  // Girls sports only, by design — this list intentionally omits
+  // Girls sports only, by design: this list intentionally omits
   // boys-lacrosse. The backend also hard-enforces gender=F server-side (see
   // hs-search.js), since "lacrosse" here is a genuinely mixed-gender key,
-  // not just a naming convention — filtering the dropdown alone wouldn't be
-  // enough.
+  // not just a naming convention (filtering the dropdown alone wouldn't be
+  // enough).
   var SPORTS=[
     {value:'volleyball',label:'Volleyball'},{value:'softball',label:'Softball'},
     {value:'basketball',label:'Basketball'},{value:'girls-soccer',label:'Girls Soccer'},
@@ -378,7 +378,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
   SPORTS.forEach(function(s){var o=document.createElement('option');o.value=s.value;o.textContent=s.label;sportSel.appendChild(o)});
   function sportLabel(v){var s=SPORTS.filter(function(x){return x.value===v})[0];return s?s.label:v}
 
-  // 50 states + DC + PR — a curated list, not the raw distinct values in the
+  // 50 states + DC + PR: a curated list, not the raw distinct values in the
   // table (which also has stray junk from bad scrapes, e.g. "N/", "11").
   var STATES=[
     ['AL','Alabama'],['AK','Alaska'],['AZ','Arizona'],['AR','Arkansas'],['CA','California'],
@@ -435,7 +435,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     // No GET route to validate against (search is intentionally public read),
     // so validate against the write route instead: a wrong key gets 401; a
     // right key gets 400 (missing id, sent on purpose). Anything else
-    // (500/503/network) is treated as a failure to verify, not success —
+    // (500/503/network) is treated as a failure to verify, not success;
     // otherwise an unconfigured server (missing HS_API_KEY -> 503) would
     // silently accept any key typed here.
     fetch(API_SOCIALS,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},{'x-hs-api-key':val}),body:'{}'}).then(function(res){
@@ -501,7 +501,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     if(term.length<2&&!sport&&!st&&!school&&!missingInfo&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!searchedFilter&&!offerFilter){setState('idle');return}
     var ctl=new AbortController();inflight=ctl;
     // A generation counter, not just AbortController: abort() only cancels a
-    // fetch that's still pending — it has no effect once the response has
+    // fetch that's still pending; it has no effect once the response has
     // already arrived, so two rapid filter changes can otherwise resolve
     // out of order and let the OLDER result overwrite the newer one on
     // screen. Every render is gated on still being the latest request.
@@ -529,7 +529,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
       setState('err');
     }).then(function(){if(inflight===ctl){inflight=null;loadBar.classList.remove('on')}});
   }
-  // Not gated behind the debounce/generation machinery above — it's an
+  // Not gated behind the debounce/generation machinery above; it's an
   // explicit user tap, not a filter change, and always targets the very
   // next page after whatever's currently on screen.
   function loadMoreAthletes(){
@@ -558,7 +558,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
   function esc(x){return String(x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 
   // Some legacy ig_handle values (scraped before this tool existed) are full
-  // profile URLs rather than bare handles — this table has no server-side
+  // profile URLs rather than bare handles, since this table has no server-side
   // guarantee on that column's shape. Every write this tool makes is
   // regex-validated to a bare handle (see hs-athlete-socials.js), so this is
   // purely a display-time cleanup for pre-existing data, mirroring the exact
@@ -576,7 +576,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     return (parts[0][0]+(parts.length>1?parts[parts.length-1][0]:'')).toUpperCase();
   }
   // Prefer the posed cover shot, then the action shot, then the IG-post
-  // screenshot last — a screenshot usually has UI chrome around the face
+  // screenshot last, since a screenshot usually has UI chrome around the face
   // rather than being a clean photo, so it's the weakest thumbnail choice.
   function primaryPhoto(a){
     var p=a.photos||{};
@@ -608,7 +608,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
       setState('list');
       lastRows=rows;
     }else{
-      // A page came back empty even though the prior page was full — the
+      // A page came back empty even though the prior page was full, so the
       // total just happened to land on an exact page boundary. Quietly stop
       // offering more rather than erroring.
       if(!rows.length){hasMore=false;updateMoreBtn();return}
@@ -648,7 +648,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     updateMoreBtn();
   }
   // Broken/missing image URLs fall back to initials instead of the browser's
-  // broken-image icon. Attached once here, not inline in the markup above —
+  // broken-image icon. Attached once here, not inline in the markup above, because
   // module-scoped functions aren't reachable from an inline onerror="".
   list.addEventListener('error',function(e){
     var img=e.target;
@@ -952,7 +952,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
     return c.toDataURL('image/jpeg',.88);
   }
-  // Every uploaded photo — not just a dedicated "screenshot" slot — gets
+  // Every uploaded photo (not just a dedicated "screenshot" slot) gets
   // sent to the same same-origin vision reader SnapRecruit's scanner uses
   // (/api/read-profile, no new backend needed): a Cover or Action shot
   // won't have an IG UI to read and will just come back empty, but a
@@ -964,7 +964,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
       .then(function(res){return res.json()})
       .then(function(data){
         if(!data||(!data.instagram&&!data.snapchat))return;
-        if(currentAthlete!==a)return; // detail sheet moved on — don't surface a stale result
+        if(currentAthlete!==a)return; // detail sheet moved on; don't surface a stale result
         pendingScan={instagram:data.instagram||'',snapchat:data.snapchat||'',full_name:data.full_name||'',athlete:a};
         var bits=[];
         if(data.full_name)bits.push(esc(data.full_name));
