@@ -78,6 +78,12 @@
   to = "https://pw-hs-dashboard.vercel.app/api/hs-athlete-edit"
   status = 200
 
+# "Duplicate?" (2026-11-08): opens a review case only, never merges.
+[[redirects]]
+  from = "/api/hs-duplicate-tag"
+  to = "https://pw-hs-dashboard.vercel.app/api/hs-duplicate-tag"
+  status = 200
+
 [[redirects]]
   from = "/api/hs-athlete-offer-sent"
   to = "https://pw-hs-dashboard.vercel.app/api/hs-athlete-offer-sent"

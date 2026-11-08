@@ -62,6 +62,15 @@
 .fwToggle{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:40px;border-radius:11px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:10px;font-weight:700;letter-spacing:.1em;padding:0 4px}
 .fwToggle .dot{width:7px;height:7px;border-radius:50%;background:var(--ms-border-strong)}
 .fwToggle.on{border-color:var(--ms-gold);color:var(--ms-gold-bright);background:var(--ms-surface-2)}
+.dDup{border:1px solid var(--ms-border);border-radius:11px;padding:10px;margin-bottom:12px}
+.dDupNote{font-size:12px;line-height:1.45;color:var(--ms-text-2);margin:0 0 8px}
+.dDupRow{display:flex;gap:8px;align-items:stretch}.dDupRow .btn{flex:none;width:auto;min-height:44px;height:auto;padding:0 14px;margin:0}.dDupRow input{flex:1;min-width:0;min-height:44px;font-size:16px;border-radius:10px;border:1px solid var(--ms-border);background:var(--ms-surface);color:inherit;padding:0 10px}
+.dDupList{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.dupItem{text-align:left;min-height:48px;border-radius:10px;border:1px solid var(--ms-border);background:transparent;color:inherit;padding:8px 10px}
+.dupItem.on{border-color:var(--ms-gold);background:var(--ms-surface-2)}.dupItem b{display:block;font-size:14px}.dupItem span{font-size:12px;color:var(--ms-text-2)}
+.dDupWho{display:block;font-size:12px;color:var(--ms-text-2);margin-bottom:8px}.dDupWho input{display:block;width:100%;box-sizing:border-box;min-height:44px;font-size:16px;border-radius:10px;border:1px solid var(--ms-border);background:var(--ms-surface);color:inherit;padding:0 10px;margin-top:4px}
+.dDupMsg{font-size:13px;margin:0 0 8px}.dDupMsg.ok{color:#7fd88f}.dDupMsg.bad{color:#F87171}
+#dupTag{width:100%;min-height:44px}
 .fwToggle.on .dot{background:var(--ms-gold-bright)}
 .segRow{display:flex;gap:7px;margin-top:8px}
 .segBtn{flex:1;height:38px;border-radius:10px;border:1px solid var(--ms-border);background:var(--ms-surface);color:var(--ms-text-2);font-size:10.5px;font-weight:700;letter-spacing:.08em}
@@ -259,6 +268,15 @@
     <img class="dHeroPhoto" id="dHeroPhoto" alt="" hidden>
     <div class="dSaved" id="dSaved" hidden></div>
     <button class="fwToggle" id="dFwToggle" type="button" aria-pressed="false" style="margin-bottom:12px"><span class="dot"></span>FUTURE WATCH</button>
+    <button class="fwToggle" id="dDupToggle" type="button" aria-expanded="false" style="margin-bottom:12px">DUPLICATE?</button>
+    <div class="dDup" id="dDup" hidden>
+      <p class="dDupNote">Same athlete as another profile? Pick the other profile (up to 2 for triplets). This only opens a case in Office &gt; Duplicates for staff to decide. Nothing is merged here.</p>
+      <div class="dDupRow"><input id="dupQ" type="search" aria-label="Search by name" autocomplete="off"><button type="button" class="btn btn-outline" id="dupSearch">SEARCH</button></div>
+      <div id="dupList" class="dDupList"></div>
+      <label class="dDupWho">Your name<input id="dupWho" type="text" autocomplete="name"></label>
+      <p class="dDupMsg" id="dupMsg" hidden></p>
+      <button type="button" class="btn btn-gold" id="dupTag" disabled>TAG AS DUPLICATES</button>
+    </div>
     <div class="dConfirm" id="dConfirm" hidden>
       <p>Did <b id="dcHandle"></b> work on <span id="dcPlatform"></span>?</p>
       <div class="dcRow">
@@ -345,7 +363,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-founding-dm.mjs';
 (function(){
   var KEY='ms-hs-api-key';
-  var API_HOLD='/api/hs-contact-hold', API_OFFER='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit';
+  var API_HOLD='/api/hs-contact-hold', API_OFFER='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit', API_DUP='/api/hs-duplicate-tag';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -703,6 +721,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
         +'<input id="pf-'+slot+'" type="file" accept="image/*">';
     });
     offerErr='';renderOffer();
+    if(dupFor!==a.id)closeDup();
   }
 
   // MaxPreps button: the link /api/hs-search picked (lib/maxprepsProfile.js in
@@ -823,6 +842,64 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     }).catch(function(e){
       alert((e&&e.message)||'Failed to update Future Watch. Try again.');
     }).then(function(){btn.disabled=false});
+  });
+
+  /* ---------- Duplicate? (CEO 2026-11-08) ----------
+     Pick the other profile(s) for the same athlete, then tag. pw-hs-dashboard's
+     /api/hs-duplicate-tag ONLY opens review cases ("tagged by <name> from PW Data
+     Enrichment") for staff to decide in Office > Duplicates. It never merges. */
+  var dupFor=null, dupPicked=[], dupHits=[], WHO_KEY='pw-enrich-who';
+  function dupLine(p){return [p.grad_year?'Class of '+p.grad_year:null,p.school,p.state,p.position,p.height].filter(Boolean).map(esc).join(' · ')}
+  function dupMsg(text,ok){var m=$('dupMsg');m.textContent=text||'';m.className='dDupMsg'+(text?(ok?' ok':' bad'):'');m.hidden=!text}
+  function renderDup(){
+    $('dupList').innerHTML=dupHits.length?dupHits.map(function(p){
+      var on=dupPicked.indexOf(p.id)>=0;
+      return '<button type="button" class="dupItem'+(on?' on':'')+'" aria-pressed="'+on+'" data-id="'+esc(p.id)+'"><b>'+(on?'Picked: ':'')+esc(p.name)+'</b><span>'+(dupLine(p)||'No school or class on file')+'</span></button>';
+    }).join(''):'<p class="dEmpty">No other profile found. Try part of the name.</p>';
+    $('dupTag').disabled=!dupPicked.length;
+    $('dupTag').textContent=dupPicked.length===2?'TAG ALL 3 AS DUPLICATES':'TAG AS DUPLICATES';
+  }
+  function dupSearch(){
+    var a=currentAthlete,t=$('dupQ').value.trim();
+    if(t.length<3){dupMsg('Type at least 3 letters of a name.');return}
+    dupMsg('');$('dupList').innerHTML='<p class="dEmpty">Looking for profiles with this name</p>';
+    fetch(API_ATHLETES+'?q='+encodeURIComponent(t)+(a.sport?'&sport='+encodeURIComponent(a.sport):''),{headers:headers()})
+      .then(function(res){if(res.status===401){forget();throw new Error('unauthorized')}if(!res.ok)throw new Error('HTTP '+res.status);return res.json()})
+      .then(function(d){dupHits=((d&&d.data)||[]).filter(function(p){return p.id!==a.id});renderDup()})
+      .catch(function(e){dupHits=[];renderDup();dupMsg((e&&e.message)==='unauthorized'?'Your access key expired. Unlock again.':'The search did not finish. Try again.')});
+  }
+  function closeDup(){dupFor=null;dupPicked=[];dupHits=[];$('dDup').hidden=true;$('dDupToggle').setAttribute('aria-expanded','false');$('dDupToggle').classList.remove('on');dupMsg('')}
+  $('dDupToggle').addEventListener('click',function(){
+    if(!pwStored){showUnlock();return}
+    if(!$('dDup').hidden){closeDup();return}
+    var a=currentAthlete;dupFor=a.id;dupPicked=[];dupHits=[];
+    $('dDup').hidden=false;this.setAttribute('aria-expanded','true');this.classList.add('on');
+    $('dupQ').value=a.name||'';
+    try{$('dupWho').value=localStorage.getItem(WHO_KEY)||''}catch(e){}
+    // Same-name profiles in the same sport, listed straight away.
+    dupSearch();
+  });
+  $('dupSearch').addEventListener('click',dupSearch);
+  $('dupQ').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();dupSearch()}});
+  $('dupList').addEventListener('click',function(e){
+    var b=e.target.closest('.dupItem');if(!b)return;
+    var id=b.getAttribute('data-id'),i=dupPicked.indexOf(id);
+    if(i>=0)dupPicked.splice(i,1);else if(dupPicked.length<2)dupPicked.push(id);
+    renderDup();
+  });
+  $('dupTag').addEventListener('click',function(){
+    var who=$('dupWho').value.trim(),btn=this;
+    if(who.length<2){dupMsg('Add your name first. The tag is recorded with it.');return}
+    if(!dupPicked.length){dupMsg('Pick the other profile first.');return}
+    try{localStorage.setItem(WHO_KEY,who)}catch(e){}
+    btn.disabled=true;dupMsg('');
+    postJSON(API_DUP,{ids:[currentAthlete.id].concat(dupPicked),who:who}).then(function(r){
+      var failed=((r&&r.results)||[]).filter(function(x){return x.error});
+      dupMsg('Tagged. Staff will decide it in Office > Duplicates. Nothing was merged.'+(failed.length?' One pair could not be opened: '+failed[0].error+'.':''),true);
+      dupPicked=[];renderDup();
+    }).catch(function(e){
+      dupMsg((e&&e.message)||'The tag did not go through. Nothing was changed.');btn.disabled=false;
+    });
   });
 
   /* ---------- profile edit (club, height, position, school, state, grad year) ---------- */
