@@ -94,7 +94,8 @@ export const DM_MAX_CHARS = 1000;
 // pw-hs-dashboard lib/foundingDm.js (the source of truth): short blocks with
 // blank lines between them and the short link. The STOP line and sender
 // footer are unchanged, byte for byte (counsel-approved).
-export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-07.v1.4';
+// v1.5 (CEO 2026-11-10): four feature lines checked against the product.
+export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-10.v1.5';
 export const DM_STOP_LINE = 'Reply STOP to stop our marketing messages on Instagram and email. Account and security messages may continue.';
 export const DM_SENDER_FOOTER = 'Stephanie, on behalf of Prospect Watch, 2248 Broadway #1314, New York, NY 10024\nverified.prospect-watch.com/trust';
 const DM_CLOSE = `Questions? Reply here or email stephanie@prospect-watch.com
@@ -105,9 +106,10 @@ const DM_GREETING = "Hey {firstName} 👋 It's Stephanie from Prospect Watch.";
 const DM_RANK_PARAGRAPH = "Congrats! You're ranked #{rank} in {stateName}'s Class of {grad} on our Future Watch list. Your ranking doesn't depend on whether you sign up.";
 const DM_BODY = `You've been picked as a Founding Athlete, which means early access to our Athlete Center:
 
-🏐 See how you compare with D1 players at your position and grade
+🏐 Compare your stats with D1 players' high school stats at your grade and position
+👥 See who you'd arrive with: players and public commitments at your position
+🔎 Browse every D1 program, look up your majors and build your list
 🗺️ Get a Recruiting Roadmap with your next step
-🔎 Browse every D1 program and build your college list
 
 Claim your free profile here:
 {personalLink}
