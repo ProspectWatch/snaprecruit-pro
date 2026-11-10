@@ -12,17 +12,18 @@ const vb = { id: 'a644edf6-e95b-42d9-b77c-4b5993f244d2', name: 'Abby Bunyan', gr
 const SHORT = 'https://verified.prospect-watch.com/c/a644edf6e9';
 const label = (s) => ({ volleyball: 'Volleyball', lacrosse: 'Lacrosse' })[s] || s;
 
-test('v1.4 volleyball DM: the GENERAL Founding DM word for word, with the short link', () => {
+test('v1.5 volleyball DM: the GENERAL Founding DM word for word, with the short link', () => {
   const dm = buildClaimDm(vb, label);
-  assert.equal(FOUNDING_DM_TEMPLATE_VERSION, 'pw-founding-dm/2026-11-07.v1.4');
+  assert.equal(FOUNDING_DM_TEMPLATE_VERSION, 'pw-founding-dm/2026-11-10.v1.5');
   assert.equal(dm, [
     "Hey Abby 👋 It's Stephanie from Prospect Watch.",
     '',
     "You've been picked as a Founding Athlete, which means early access to our Athlete Center:",
     '',
-    '🏐 See how you compare with D1 players at your position and grade',
+    "🏐 Compare your stats with D1 players' high school stats at your grade and position",
+    "👥 See who you'd arrive with: players and public commitments at your position",
+    '🔎 Browse every D1 program, look up your majors and build your list',
     '🗺️ Get a Recruiting Roadmap with your next step',
-    '🔎 Browse every D1 program and build your college list',
     '',
     'Claim your free profile here:',
     SHORT,
@@ -60,10 +61,10 @@ test('every DM fits Instagram (1,000 characters) in the longest case', () => {
   }
   const ranked = buildClaimDmDetailed({ ...long, sport: 'volleyball', fw_dm_rank: 100 }, label);
   assert.equal(ranked.variant, 'RANKED');
-  assert.equal(ranked.version, 'pw-founding-dm/2026-11-07.v1.4');
+  assert.equal(ranked.version, 'pw-founding-dm/2026-11-10.v1.5');
 });
 
-test('RANKED v1.4: the approved wording, filled, with the short link', () => {
+test('RANKED v1.5: the approved wording, filled, with the short link', () => {
   const r = buildClaimDmDetailed({ ...vb, fw_dm_rank: 12 }, label);
   assert.equal(r.variant, 'RANKED');
   assert.equal(r.text, FOUNDING_DM_FW_RANKED_TEMPLATE.replace('{firstName}', 'Abby').replace('{rank}', '12')
