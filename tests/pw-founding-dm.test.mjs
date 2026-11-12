@@ -17,16 +17,16 @@ test('v1.7 volleyball DM: the GENERAL Founding DM word for word, with the name-r
   const dm = buildClaimDm(vb, label);
   assert.equal(FOUNDING_DM_TEMPLATE_VERSION, 'pw-founding-dm/2026-11-12.v1.7');
   assert.equal(dm, [
-    "Hey Abby 👋 It's Stephanie from Prospect Watch.",
+    "Hey Abby, it's Stephanie from Prospect Watch.",
     '',
     "You're invited to join as a Founding Athlete, with early access to our Athlete Center:",
     '',
-    "🏐 Compare your high school season with D1 players' high school seasons at your position and grade",
-    '👥 See the players listed at your position at each school, with public commitments shown separately',
-    '🔎 Research every D1 volleyball program, check which offer your majors and build your list',
-    '🎓 See admissions details where schools publish them: deadlines, GPA and SAT and ACT ranges',
-    '🗺️ Get a Recruiting Roadmap with your next step',
-    '✅ Get reviewed for PW Verified: if approved, the badge and a registry listing',
+    "- Compare your high school season with D1 players' high school seasons at your position and grade",
+    '- See the players listed at your position at each school, with public commitments shown separately',
+    '- Research every D1 volleyball program, check which offer your majors and build your list',
+    '- See admissions details where schools publish them: deadlines, GPA and SAT and ACT ranges',
+    '- Get a Recruiting Roadmap with your next step',
+    '- Get reviewed for PW Verified: if approved, the badge and a registry listing',
     '',
     'Claim your free profile here:',
     INVITE,
@@ -73,8 +73,8 @@ test('RANKED v1.7: the wording, filled, with the name-reveal link', () => {
   assert.deepEqual(r.features, ['comparison', 'schoolIntel', 'findSchools', 'roadmap', 'verified']);
   assert.equal(r.text, FOUNDING_DM_FW_RANKED_TEMPLATE.replace('{firstName}', 'Abby').replace('{rank}', '12')
     .replace('{stateName}', 'Texas').replace('{grad}', '2029').replace('{personalLink}', INVITE)
-    .replace(/\n🎓 [^\n]*/u, ''));
-  assert.match(r.text, /^Hey Abby 👋 It's Stephanie from Prospect Watch\.\n\nCongrats! You're ranked #12 in Texas's Class of 2029 on our Future Watch list\. Your ranking doesn't depend on whether you sign up\.\n\nYou're invited to join as a Founding Athlete/);
+    .replace(/\n- See admissions[^\n]*/u, ''));
+  assert.match(r.text, /^Hey Abby, it's Stephanie from Prospect Watch\.\n\nCongrats! You're ranked #12 in Texas's Class of 2029 on our Future Watch list\. Your ranking doesn't depend on whether you sign up\.\n\nYou're invited to join as a Founding Athlete/);
   assert.equal(FOUNDING_DM_GENERAL_TEMPLATE, FOUNDING_DM_FW_RANKED_TEMPLATE.replace(/\n\nCongrats![^\n]*/, ''), 'GENERAL is RANKED without the ranking paragraph');
   assert.equal(rankedDmRank({ ...vb, fw_dm_rank: 12 }), 12);
 });
@@ -94,7 +94,7 @@ test('everyone else gets the GENERAL DM: no rank, rank past 100, other sports, o
 test('each athlete gets their own link and greeting', () => {
   const other = { ...vb, id: '11111111-2222-3333-4444-555555555555', name: 'abby SMITH', grad_year: 2028 };
   assert.notEqual(dmLink(vb), dmLink(other));
-  assert.match(buildClaimDm(other, label), /^Hey Abby 👋/);
+  assert.match(buildClaimDm(other, label), /^Hey Abby, it's Stephanie/);
   assert.equal(new URL(inviteLink(other)).searchParams.get('lastName'), 'Smith', 'all-caps word tidied');
   assert.equal(cleanPart('McKenna'), 'McKenna', 'mixed case kept as typed');
   assert.equal(cleanPart('LILLYANA'), 'Lillyana');
@@ -113,7 +113,7 @@ test('other sports: the claim-only DM with the short link and no STOP footer', (
 
 test('no name: a neutral greeting', () => {
   const dm = buildClaimDm({ id: vb.id, name: '', sport: 'volleyball', contact_hold: false }, label);
-  assert.match(dm, /^Hey there 👋/);
+  assert.match(dm, /^Hey there, it's Stephanie/);
   assert.match(dm, /\/invite\?utm_source=instagram/, 'no name: the /invite link without a name reveal');
 });
 
@@ -140,4 +140,12 @@ test('the enrichment page rechecks the hold right before copying, and fails clos
   assert.match(page, /if\(!h\|\|h\.contact_hold!==false\)/, 'anything but an explicit clear is held');
   const toml = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
   assert.match(toml, /from = "\/api\/hs-contact-hold"\n  to = "https:\/\/pw-hs-dashboard\.vercel\.app\/api\/hs-contact-hold"/);
+});
+
+test('no emojis in any DM variant (CEO 2026-11-12: "Lose the emojis"); the contact line closes every one', () => {
+  for (const a of [vb, { ...vb, fw_dm_rank: 12 }, { ...vb, sport: 'lacrosse' }, { ...vb, name: '' }]) {
+    const dm = buildClaimDm(a, label);
+    assert.doesNotMatch(dm, /[\u{1F000}-\u{1FAFF}\u2600-\u27BF\uFE0F]/u, JSON.stringify(a.sport));
+    assert.ok(dm.endsWith(CLOSE));
+  }
 });
