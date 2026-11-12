@@ -12,16 +12,16 @@ const vb = { id: 'a644edf6-e95b-42d9-b77c-4b5993f244d2', name: 'Abby Bunyan', gr
 const SHORT = 'https://verified.prospect-watch.com/c/a644edf6e9';
 const label = (s) => ({ volleyball: 'Volleyball', lacrosse: 'Lacrosse' })[s] || s;
 
-test('v1.5 volleyball DM: the GENERAL Founding DM word for word, with the short link', () => {
+test('v1.6 volleyball DM: the GENERAL Founding DM word for word, with the short link', () => {
   const dm = buildClaimDm(vb, label);
-  assert.equal(FOUNDING_DM_TEMPLATE_VERSION, 'pw-founding-dm/2026-11-10.v1.5');
+  assert.equal(FOUNDING_DM_TEMPLATE_VERSION, 'pw-founding-dm/2026-11-12.v1.6');
   assert.equal(dm, [
     "Hey Abby 👋 It's Stephanie from Prospect Watch.",
     '',
-    "You've been picked as a Founding Athlete, which means early access to our Athlete Center:",
+    "You're invited to join as a Founding Athlete, with early access to our Athlete Center:",
     '',
     "🏐 Compare your stats with D1 players' high school stats at your grade and position",
-    "👥 See who you'd arrive with: players and public commitments at your position",
+    "👥 See the players listed at your position at each school, with public commitments shown separately",
     '🔎 Browse every D1 program, look up your majors and build your list',
     '🗺️ Get a Recruiting Roadmap with your next step',
     '',
@@ -61,15 +61,15 @@ test('every DM fits Instagram (1,000 characters) in the longest case', () => {
   }
   const ranked = buildClaimDmDetailed({ ...long, sport: 'volleyball', fw_dm_rank: 100 }, label);
   assert.equal(ranked.variant, 'RANKED');
-  assert.equal(ranked.version, 'pw-founding-dm/2026-11-10.v1.5');
+  assert.equal(ranked.version, 'pw-founding-dm/2026-11-12.v1.6');
 });
 
-test('RANKED v1.5: the approved wording, filled, with the short link', () => {
+test('RANKED v1.6: the approved wording, filled, with the short link', () => {
   const r = buildClaimDmDetailed({ ...vb, fw_dm_rank: 12 }, label);
   assert.equal(r.variant, 'RANKED');
   assert.equal(r.text, FOUNDING_DM_FW_RANKED_TEMPLATE.replace('{firstName}', 'Abby').replace('{rank}', '12')
     .replace('{stateName}', 'Texas').replace('{grad}', '2029').replace('{personalLink}', SHORT));
-  assert.match(r.text, /^Hey Abby 👋 It's Stephanie from Prospect Watch\.\n\nCongrats! You're ranked #12 in Texas's Class of 2029 on our Future Watch list\. Your ranking doesn't depend on whether you sign up\.\n\nYou've been picked as a Founding Athlete/);
+  assert.match(r.text, /^Hey Abby 👋 It's Stephanie from Prospect Watch\.\n\nCongrats! You're ranked #12 in Texas's Class of 2029 on our Future Watch list\. Your ranking doesn't depend on whether you sign up\.\n\nYou're invited to join as a Founding Athlete/);
   assert.equal(FOUNDING_DM_GENERAL_TEMPLATE, FOUNDING_DM_FW_RANKED_TEMPLATE.replace(/\n\nCongrats![^\n]*/, ''), 'GENERAL is RANKED without the ranking paragraph');
   assert.equal(rankedDmRank({ ...vb, fw_dm_rank: 12 }), 12);
 });
