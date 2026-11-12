@@ -222,6 +222,9 @@
         <button class="fwToggle" id="igToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS IG</button>
         <button class="fwToggle" id="committedToggle" type="button" aria-pressed="false"><span class="dot"></span>COMMITTED</button>
       </div>
+      <div class="toggleRow" style="grid-template-columns:1fr">
+        <button class="fwToggle" id="uncommittedSortToggle" type="button" aria-pressed="false"><span class="dot"></span>SORT: UNCOMMITTED FIRST</button>
+      </div>
       <div class="segRow" id="searchedRow" role="group" aria-label="Filter by search status">
         <button class="segBtn on" type="button" data-v="">ALL</button>
         <button class="segBtn" type="button" data-v="no">UNSEARCHED</button>
@@ -374,7 +377,8 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
   var stateSel=$('state'), schoolInput=$('school'), missingInfoSel=$('missingInfo'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
   var photoToggle=$('photoToggle'), igToggle=$('igToggle'), committedToggle=$('committedToggle'), moreBtn=$('moreBtn');
-  var offerFilter='', fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false;
+  var uncommittedSortToggle=$('uncommittedSortToggle');
+  var offerFilter='', fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false, uncommittedSortOn=false;
   // "Load next 100" state; every request here (name term or not) is one
   // paginated PostgREST query, so pagination applies uniformly, unlike
   // Athlete Search where it's browse-mode only.
@@ -494,6 +498,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
       +(hasPhoto?'&has_photo=1':'')
       +(hasIgOn?'&has_instagram=1':'')
       +(hasCommittedOn?'&has_committed=1':'')
+      +(uncommittedSortOn?'&sort=uncommitted':'')
       +(searchedFilter?'&searched='+searchedFilter:'')
       +(offerFilter?'&offer='+offerFilter:'')
       +(missingInfo?'&missing='+encodeURIComponent(missingInfo):'')
@@ -511,12 +516,12 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     schoolInput.classList.toggle('filtering',!!school);
     missingInfoSel.classList.toggle('filtering',!!missingInfo);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+st+' '+school+' '+missingInfo+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+searchedFilter+' '+offerFilter;
+    var key=term+' '+sport+' '+st+' '+school+' '+missingInfo+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+uncommittedSortOn+' '+searchedFilter+' '+offerFilter;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
     if(inflight)inflight.abort();
-    if(term.length<2&&!sport&&!st&&!school&&!missingInfo&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!searchedFilter&&!offerFilter){setState('idle');return}
+    if(term.length<2&&!sport&&!st&&!school&&!missingInfo&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!uncommittedSortOn&&!searchedFilter&&!offerFilter){setState('idle');return}
     var ctl=new AbortController();inflight=ctl;
     // A generation counter, not just AbortController: abort() only cancels a
     // fetch that's still pending; it has no effect once the response has
@@ -634,7 +639,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     }
     var startIdx=append?lastRows.length-rows.length:0;
     var browsing=term.length<2;
-    resLabel.textContent=browsing?(fwOn?'BROWSING BY FW RANK':'BROWSING A–Z'):'RESULTS';
+    resLabel.textContent=browsing?(fwOn?'BROWSING BY FW RANK':uncommittedSortOn?'BROWSING UNCOMMITTED FIRST':'BROWSING A–Z'):'RESULTS';
     resCount.textContent=lastRows.length+(lastRows.length===1?' athlete':' athletes');
     resMeta.hidden=false;
     var html=rows.map(function(a,i){
@@ -1121,6 +1126,12 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     hasCommittedOn=!hasCommittedOn;
     this.classList.toggle('on',hasCommittedOn);
     this.setAttribute('aria-pressed',String(hasCommittedOn));
+    clearTimeout(debounceT);runSearch();
+  });
+  uncommittedSortToggle.addEventListener('click',function(){
+    uncommittedSortOn=!uncommittedSortOn;
+    this.classList.toggle('on',uncommittedSortOn);
+    this.setAttribute('aria-pressed',String(uncommittedSortOn));
     clearTimeout(debounceT);runSearch();
   });
   moreBtn.addEventListener('click',loadMoreAthletes);
