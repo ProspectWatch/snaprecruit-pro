@@ -1,0 +1,110 @@
+{
+  "source": "pw-hs-dashboard lib/foundingDm.js (source of truth)",
+  "version": "pw-founding-dm/2026-11-13.v1.8",
+  "cases": [
+    {
+      "label": "typical GENERAL",
+      "athlete": {
+        "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+        "name": "Ava Lopez",
+        "grad_year": 2029,
+        "sport": "volleyball",
+        "state": "TX",
+        "contact_hold": false
+      },
+      "firstName": "Ava",
+      "personalLink": "https://verified.prospect-watch.com/invite?firstName=Ava&lastName=Lopez&gradYear=2029&sport=volleyball&id=0f8fad5b-d9cb-469f-a165-70867728950e&utm_source=instagram&utm_medium=dm&utm_campaign=ac_launch_2026_11_enrichment",
+      "fwRank": null,
+      "state": "TX",
+      "grad": 2029,
+      "version": "pw-founding-dm/2026-11-13.v1.8",
+      "chars": 997,
+      "features": [
+        "comparison",
+        "schoolIntel",
+        "findSchools",
+        "admissions",
+        "roadmap",
+        "verified"
+      ],
+      "text": "Hey Ava, it's Stephanie from Prospect Watch.\n\nYou're invited to join as a Founding Athlete. Paid membership includes these Athlete Center features:\n\n- Compare your high school season with D1 players' high school seasons at your position and grade\n- See the players listed at your position at each school, with public commitments shown separately\n- Research every D1 volleyball program, check which offer your majors and build your list\n- See admissions details where schools publish them: deadlines, GPA and SAT and ACT ranges\n- Get a Recruiting Roadmap with your next step\n- Get reviewed for PW Verified: if approved, the badge and a registry listing\n\nClaim your free profile and view the optional membership offer:\nhttps://verified.prospect-watch.com/invite?firstName=Ava&lastName=Lopez&gradYear=2029&sport=volleyball&id=0f8fad5b-d9cb-469f-a165-70867728950e&utm_source=instagram&utm_medium=dm&utm_campaign=ac_launch_2026_11_enrichment\n\nQuestions? Reply here or email stephanie@prospect-watch.com"
+    },
+    {
+      "label": "typical RANKED #7 TX",
+      "athlete": {
+        "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+        "name": "Ava Lopez",
+        "grad_year": 2029,
+        "sport": "volleyball",
+        "state": "TX",
+        "contact_hold": false,
+        "fw_dm_rank": 7
+      },
+      "firstName": "Ava",
+      "personalLink": "https://verified.prospect-watch.com/invite?firstName=Ava&lastName=Lopez&gradYear=2029&sport=volleyball&id=0f8fad5b-d9cb-469f-a165-70867728950e&utm_source=instagram&utm_medium=dm&utm_campaign=ac_launch_2026_11_enrichment",
+      "fwRank": 7,
+      "state": "TX",
+      "grad": 2029,
+      "version": "pw-founding-dm/2026-11-13.v1.8",
+      "chars": 959,
+      "features": [
+        "comparison",
+        "schoolIntel",
+        "findSchools",
+        "roadmap"
+      ],
+      "text": "Hey Ava, it's Stephanie from Prospect Watch.\n\nCongrats! You're ranked #7 in Texas's Class of 2029 on our Future Watch list. Your ranking doesn't depend on whether you sign up.\n\nYou're invited to join as a Founding Athlete. Paid membership includes these Athlete Center features:\n\n- Compare your high school season with D1 players' high school seasons at your position and grade\n- See the players listed at your position at each school, with public commitments shown separately\n- Research every D1 volleyball program, check which offer your majors and build your list\n- Get a Recruiting Roadmap with your next step\n\nClaim your free profile and view the optional membership offer:\nhttps://verified.prospect-watch.com/invite?firstName=Ava&lastName=Lopez&gradYear=2029&sport=volleyball&id=0f8fad5b-d9cb-469f-a165-70867728950e&utm_source=instagram&utm_medium=dm&utm_campaign=ac_launch_2026_11_enrichment\n\nQuestions? Reply here or email stephanie@prospect-watch.com"
+    },
+    {
+      "label": "long name GENERAL",
+      "athlete": {
+        "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+        "name": "Maximiliana-Josephine Featherstonehaugh-Castellanos",
+        "grad_year": 2030,
+        "sport": "volleyball",
+        "state": "DC",
+        "contact_hold": false
+      },
+      "firstName": "Maximiliana-Josephine",
+      "personalLink": "https://verified.prospect-watch.com/invite?firstName=Maximiliana-Josephine&lastName=Featherstonehaugh-Castellanos&gradYear=2030&sport=volleyball&id=0f8fad5b-d9cb-469f-a165-70867728950e&utm_source=instagram&utm_medium=dm&utm_campaign=ac_launch_2026_11_enrichment",
+      "fwRank": null,
+      "state": "DC",
+      "grad": 2030,
+      "version": "pw-founding-dm/2026-11-13.v1.8",
+      "chars": 966,
+      "features": [
+        "comparison",
+        "schoolIntel",
+        "findSchools",
+        "roadmap",
+        "verified"
+      ],
+      "text": "Hey Maximiliana-Josephine, it's Stephanie from Prospect Watch.\n\nYou're invited to join as a Founding Athlete. Paid membership includes these Athlete Center features:\n\n- Compare your high school season with D1 players' high school seasons at your position and grade\n- See the players listed at your position at each school, with public commitments shown separately\n- Research every D1 volleyball program, check which offer your majors and build your list\n- Get a Recruiting Roadmap with your next step\n- Get reviewed for PW Verified: if approved, the badge and a registry listing\n\nClaim your free profile and view the optional membership offer:\nhttps://verified.prospect-watch.com/invite?firstName=Maximiliana-Josephine&lastName=Featherstonehaugh-Castellanos&gradYear=2030&sport=volleyball&id=0f8fad5b-d9cb-469f-a165-70867728950e&utm_source=instagram&utm_medium=dm&utm_campaign=ac_launch_2026_11_enrichment\n\nQuestions? Reply here or email stephanie@prospect-watch.com"
+    },
+    {
+      "label": "long name RANKED #100 DC",
+      "athlete": {
+        "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+        "name": "Maximiliana-Josephine Featherstonehaugh-Castellanos",
+        "grad_year": 2030,
+        "sport": "volleyball",
+        "state": "DC",
+        "contact_hold": false,
+        "fw_dm_rank": 100
+      },
+      "firstName": "Maximiliana-Josephine",
+      "personalLink": "https://verified.prospect-watch.com/invite?firstName=Maximiliana-Josephine&lastName=Featherstonehaugh-Castellanos&gradYear=2030&sport=volleyball&id=0f8fad5b-d9cb-469f-a165-70867728950e&utm_source=instagram&utm_medium=dm&utm_campaign=ac_launch_2026_11_enrichment",
+      "fwRank": 100,
+      "state": "DC",
+      "grad": 2030,
+      "version": "pw-founding-dm/2026-11-13.v1.8",
+      "chars": 989,
+      "features": [
+        "comparison",
+        "schoolIntel",
+        "findSchools"
+      ],
+      "text": "Hey Maximiliana-Josephine, it's Stephanie from Prospect Watch.\n\nCongrats! You're ranked #100 in District of Columbia's Class of 2030 on our Future Watch list. Your ranking doesn't depend on whether you sign up.\n\nYou're invited to join as a Founding Athlete. Paid membership includes these Athlete Center features:\n\n- Compare your high school season with D1 players' high school seasons at your position and grade\n- See the players listed at your position at each school, with public commitments shown separately\n- Research every D1 volleyball program, check which offer your majors and build your list\n\nClaim your free profile and view the optional membership offer:\nhttps://verified.prospect-watch.com/invite?firstName=Maximiliana-Josephine&lastName=Featherstonehaugh-Castellanos&gradYear=2030&sport=volleyball&id=0f8fad5b-d9cb-469f-a165-70867728950e&utm_source=instagram&utm_medium=dm&utm_campaign=ac_launch_2026_11_enrichment\n\nQuestions? Reply here or email stephanie@prospect-watch.com"
+    }
+  ]
+}

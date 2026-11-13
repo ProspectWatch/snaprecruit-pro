@@ -15,11 +15,11 @@ const label = (s) => ({ volleyball: 'Volleyball', lacrosse: 'Lacrosse' })[s] || 
 
 test('v1.7 volleyball DM: the GENERAL Founding DM word for word, with the name-reveal link and no STOP footer', () => {
   const dm = buildClaimDm(vb, label);
-  assert.equal(FOUNDING_DM_TEMPLATE_VERSION, 'pw-founding-dm/2026-11-12.v1.7');
+  assert.equal(FOUNDING_DM_TEMPLATE_VERSION, 'pw-founding-dm/2026-11-13.v1.8');
   assert.equal(dm, [
     "Hey Abby, it's Stephanie from Prospect Watch.",
     '',
-    "You're invited to join as a Founding Athlete, with early access to our Athlete Center:",
+    "You're invited to join as a Founding Athlete. Paid membership includes these Athlete Center features:",
     '',
     "- Compare your high school season with D1 players' high school seasons at your position and grade",
     '- See the players listed at your position at each school, with public commitments shown separately',
@@ -28,7 +28,7 @@ test('v1.7 volleyball DM: the GENERAL Founding DM word for word, with the name-r
     '- Get a Recruiting Roadmap with your next step',
     '- Get reviewed for PW Verified: if approved, the badge and a registry listing',
     '',
-    'Claim your free profile here:',
+    'Claim your free profile and view the optional membership offer:',
     INVITE,
     '',
     'Questions? Reply here or email stephanie@prospect-watch.com',
@@ -61,19 +61,19 @@ test('every DM fits Instagram (1,000 characters) in the longest case; feature li
   }
   const ranked = buildClaimDmDetailed({ ...long, sport: 'volleyball', fw_dm_rank: 100 }, label);
   assert.equal(ranked.variant, 'RANKED');
-  assert.equal(ranked.version, 'pw-founding-dm/2026-11-12.v1.7');
+  assert.equal(ranked.version, 'pw-founding-dm/2026-11-13.v1.8');
   assert.ok(ranked.features.includes('comparison') && ranked.features.includes('schoolIntel'));
   assert.equal(DM_FEATURES.length, 6);
 });
 
-test('RANKED v1.7: the wording, filled, with the name-reveal link', () => {
+test('RANKED v1.8: the wording, filled, with the name-reveal link', () => {
   const r = buildClaimDmDetailed({ ...vb, fw_dm_rank: 12 }, label);
   assert.equal(r.variant, 'RANKED');
-  // With the full link, a typical RANKED DM drops the lowest-priority line (admissions) to fit.
-  assert.deepEqual(r.features, ['comparison', 'schoolIntel', 'findSchools', 'roadmap', 'verified']);
+  // With the full link, a typical RANKED DM drops whole lines in the drop order (admissions, then verified) to fit.
+  assert.deepEqual(r.features, ['comparison', 'schoolIntel', 'findSchools', 'roadmap']);
   assert.equal(r.text, FOUNDING_DM_FW_RANKED_TEMPLATE.replace('{firstName}', 'Abby').replace('{rank}', '12')
     .replace('{stateName}', 'Texas').replace('{grad}', '2029').replace('{personalLink}', INVITE)
-    .replace(/\n- See admissions[^\n]*/u, ''));
+    .replace(/\n- See admissions[^\n]*/u, '').replace(/\n- Get reviewed[^\n]*/u, ''));
   assert.match(r.text, /^Hey Abby, it's Stephanie from Prospect Watch\.\n\nCongrats! You're ranked #12 in Texas's Class of 2029 on our Future Watch list\. Your ranking doesn't depend on whether you sign up\.\n\nYou're invited to join as a Founding Athlete/);
   assert.equal(FOUNDING_DM_GENERAL_TEMPLATE, FOUNDING_DM_FW_RANKED_TEMPLATE.replace(/\n\nCongrats![^\n]*/, ''), 'GENERAL is RANKED without the ranking paragraph');
   assert.equal(rankedDmRank({ ...vb, fw_dm_rank: 12 }), 12);
