@@ -84,37 +84,53 @@ export const SHORT_CODE_LEN = 10;
 export const shortCode = (id) => (typeof id === 'string' && UUID.test(id) ? id.toLowerCase().replace(/-/g, '').slice(0, SHORT_CODE_LEN) : '');
 export const shortLink = (id) => { const c = shortCode(id); return c ? SHORT_URL + c : ''; };
 
-/** The link the DM carries: the short link; the full invite or claim link only if the id is unusable. */
-export const dmLink = (a) => shortLink(a && a.id) || (isVolleyball(a.sport) ? inviteLink(a) : claimLink(a));
+/**
+ * The link the DM carries. v1.7 (CEO 2026-11-12: "proper personalized link
+ * with name animated"): volleyball gets the personal /invite link that reveals
+ * the athlete's name; other sports keep the short link (else the claim link).
+ */
+export const dmLink = (a) => (isVolleyball(a && a.sport) ? inviteLink(a) : (shortLink(a && a.id) || claimLink(a)));
 
 /** Instagram caps a DM at 1,000 characters (CEO 2026-11-02: "the DM is too long for IG"). */
 export const DM_MAX_CHARS = 1000;
 
 // v1.4 (CEO GO 2026-11-07, "DM go as drafted"), word for word
-// pw-hs-dashboard lib/foundingDm.js (the source of truth): short blocks with
-// blank lines between them and the short link. The STOP line and sender
-// footer are unchanged, byte for byte (counsel-approved).
+// pw-hs-dashboard lib/foundingDm.js (the source of truth).
 // v1.5 (CEO 2026-11-10): four feature lines checked against the product.
-export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-10.v1.5';
+// v1.6 (2026-11-12, copy review): "invited" instead of "picked", and the
+// roster line names what the screen shows.
+// v1.7 (CEO 2026-11-12, relayed by #00): "The DM copy needs to proper
+// personalized link with name animated. Remove the stop section at the
+// bottom. They have our contact information. And Improve the AC descriptions
+// and features." No STOP line or sender footer in any DM; feature lines drop
+// (lowest priority first) to fit 1,000 characters, never the link.
+// No emojis (CEO 2026-11-12: "Lose the emojis"); "- " is the bullet.
+export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-12.v1.7';
+// Kept exported for older callers; no longer part of any DM since v1.7.
 export const DM_STOP_LINE = 'Reply STOP to stop our marketing messages on Instagram and email. Account and security messages may continue.';
 export const DM_SENDER_FOOTER = 'Stephanie, on behalf of Prospect Watch, 2248 Broadway #1314, New York, NY 10024\nverified.prospect-watch.com/trust';
-const DM_CLOSE = `Questions? Reply here or email stephanie@prospect-watch.com
-
-${DM_STOP_LINE}
-${DM_SENDER_FOOTER}`;
-const DM_GREETING = "Hey {firstName} 👋 It's Stephanie from Prospect Watch.";
+const DM_QUESTIONS = 'Questions? Reply here or email stephanie@prospect-watch.com';
+// Same switch as pw-hs-dashboard lib/foundingDm.js DM_INCLUDE_ROADMAP.
+export const DM_INCLUDE_ROADMAP = true;
+const DM_GREETING = "Hey {firstName}, it's Stephanie from Prospect Watch.";
 const DM_RANK_PARAGRAPH = "Congrats! You're ranked #{rank} in {stateName}'s Class of {grad} on our Future Watch list. Your ranking doesn't depend on whether you sign up.";
-const DM_BODY = `You've been picked as a Founding Athlete, which means early access to our Athlete Center:
-
-🏐 Compare your stats with D1 players' high school stats at your grade and position
-👥 See who you'd arrive with: players and public commitments at your position
-🔎 Browse every D1 program, look up your majors and build your list
-🗺️ Get a Recruiting Roadmap with your next step
-
-Claim your free profile here:
-{personalLink}
-
-${DM_CLOSE}`;
+const DM_INTRO = "You're invited to join as a Founding Athlete, with early access to our Athlete Center:";
+export const DM_FEATURES = Object.freeze([
+  Object.freeze({ feature: 'comparison', line: "- Compare your high school season with D1 players' high school seasons at your position and grade" }),
+  Object.freeze({ feature: 'schoolIntel', line: '- See the players listed at your position at each school, with public commitments shown separately' }),
+  Object.freeze({ feature: 'findSchools', drop: 4, line: '- Research every D1 volleyball program, check which offer your majors and build your list' }),
+  Object.freeze({ feature: 'admissions', drop: 1, line: '- See admissions details where schools publish them: deadlines, GPA and SAT and ACT ranges' }),
+  ...(DM_INCLUDE_ROADMAP ? [Object.freeze({ feature: 'roadmap', drop: 3, line: '- Get a Recruiting Roadmap with your next step' })] : []),
+  Object.freeze({ feature: 'verified', drop: 2, line: '- Get reviewed for PW Verified: if approved, the badge and a registry listing' }),
+]);
+const bodyWith = (lines) => `${DM_INTRO}\n\n${lines.map((f) => f.line).join('\n')}\n\nClaim your free profile here:\n{personalLink}\n\n${DM_QUESTIONS}`;
+const DM_BODY = bodyWith(DM_FEATURES);
+function featureSets() {
+  const out = [DM_FEATURES];
+  let cur = DM_FEATURES;
+  for (const f of DM_FEATURES.filter((x) => x.drop).sort((x, y) => x.drop - y.drop)) { cur = cur.filter((x) => x !== f); out.push(cur); }
+  return out;
+}
 
 export const FOUNDING_DM_GENERAL_TEMPLATE = `${DM_GREETING}
 
@@ -164,8 +180,8 @@ const count = (t) => [...t].length;
  * link (246 characters); if a link were ever longer still, the GENERAL text
  * is used (variant GENERAL_LENGTH_FALLBACK), exactly as
  * renderFoundingDmDetailed does. Other sports (no Athlete Center yet): a
- * claim-only version with the direct claim link, closing with the same STOP
- * line and footer. Price and terms live on the page the link opens.
+ * claim-only version with the direct claim link, closing with the questions
+ * line (no STOP line or footer since v1.7). Price and terms live on the page the link opens.
  */
 // Any STOP stops every channel (U-05; final sign-off Schedule 5): an athlete
 // /api/hs-search marks contact_hold (do not contact, a family email opted
@@ -186,28 +202,33 @@ export function buildClaimDmDetailed(a, sportLabel = (s) => s) {
   const first = cleanPart(splitName(a.name).first) || 'there';
   if (isVolleyball(a.sport)) {
     const link = dmLink(a);
-    const general = FOUNDING_DM_GENERAL_TEMPLATE.replace('{firstName}', first).replace('{personalLink}', link);
+    const v = FOUNDING_DM_TEMPLATE_VERSION;
+    const fill = (t) => t.replace('{firstName}', first).replace('{personalLink}', link);
+    const sets = featureSets();
     const rank = rankedDmRank(a);
     if (rank) {
-      const ranked = FOUNDING_DM_FW_RANKED_TEMPLATE.replace('{firstName}', first).replace('{rank}', String(rank))
-        .replace('{stateName}', stateNameOf(a.state)).replace('{grad}', String(Number(a.grad_year))).replace('{personalLink}', link);
-      if (count(ranked) <= DM_MAX_CHARS) return { text: ranked, variant: 'RANKED', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(ranked) };
-      if (count(general) <= DM_MAX_CHARS) return { text: general, variant: 'GENERAL_LENGTH_FALLBACK', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(general) };
-      return { text: null, variant: 'TOO_LONG', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(general) };
+      const rp = DM_RANK_PARAGRAPH.replace('{rank}', String(rank)).replace('{stateName}', stateNameOf(a.state)).replace('{grad}', String(Number(a.grad_year)));
+      for (const set of sets) {
+        const t = fill(`${DM_GREETING}\n\n${rp}\n\n${bodyWith(set)}`);
+        if (count(t) <= DM_MAX_CHARS) return { text: t, variant: 'RANKED', version: v, chars: count(t), features: set.map((f) => f.feature) };
+      }
     }
-    if (count(general) <= DM_MAX_CHARS) return { text: general, variant: 'GENERAL', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(general) };
-    return { text: null, variant: 'TOO_LONG', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(general) };
+    for (const set of sets) {
+      const t = fill(`${DM_GREETING}\n\n${bodyWith(set)}`);
+      if (count(t) <= DM_MAX_CHARS) return { text: t, variant: rank ? 'GENERAL_LENGTH_FALLBACK' : 'GENERAL', version: v, chars: count(t), features: set.map((f) => f.feature) };
+    }
+    return { text: null, variant: 'TOO_LONG', version: v, chars: 0, features: [] };
   }
   const bits = [];
   const sport = a.sport ? sportLabel(a.sport) : '';
   if (sport) bits.push(sport);
   if (a.grad_year) bits.push('Class of ' + a.grad_year);
   const context = bits.length ? ' (' + bits.join(' · ') + ')' : '';
-  const text = "Hey " + first + ", it's Stephanie from Prospect Watch 👋\n"
+  const text = "Hey " + first + ", it's Stephanie from Prospect Watch.\n"
     + "We've built your recruiting profile" + context + '. Claiming it is free: check your info and add your own stats, highlights and photo.\n'
     + 'Claim it here: ' + dmLink(a) + '\n'
     + "This isn't a ranking or Future Watch selection.\n"
-    + DM_CLOSE;
+    + DM_QUESTIONS;
   return count(text) <= DM_MAX_CHARS
     ? { text, variant: 'CLAIM_ONLY', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(text) }
     : { text: null, variant: 'TOO_LONG', version: FOUNDING_DM_TEMPLATE_VERSION, chars: count(text) };
