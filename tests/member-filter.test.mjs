@@ -37,3 +37,13 @@ test('the Founding offer is never drafted for a current member or an unchecked r
 test('the copy-time recheck honours a membership recorded after the search loaded', () => {
   assert.match(html, /if\(h\.member_hold!==false\)\{/);
 });
+
+// The MainStage athlete list in this app (athletes.html) has the same filter:
+// MainStage's /api/admin/athletes takes members=non and tags each row.
+const athletes = readFileSync(new URL('../athletes.html', import.meta.url), 'utf8');
+test('athletes.html: Non-members only is ON by default, sent to MainStage, and rows show the tag', () => {
+  assert.match(athletes, /memberFilter='non'/);
+  assert.match(athletes, /'&members='\+memberFilter/);
+  assert.match(athletes, /<button class="segBtn on" type="button" data-v="non">NON-MEMBERS ONLY<\/button>/);
+  assert.match(athletes, /a\.pw_member_tag&&a\.pw_member_status!=='none'/);
+});

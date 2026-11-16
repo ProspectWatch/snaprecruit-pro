@@ -197,6 +197,10 @@
         <button class="photoToggle" id="photoToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS PHOTO ONLY</button>
         <button class="photoToggle" id="igToggle" type="button" aria-pressed="false"><span class="dot"></span>HAS IG ONLY</button>
       </div>
+      <div class="segRow" id="memberFilterRow" role="group" aria-label="Filter by Prospect Watch membership">
+        <button class="segBtn on" type="button" data-v="non">NON-MEMBERS ONLY</button>
+        <button class="segBtn" type="button" data-v="">ALL</button>
+      </div>
       <div class="segRow" id="searchedRow" role="group" aria-label="Filter by search status">
         <button class="segBtn on" type="button" data-v="">ALL</button>
         <button class="segBtn" type="button" data-v="no">UNSEARCHED</button>
@@ -300,7 +304,9 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
   var list=$('list'), resMeta=$('resMeta'), resLabel=$('resLabel'), resCount=$('resCount');
   var sportNote=$('sportNote');
   var stateIdle=$('stateIdle'), stateEmpty=$('stateEmpty'), stateErr=$('stateErr');
-  var hasPhotoOn=false, hasIgOn=false, searchedFilter='';
+  // Prospect Watch members (CEO 2026-11-16): 'non' (default) keeps only
+  // non-members; MainStage asks pw-hs-dashboard (lib/pwMemberStatus.ts there).
+  var hasPhotoOn=false, hasIgOn=false, searchedFilter='', memberFilter='non';
   // "Load next 100" state — only ever populated in browse mode: the API
   // only returns `more` there (search mode is a relevance-ranked top-N list,
   // not a stable sort a page offset could walk through), so `hasMore` stays
@@ -491,6 +497,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
       +(hasPhoto?'&has_photo=1':'')
       +(hasIgOn?'&has_instagram=1':'')
       +(searchedFilter?'&searched='+searchedFilter:'')
+      +(memberFilter?'&members='+memberFilter:'')
       +(missingInfo?'&missing='+encodeURIComponent(missingInfo):'')
       +(off?'&offset='+off:'');
   }
@@ -506,7 +513,7 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     positionSel.classList.toggle('filtering',!!position);
     gradYearSel.classList.toggle('filtering',!!gradYear);
     missingInfoSel.classList.toggle('filtering',!!missingInfo);
-    var key=term+' '+sport+' '+division+' '+conference+' '+school+' '+position+' '+gradYear+' '+hasPhotoOn+' '+hasIgOn+' '+searchedFilter+' '+missingInfo;
+    var key=term+' '+sport+' '+division+' '+conference+' '+school+' '+position+' '+gradYear+' '+hasPhotoOn+' '+hasIgOn+' '+searchedFilter+' '+memberFilter+' '+missingInfo;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
@@ -641,7 +648,8 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
         ?' <span class="pref">“'+esc(a.preferred_name)+'”</span>':'';
       var ig=socialHandle(a,'instagram'), snap=socialHandle(a,'snapchat');
       var pill;
-      if(ig)pill='<span class="apill done">✓ @'+esc(ig)+'</span>';
+      if(a.pw_member_tag&&a.pw_member_status!=='none')pill='<span class="apill">'+esc(a.pw_member_tag)+'</span>';
+      else if(ig)pill='<span class="apill done">✓ @'+esc(ig)+'</span>';
       else if(snap)pill='<span class="apill done">✓ snap:'+esc(snap)+'</span>';
       else{
         var searchedBits=[];
@@ -1021,6 +1029,13 @@ import {buildSuggestions} from '/js/snaprecruit-core.mjs';
     clearTimeout(debounceT);runSearch();
   });
   moreBtn.addEventListener('click',loadMoreAthletes);
+  $('memberFilterRow').addEventListener('click',function(e){
+    var b=e.target.closest('.segBtn');
+    if(!b)return;
+    memberFilter=b.getAttribute('data-v');
+    Array.prototype.forEach.call($('memberFilterRow').querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
+    clearTimeout(debounceT);runSearch();
+  });
   searchedRow.addEventListener('click',function(e){
     var b=e.target.closest('.segBtn');
     if(!b)return;
