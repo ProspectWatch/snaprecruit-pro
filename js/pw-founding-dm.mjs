@@ -104,12 +104,16 @@ export const DM_MAX_CHARS = 1000;
 // bottom. They have our contact information. And Improve the AC descriptions
 // and features." No STOP line or sender footer in any DM; feature lines drop
 // (lowest priority first) to fit 1,000 characters, never the link.
-// No emojis (CEO 2026-11-12: "Lose the emojis"); "- " is the bullet.
+// No emojis (CEO 2026-11-12: "Lose the emojis"); "• " is the bullet.
 // v1.8 (CEO GO 2026-11-13, relayed by #00, his exact lines): the intro says
 // the listed features come with paid membership, and the call to action names
 // the free profile and the optional membership offer separately. Feature
 // lines, drop order, link, STOP handling and the questions line unchanged.
-export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-13.v1.8';
+// v1.9 (CEO 2026-11-16, relayed by #00): the RANKED paragraph drops "Your
+// ranking doesn't depend on whether you sign up." (a deviation from the
+// signed-off template, recorded like the STOP line; Terms v1.2 1.5 still
+// says rankings are never for sale), and feature lines use "• " bullets.
+export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-16.v1.9';
 // Kept exported for older callers; no longer part of any DM since v1.7.
 export const DM_STOP_LINE = 'Reply STOP to stop our marketing messages on Instagram and email. Account and security messages may continue.';
 export const DM_SENDER_FOOTER = 'Stephanie, on behalf of Prospect Watch, 2248 Broadway #1314, New York, NY 10024\nverified.prospect-watch.com/trust';
@@ -117,15 +121,15 @@ const DM_QUESTIONS = 'Questions? Reply here or email stephanie@prospect-watch.co
 // Same switch as pw-hs-dashboard lib/foundingDm.js DM_INCLUDE_ROADMAP.
 export const DM_INCLUDE_ROADMAP = true;
 const DM_GREETING = "Hey {firstName}, it's Stephanie from Prospect Watch.";
-const DM_RANK_PARAGRAPH = "Congrats! You're ranked #{rank} in {stateName}'s Class of {grad} on our Future Watch list. Your ranking doesn't depend on whether you sign up.";
+const DM_RANK_PARAGRAPH = "Congrats! You're ranked #{rank} in {stateName}'s Class of {grad} on our Future Watch list.";
 const DM_INTRO = "You're invited to join as a Founding Athlete. Paid membership includes these Athlete Center features:";
 export const DM_FEATURES = Object.freeze([
-  Object.freeze({ feature: 'comparison', line: "- Compare your high school season with D1 players' high school seasons at your position and grade" }),
-  Object.freeze({ feature: 'schoolIntel', line: '- See the players listed at your position at each school, with public commitments shown separately' }),
-  Object.freeze({ feature: 'findSchools', drop: 4, line: '- Research every D1 volleyball program, check which offer your majors and build your list' }),
-  Object.freeze({ feature: 'admissions', drop: 1, line: '- See admissions details where schools publish them: deadlines, GPA and SAT and ACT ranges' }),
-  ...(DM_INCLUDE_ROADMAP ? [Object.freeze({ feature: 'roadmap', drop: 3, line: '- Get a Recruiting Roadmap with your next step' })] : []),
-  Object.freeze({ feature: 'verified', drop: 2, line: '- Get reviewed for PW Verified: if approved, the badge and a registry listing' }),
+  Object.freeze({ feature: 'comparison', line: "• Compare your high school season with D1 players' high school seasons at your position and grade" }),
+  Object.freeze({ feature: 'schoolIntel', line: '• See the players listed at your position at each school, with public commitments shown separately' }),
+  Object.freeze({ feature: 'findSchools', drop: 4, line: '• Research every D1 volleyball program, check which offer your majors and build your list' }),
+  Object.freeze({ feature: 'admissions', drop: 1, line: '• See admissions details where schools publish them: deadlines, GPA and SAT and ACT ranges' }),
+  ...(DM_INCLUDE_ROADMAP ? [Object.freeze({ feature: 'roadmap', drop: 3, line: '• Get a Recruiting Roadmap with your next step' })] : []),
+  Object.freeze({ feature: 'verified', drop: 2, line: '• Get reviewed for PW Verified: if approved, the badge and a registry listing' }),
 ]);
 const bodyWith = (lines) => `${DM_INTRO}\n\n${lines.map((f) => f.line).join('\n')}\n\nClaim your free profile and view the optional membership offer:\n{personalLink}\n\n${DM_QUESTIONS}`;
 const DM_BODY = bodyWith(DM_FEATURES);
