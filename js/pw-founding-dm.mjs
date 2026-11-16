@@ -114,11 +114,11 @@ export const DM_MAX_CHARS = 1000;
 // signed-off template, recorded like the STOP line; Terms v1.2 1.5 still
 // says rankings are never for sale), and feature lines use "• " bullets.
 // v1.9 final wording (CEO 2026-11-16, from the RANKED example, relayed by #00):
-// "next steps", the Verified line "Get PW Verified and show coaches you are
-// serious about playing NCAA volleyball" (lowercase per the copy standard),
+// "next steps", the Verified line "Apply for PW Verified and show coaches
+// you're serious about playing NCAA volleyball" (CEO "merge" 2026-11-16),
 // and the CTA "Claim your profile and view your Founding Athlete membership
 // offer:" (drops "free" and "optional" from the 2026-11-15 wording, by his
-// own instruction). #00 is checking "if approved" and "show coaches" first.
+// own instruction). Deviations recorded in STEPH-OUTREACH 4c.
 export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-16.v1.9';
 // Kept exported for older callers; no longer part of any DM since v1.7.
 export const DM_STOP_LINE = 'Reply STOP to stop our marketing messages on Instagram and email. Account and security messages may continue.';
@@ -135,7 +135,7 @@ export const DM_FEATURES = Object.freeze([
   Object.freeze({ feature: 'findSchools', drop: 4, line: '• Research every D1 volleyball program, check which offer your majors and build your list' }),
   Object.freeze({ feature: 'admissions', drop: 1, line: '• See admissions details where schools publish them: deadlines, GPA and SAT and ACT ranges' }),
   ...(DM_INCLUDE_ROADMAP ? [Object.freeze({ feature: 'roadmap', drop: 3, line: '• Get a Recruiting Roadmap with your next steps' })] : []),
-  Object.freeze({ feature: 'verified', drop: 2, line: '• Get PW Verified and show coaches you are serious about playing NCAA volleyball' }),
+  Object.freeze({ feature: 'verified', drop: 2, line: "• Apply for PW Verified and show coaches you're serious about playing NCAA volleyball" }),
 ]);
 const bodyWith = (lines) => `${DM_INTRO}\n\n${lines.map((f) => f.line).join('\n')}\n\nClaim your profile and view your Founding Athlete membership offer:\n{personalLink}\n\n${DM_QUESTIONS}`;
 const DM_BODY = bodyWith(DM_FEATURES);

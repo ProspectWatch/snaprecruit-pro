@@ -26,7 +26,7 @@ test('v1.7 volleyball DM: the GENERAL Founding DM word for word, with the name-r
     '• Research every D1 volleyball program, check which offer your majors and build your list',
     // The admissions line drops first: with the full enrichment link it would pass 1,000.
     '• Get a Recruiting Roadmap with your next steps',
-    '• Get PW Verified and show coaches you are serious about playing NCAA volleyball',
+    "• Apply for PW Verified and show coaches you're serious about playing NCAA volleyball",
     '',
     'Claim your profile and view your Founding Athlete membership offer:',
     INVITE,
@@ -69,11 +69,11 @@ test('every DM fits Instagram (1,000 characters) in the longest case; feature li
 test('RANKED v1.9: the wording, filled, with the name-reveal link', () => {
   const r = buildClaimDmDetailed({ ...vb, fw_dm_rank: 12 }, label);
   assert.equal(r.variant, 'RANKED');
-  // With the full link, a typical RANKED DM drops whole lines in the drop order (admissions first) to fit.
-  assert.deepEqual(r.features, ['comparison', 'schoolIntel', 'findSchools', 'roadmap', 'verified']);
+  // With the full link, a typical RANKED DM drops whole lines in the drop order (admissions, then Verified) to fit.
+  assert.deepEqual(r.features, ['comparison', 'schoolIntel', 'findSchools', 'roadmap']);
   assert.equal(r.text, FOUNDING_DM_FW_RANKED_TEMPLATE.replace('{firstName}', 'Abby').replace('{rank}', '12')
     .replace('{stateName}', 'Texas').replace('{grad}', '2029').replace('{personalLink}', INVITE)
-    .replace(/\n• See admissions[^\n]*/u, ''));
+    .replace(/\n• See admissions[^\n]*/u, '').replace(/\n• Apply for PW Verified[^\n]*/u, ''));
   assert.match(r.text, /^Hey Abby, it's Stephanie from Prospect Watch\.\n\nCongrats! You're ranked #12 in Texas's Class of 2029 on our Future Watch list\.\n\nYou're invited to join as a Founding Athlete/);
   assert.equal(FOUNDING_DM_GENERAL_TEMPLATE, FOUNDING_DM_FW_RANKED_TEMPLATE.replace(/\n\nCongrats![^\n]*/, ''), 'GENERAL is RANKED without the ranking paragraph');
   assert.equal(rankedDmRank({ ...vb, fw_dm_rank: 12 }), 12);
