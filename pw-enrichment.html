@@ -230,6 +230,10 @@
         <button class="segBtn" type="button" data-v="no">UNSEARCHED</button>
         <button class="segBtn" type="button" data-v="yes">SEARCHED</button>
       </div>
+      <div class="segRow" id="memberFilterRow" role="group" aria-label="Filter by membership">
+        <button class="segBtn on" type="button" data-v="non">NON-MEMBERS ONLY</button>
+        <button class="segBtn" type="button" data-v="">ALL</button>
+      </div>
       <div class="segRow" id="offerFilterRow" role="group" aria-label="Filter by Founding Athlete DM">
         <button class="segBtn on" type="button" data-v="">ALL</button>
         <button class="segBtn" type="button" data-v="unsent">OFFER NOT SENT</button>
@@ -378,7 +382,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
   var stateSel=$('state'), schoolInput=$('school'), missingInfoSel=$('missingInfo'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
   var photoToggle=$('photoToggle'), igToggle=$('igToggle'), committedToggle=$('committedToggle'), moreBtn=$('moreBtn');
   var uncommittedSortToggle=$('uncommittedSortToggle');
-  var offerFilter='', fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false, uncommittedSortOn=false;
+  var offerFilter='', memberFilter='non', fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false, uncommittedSortOn=false;
   // "Load next 100" state; every request here (name term or not) is one
   // paginated PostgREST query, so pagination applies uniformly, unlike
   // Athlete Search where it's browse-mode only.
@@ -501,6 +505,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
       +(uncommittedSortOn?'&sort=uncommitted':'')
       +(searchedFilter?'&searched='+searchedFilter:'')
       +(offerFilter?'&offer='+offerFilter:'')
+      +(memberFilter?'&members='+memberFilter:'')
       +(missingInfo?'&missing='+encodeURIComponent(missingInfo):'')
       +(off?'&offset='+off:'');
   }
@@ -516,7 +521,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     schoolInput.classList.toggle('filtering',!!school);
     missingInfoSel.classList.toggle('filtering',!!missingInfo);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+st+' '+school+' '+missingInfo+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+uncommittedSortOn+' '+searchedFilter+' '+offerFilter;
+    var key=term+' '+sport+' '+st+' '+school+' '+missingInfo+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+uncommittedSortOn+' '+searchedFilter+' '+offerFilter+' '+memberFilter;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
@@ -654,7 +659,8 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
         :(a.future_watch?'★ Future Watch':null);
       var extra=[fwBit,a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.pw_score?'PW '+a.pw_score+(a.pw_score_label?' '+a.pw_score_label:''):null]
         .filter(Boolean).map(esc).join(' · ');
-      var pill=a.offer_sent_at?'<span class="apill done mut">✓ Offer sent</span>'
+      var pill=(a.member_tag&&a.member_status!=='none')?'<span class="apill">'+esc(a.member_tag)+'</span>'
+        :a.offer_sent_at?'<span class="apill done mut">✓ Offer sent</span>'
         :a.ig_handle?'<span class="apill done">✓ @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>'
         :a.snap_handle?'<span class="apill done">✓ snap:'+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>'
         :a.socials_searched_at?'<span class="apill done mut">✓ Searched</span>'
@@ -693,6 +699,21 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
   function buildClaimDm(a){return buildFoundingDm(a,sportLabel)}
   // Small "Future Watch #N" label when the RANKED DM is in use (a.fw_dm_rank
   // from /api/hs-search: FINAL rank 1 to 100 on Future Watch, volleyball).
+  // Member guard (CEO 2026-11-16): the Founding offer is never drafted for a
+  // current member. pw-hs-dashboard decides (lib/memberStatus.js) and sends
+  // offer_refused; a row without it (older server) is held, never drafted.
+  function memberHeld(a){return !a||a.offer_refused!==false}
+  function memberText(a){
+    var tag=a&&a.member_tag;
+    if(tag==='Founding member')return 'Do not send the Founding offer: this athlete is already a Founding member.';
+    if(tag==='Member')return 'Do not send the Founding offer: this athlete is already a current member.';
+    return 'Do not send the Founding offer yet: membership could not be checked. Try again in a minute.';
+  }
+  function dmFor(a){
+    if(!a||a.contact_hold!==false)return {text:holdText(a&&a.contact_hold_reasons),ok:false};
+    if(memberHeld(a))return {text:memberText(a),ok:false};
+    return {text:buildClaimDm(a),ok:true};
+  }
   function showFwDmTag(a){
     var r=rankedDmRank(a),t=$('dmFwTag');
     t.textContent=r?'Future Watch #'+r:'';t.hidden=!r;
@@ -784,9 +805,10 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     renderMaxpreps();
     renderSheet();
     // Held athletes get no DM (do not contact, email opt-out or a STOP).
-    $('dmText').value=a.contact_hold===false?buildClaimDm(a):holdText(a.contact_hold_reasons);
-    $('dmText').readOnly=a.contact_hold!==false;
-    $('dmCopy').disabled=a.contact_hold!==false;
+    var dm=dmFor(a);
+    $('dmText').value=dm.text;
+    $('dmText').readOnly=!dm.ok;
+    $('dmCopy').disabled=!dm.ok;
     showFwDmTag(a);
     $('dmNoHandle').hidden=!!a.ig_handle;
     $('detailScrim').hidden=false;
@@ -805,7 +827,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     else done(false);
   });
   $('dmReset').addEventListener('click',function(){
-    if(currentAthlete)$('dmText').value=currentAthlete.contact_hold===false?buildClaimDm(currentAthlete):holdText(currentAthlete.contact_hold_reasons);
+    if(currentAthlete)$('dmText').value=dmFor(currentAthlete).text;
   });
   // Copy-time recheck (final sign-off Schedule 5): just before copying, ask
   // pw-hs-dashboard whether the athlete is still clear to contact, so a STOP
@@ -813,12 +835,17 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
   $('dmCopy').addEventListener('click',function(){
     var btn=this,a=currentAthlete;
     function done(ok){btn.textContent=ok?'COPIED ✓':'COPY FAILED';setTimeout(function(){btn.textContent='COPY DM'},1400)}
-    if(!a||a.contact_hold!==false){done(false);return}
+    if(!dmFor(a).ok){done(false);return}
     btn.textContent='CHECKING…';
     fetch(API_HOLD+'?id='+encodeURIComponent(a.id),{headers:headers()}).then(function(res){return res.ok?res.json():{contact_hold:true,reasons:['unknown']}}).then(function(h){
       if(!h||h.contact_hold!==false){
         a.contact_hold=true;a.contact_hold_reasons=(h&&h.reasons)||['unknown'];
         $('dmText').value=holdText(a.contact_hold_reasons);$('dmText').readOnly=true;btn.disabled=true;btn.textContent='HELD';return;
+      }
+      // Copy-time member re-check: a membership recorded after the search loaded is honoured.
+      if(h.member_hold!==false){
+        a.offer_refused=true;a.member_tag=h.member_tag||a.member_tag;
+        $('dmText').value=memberText(a);$('dmText').readOnly=true;btn.disabled=true;btn.textContent='HELD';rerenderList();return;
       }
       if(navigator.clipboard&&navigator.clipboard.writeText)
         navigator.clipboard.writeText($('dmText').value).then(function(){done(true)},function(){done(false)});
@@ -1142,6 +1169,13 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     Array.prototype.forEach.call(searchedRow.querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
     clearTimeout(debounceT);runSearch();
   });
+  $('memberFilterRow').addEventListener('click',function(e){
+    var b=e.target.closest('.segBtn');
+    if(!b)return;
+    memberFilter=b.getAttribute('data-v');
+    Array.prototype.forEach.call($('memberFilterRow').querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
+    clearTimeout(debounceT);runSearch();
+  });
   $('offerFilterRow').addEventListener('click',function(e){
     var b=e.target.closest('.segBtn');
     if(!b)return;
@@ -1161,6 +1195,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     row.innerHTML=(a.offer_sent_at
       ?'<span class="offerDone">✓ OFFER SENT'+(fmtDate(a.offer_sent_at)?' · '+esc(fmtDate(a.offer_sent_at)):'')+'</span>'
         +'<button type="button" class="offerUndo" id="offerUndo"'+(offerBusy?' disabled':'')+'>Undo</button>'
+      :memberHeld(a)?'<p class="offerErr">'+esc(memberText(a))+'</p>'
       :'<button class="btn btn-gold" id="offerMark" type="button"'+(offerBusy?' disabled':'')+'>'+(offerBusy?'SAVING…':'OFFER SENT')+'</button>')
       +(offerErr?'<p class="offerErr">'+esc(offerErr)+'</p>':'');
   }
@@ -1172,7 +1207,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText} from '/js/pw-fo
     postJSON(API_OFFER,{id:a.id,sent:sent}).then(function(r){
       a.offer_sent_at=r&&r.sent?(r.sent_at||new Date().toISOString()):null;
     }).catch(function(e){
-      offerErr=e&&e.message==='unauthorized'?'Sign in again to save.':'Could not save. Try again.';
+      offerErr=e&&e.message==='unauthorized'?'Sign in again to save.':(e&&/^Not sent:/.test(e.message||''))?e.message:'Could not save. Try again.';
     }).then(function(){offerBusy=false;renderOffer();rerenderList()});
   }
   $('offerRow').addEventListener('click',function(e){
