@@ -118,7 +118,8 @@ export const DM_MAX_CHARS = 1000;
 // serious about playing NCAA volleyball" (lowercase per the copy standard),
 // and the CTA "Claim your profile and view your Founding Athlete membership
 // offer:" (drops "free" and "optional" from the 2026-11-15 wording, by his
-// own instruction). #00 is checking "if approved" and "show coaches" first.
+// own instruction). Final by CEO "merge as written" 2026-11-16; the Verified
+// line drops "if approved". Deviations recorded in STEPH-OUTREACH 4c.
 export const FOUNDING_DM_TEMPLATE_VERSION = 'pw-founding-dm/2026-11-16.v1.9';
 // Kept exported for older callers; no longer part of any DM since v1.7.
 export const DM_STOP_LINE = 'Reply STOP to stop our marketing messages on Instagram and email. Account and security messages may continue.';
