@@ -255,12 +255,8 @@ export function buildClaimDm(a, sportLabel = (s) => s) {
 }
 
 // ---------------------------------------------------------------------------
-// Two-step Instagram DM (CEO GO 2026-11-17). Mirror of pw-hs-dashboard
-// lib/foundingDm.js renderTwoStepMessage1Detailed / renderTwoStepMessage2; the
-// parity fixture (tests/founding-dm-parity.json, twoStep) holds every case.
-// Message 1: personal, NO link, no price; built only from her record.
-export const TWO_STEP_DM_VERSION = 'pw-two-step-dm/2026-11-17.v1';
-export const TWO_STEP_MSG1_MAX = 450;
+// Helpers for the personal DM line (a position as a word, a cleaned school or
+// club name), mirrored from pw-hs-dashboard lib/foundingDm.js.
 const TWO_STEP_POSITION_WORDS = Object.freeze([
   ['outside hitter', /^(oh|outside|outside hitter|lh|left side)$/],
   ['middle blocker', /^(mb|mh|middle|middle blocker|middle hitter)$/],
@@ -287,38 +283,42 @@ const twoStepRank = (v) => {
   const n = Number(v);
   return Number.isInteger(n) && n >= 1 && n <= 100 ? n : null;
 };
-export function renderTwoStepMessage1Detailed({ firstName, grad, position, school, club, fwRank, state, stat } = {}) {
+// ---------------------------------------------------------------------------
+// One-step Instagram DM (CEO 2026-11-17: "I don't want 2 step messaging.
+// Combine the 2. Keep it simple"). Mirror of pw-hs-dashboard lib/foundingDm.js
+// renderOneStepDmDetailed; the parity fixture (oneStep) holds every case.
+export const ONE_STEP_DM_VERSION = 'pw-one-step-dm/2026-11-17.v1';
+export const ONE_STEP_MAX = 700;
+export function renderOneStepDmDetailed({ firstName, grad, position, school, club, fwRank, state, shortLink: link0 } = {}) {
+  const link = String(link0 || '').trim();
+  if (!/^https:\/\/\S+$/.test(link)) return { text: null, version: ONE_STEP_DM_VERSION, chars: 0, used: [] };
   const first = String(firstName || '').trim().split(/\s+/)[0] || '';
   const g = /^\d{4}$/.test(String(grad || '').trim()) ? String(grad).trim() : '';
   const rank = twoStepRank(fwRank);
   const stateName = stateNameOf(state);
-  const parts = { position: twoStepPositionWord(position), school: twoStepCleanName(school), club: twoStepCleanName(club), stat: String(stat || '').trim().replace(/[.]+$/, '') };
+  const parts = { rank: !!(rank && stateName && g), position: twoStepPositionWord(position), school: twoStepCleanName(school), club: twoStepCleanName(club) };
   const build = (p) => {
     const where = [p.position, p.school].filter(Boolean).join(' at ');
-    return `Hey ${first || 'there'}! Stephanie from Prospect Watch here.`
-      + (rank && stateName && g ? ` Congrats on being ranked #${rank} in ${stateName}'s Class of ${g} on our Future Watch list!` : '')
-      + ` Your ${g ? `Class of ${g} ` : ''}volleyball profile is live on our site`
+    return `Hey ${first || 'there'}! Stephanie from Prospect Watch here. `
+      + (p.rank ? `Congrats on being ranked #${rank} in ${stateName}'s Class of ${g} on our Future Watch list! Your volleyball profile` : `Your ${g ? `Class of ${g} ` : ''}volleyball profile`)
+      + ' is live on our site'
       + (where ? `: ${where}` : '')
       + (p.club ? `, playing club for ${p.club}` : '')
-      + (p.stat ? `, with ${p.stat}` : '')
-      + '. You can claim it for free and update any of your information, add your photo, film and stats. Want me to send you the link?';
+      + `.\n\nClaim it for free to update any of your information, add your photo, film and stats, compare your season with D1 players at your position, and build your school list:\n${link}`
+      + "\n\nYou're also invited as a Founding Athlete. The membership offer is on the same page."
+      + '\n\nQuestions? Reply here or email stephanie@prospect-watch.com';
   };
   const p = { ...parts };
   let text = build(p);
-  for (const k of ['stat', 'club', 'school', 'position']) {
-    if (text.length <= TWO_STEP_MSG1_MAX) break;
-    p[k] = '';
+  for (const k of ['club', 'school', 'position', 'rank']) {
+    if (text.length <= ONE_STEP_MAX) break;
+    p[k] = k === 'rank' ? false : '';
     text = build(p);
   }
-  const used = ['firstName', 'grad', 'fwRank', 'position', 'school', 'club', 'stat'].filter((k) => (
-    k === 'firstName' ? !!first : k === 'grad' ? !!g : k === 'fwRank' ? !!(rank && stateName && g) : !!p[k]));
-  return { text, version: TWO_STEP_DM_VERSION, chars: text.length, used };
+  const used = ['firstName', 'grad', 'fwRank', 'position', 'school', 'club'].filter((k) => (
+    k === 'firstName' ? !!first : k === 'grad' ? !!g : k === 'fwRank' ? !!p.rank : !!p[k]));
+  return { text, version: ONE_STEP_DM_VERSION, chars: text.length, used };
 }
-export const renderTwoStepMessage1 = (args = {}) => renderTwoStepMessage1Detailed(args).text;
-export function renderTwoStepMessage2({ shortLink: link } = {}) {
-  const l = String(link || '').trim();
-  if (!/^https:\/\/\S+$/.test(l)) return null;
-  return `Here you go: ${l}\n\nClaim your profile to update your information, add your photo, film and stats, compare your high school season with D1 players at your position, and build your school list.\n\nYou're also invited as a Founding Athlete. Your parent can see the membership offer on the same page.\n\nQuestions? Reply here or email stephanie@prospect-watch.com`;
-}
-/** Message 2's short link: the same /c/<code> invite page, ?s=2 for the two-step campaign. */
-export const twoStepShortLink = (id) => { const l = shortLink(id); return l ? `${l}?s=2` : ''; };
+export const renderOneStepDm = (args = {}) => renderOneStepDmDetailed(args).text;
+/** The one-step DM's link: the same /c/<code> invite page, ?s=1 for its campaign. */
+export const oneStepShortLink = (id) => { const l = shortLink(id); return l ? `${l}?s=1` : ''; };
