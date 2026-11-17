@@ -8,6 +8,7 @@
 const VERSION = 'pw-free-profile-claim/2026-11-17.v2';
 const BASE = 'https://verified.prospect-watch.com';
 const CONTACT = 'stephanie@prospect-watch.com';
+const TWO_STEP_CAMPAIGN = 'dm_two_step_202611';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const clean = (s) => typeof s === 'string' ? s.replace(/\s+/g, ' ').trim() : '';
 const bad = (s) => /\[|\]|\{|\}|<|>|\u2014|[\r\n]/.test(s);
@@ -106,12 +107,16 @@ We’d love to invite ${toGuardian ? 'your family' : 'you'} to claim it for free
 
 Would you like me to send you ${toGuardian ? 'the' : 'your'} personal claim link?`;
   } else if (variant === 'reply') {
+    const trackedLink = new URL(link);
+    trackedLink.searchParams.set('utm_source', 'instagram');
+    trackedLink.searchParams.set('utm_medium', 'dm');
+    trackedLink.searchParams.set('utm_campaign', TWO_STEP_CAMPAIGN);
     const recipient = toGuardian ? (parent || `${first}'s family`) : first;
     body = `Thanks, ${recipient}!
 
 Here’s ${toGuardian ? 'the' : 'your'} personal link to claim ${possessive} Prospect Watch volleyball profile for FREE:
 
-${link}
+${trackedLink}
 
 You can review ${toGuardian ? 'the' : 'your'} information, add ${toGuardian ? '' : 'your '}stats and highlights, and start building ${toGuardian ? 'the' : 'your'} recruiting profile.
 
