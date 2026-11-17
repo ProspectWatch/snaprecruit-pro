@@ -304,8 +304,8 @@ export function renderOneStepDmDetailed({ firstName, grad, position, school, clu
       + ' is live on our site'
       + (where ? `: ${where}` : '')
       + (p.club ? `, playing club for ${p.club}` : '')
-      + `.\n\nClaim it for free to update any of your information, add your photo, film and stats, compare your season with D1 players at your position, and build your school list:\n${link}`
-      + "\n\nYou're also invited as a Founding Athlete. The membership offer is on the same page."
+      + `.\n\nClaim your profile for free and update your information:\n${link}`
+      + "\n\nOptional paid Athlete Center membership includes performance comparisons and school research. See available membership options and terms on the same page."
       + '\n\nQuestions? Reply here or email stephanie@prospect-watch.com';
   };
   const p = { ...parts };
