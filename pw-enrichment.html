@@ -351,25 +351,10 @@
     <div id="dOptions"></div>
     <button class="btn btn-gold" id="dCopy" type="button">COPY NAME</button>
 
-    <div class="dSectHead"><span class="eyebrow gold">TWO-STEP DM</span><span class="searchMeta">message 1 first, no link</span></div>
-    <p class="dmHint">Send message 1. Send message 2 (the link) only after she replies.</p>
-    <textarea class="dmBox" id="dm2One" rows="7" readonly></textarea>
-    <textarea class="dmBox" id="dm2Two" rows="9" readonly></textarea>
-    <div class="dcRow">
-      <button class="btn btn-gold" id="dm2CopyOne" type="button">COPY MESSAGE 1</button>
-      <button class="btn btn-gold" id="dm2CopyTwo" type="button">COPY MESSAGE 2</button>
-    </div>
-    <div class="segRow" id="dm2Stages" role="group" aria-label="Two-step DM stages">
-      <button class="segBtn" type="button" data-stage="msg1">MESSAGE 1 SENT</button>
-      <button class="segBtn" type="button" data-stage="replied">REPLIED</button>
-      <button class="segBtn" type="button" data-stage="msg2">MESSAGE 2 SENT</button>
-    </div>
-    <p class="offerErr" id="dm2Err" hidden></p>
-
-    <div class="dSectHead"><span class="eyebrow gold">PROFILE CLAIM DM (v1.9)</span><span class="fwDmTag" id="dmFwTag" hidden></span><span class="searchMeta">edit before sending</span></div>
+    <div class="dSectHead"><span class="eyebrow gold">FREE PROFILE CLAIM DM</span></div>
+    <p class="dmHint" id="dmHistory" hidden></p>
     <p class="dmHint" id="dmNoHandle" hidden>No Instagram handle on file yet. OPEN INSTAGRAM will search their name instead.</p>
-    <textarea class="dmBox" id="dmText" rows="18"></textarea>
-    <button type="button" class="dmReset" id="dmReset">RESET TO DEFAULT MESSAGE</button>
+    <textarea class="dmBox" id="dmText" rows="18" readonly></textarea>
     <div class="dcRow">
       <button class="btn btn-gold" id="dmCopy" type="button">COPY DM</button>
       <button class="btn btn-secondary" id="dmOpenIg" type="button">OPEN INSTAGRAM</button>
@@ -382,10 +367,11 @@
 
 <script type="module">
 import {buildSuggestions} from '/js/snaprecruit-core.mjs';
-import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText, renderTwoStepMessage1, renderTwoStepMessage2, twoStepShortLink} from '/js/pw-founding-dm.mjs';
+import {holdText} from '/js/pw-founding-dm.mjs';
+import {render as renderClaimProfile} from '/js/pw-claim-profile.mjs';
 (function(){
   var KEY='ms-hs-api-key';
-  var API_HOLD='/api/hs-contact-hold', API_OFFER='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit', API_DUP='/api/hs-duplicate-tag';
+  var API_HOLD='/api/hs-contact-hold', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit', API_DUP='/api/hs-duplicate-tag';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -706,17 +692,6 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText, renderTwoStepMe
   function socialsFromRow(a){return {instagram:a.ig_handle||'',snapchat:a.snap_handle||''}}
   function openLink(href){var el=document.createElement('a');el.href=href;el.target='_blank';el.rel='noopener noreferrer';document.body.appendChild(el);el.click();el.remove()}
 
-  // Staff-composed outreach DM: the claim + Founding Athlete offer message,
-  // signed by Stephanie, carrying the athlete's personal Prospect Watch invite
-  // link for volleyball (js/pw-founding-dm.mjs, CEO 2026-11-02). This tool only
-  // drafts the message and hands off two taps (copy, open Instagram); it never
-  // sends anything itself.
-  function buildClaimDm(a){return buildFoundingDm(a,sportLabel)}
-  // Small "Future Watch #N" label when the RANKED DM is in use (a.fw_dm_rank
-  // from /api/hs-search: FINAL rank 1 to 100 on Future Watch, volleyball).
-  // Member guard (CEO 2026-11-16): the Founding offer is never drafted for a
-  // current member. pw-hs-dashboard decides (lib/memberStatus.js) and sends
-  // offer_refused; a row without it (older server) is held, never drafted.
   function memberHeld(a){return !a||a.offer_refused!==false}
   function memberText(a){
     var tag=a&&a.member_tag;
@@ -727,45 +702,11 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText, renderTwoStepMe
   function dmFor(a){
     if(!a||a.contact_hold!==false)return {text:holdText(a&&a.contact_hold_reasons),ok:false};
     if(memberHeld(a))return {text:memberText(a),ok:false};
-    return {text:buildClaimDm(a),ok:true};
-  }
-  // Two-step DM (CEO GO 2026-11-17): message 1 personal with no link, message 2
-  // after she replies. Built only from her record (js/pw-founding-dm.mjs, the
-  // same renderer as the Claim Desk). Held rows (a STOP, a member, or a
-  // membership not checked) get the hold note instead, as the v1.9 DM does.
-  function twoStepTexts(a){
-    var held=dmFor(a);
-    if(!held.ok)return {one:held.text,two:'',ok:false};
-    return {
-      one:renderTwoStepMessage1({firstName:String(a.name||'').trim().split(/\s+/)[0],grad:a.grad_year,position:a.position,school:a.school,club:a.club_team,fwRank:a.fw_dm_rank,state:a.state}),
-      two:renderTwoStepMessage2({shortLink:twoStepShortLink(a.id)})||'',
-      ok:true
-    };
-  }
-  function renderTwoStep(a){
-    var t=twoStepTexts(a);
-    $('dm2One').value=t.one;$('dm2Two').value=t.two;$('dm2Two').hidden=!t.two;
-    $('dm2CopyOne').disabled=!t.ok;$('dm2CopyTwo').disabled=!t.ok||!t.two;
-    var st=(a&&a.dm2)||{};
-    Array.prototype.forEach.call($('dm2Stages').querySelectorAll('.segBtn'),function(b){b.classList.toggle('on',!!st[b.getAttribute('data-stage')])});
-    $('dm2Err').hidden=true;
-  }
-  // Copy-time recheck for both messages (STOP and member), the same as COPY DM.
-  function recheckThenCopy(btn,label,getText){
-    var a=currentAthlete;
-    function done(ok){btn.textContent=ok?'COPIED ✓':'COPY FAILED';setTimeout(function(){btn.textContent=label},1400)}
-    if(!twoStepTexts(a).ok){done(false);return}
-    btn.textContent='CHECKING…';
-    fetch(API_HOLD+'?id='+encodeURIComponent(a.id),{headers:headers()}).then(function(res){return res.ok?res.json():{contact_hold:true,reasons:['unknown']}}).then(function(h){
-      if(!h||h.contact_hold!==false){a.contact_hold=true;a.contact_hold_reasons=(h&&h.reasons)||['unknown'];renderTwoStep(a);btn.textContent='HELD';return}
-      if(h.member_hold!==false){a.offer_refused=true;a.member_tag=h.member_tag||a.member_tag;renderTwoStep(a);btn.textContent='HELD';rerenderList();return}
-      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(getText()).then(function(){done(true)},function(){done(false)});
-      else done(false);
-    },function(){btn.textContent='HELD'});
-  }
-  function showFwDmTag(a){
-    var r=rankedDmRank(a),t=$('dmFwTag');
-    t.textContent=r?'Future Watch #'+r:'';t.hidden=!r;
+    if(String(a.sport||'').toLowerCase()!=='volleyball')return {text:'The approved claim invitation is for volleyball profiles.',ok:false};
+    if(a.claim_reply_checked!==true || Object.values(a.dm2||{}).some(Boolean))return {text:'Claim outreach is held because prior DM activity exists or could not be checked.',ok:false};
+    var draft=renderClaimProfile({athleteFirst:String(a.name||'').trim().split(/\s+/)[0],gradYear:a.grad_year,
+      athleteId:a.id,eligibilityChecked:true,suppressionChecked:true,profileUnclaimed:a.profile_unclaimed===true});
+    return {text:draft.ok?draft.body:draft.reasons.join(' '),ok:draft.ok};
   }
 
   function renderSheet(){
@@ -795,7 +736,7 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText, renderTwoStepMe
       box.innerHTML=(url?'<img src="'+esc(url)+'" alt=""><span class="tick">✓</span>':'<span class="ph">+</span>')
         +'<input id="pf-'+slot+'" type="file" accept="image/*">';
     });
-    offerErr='';renderOffer();
+    renderOffer();
     if(dupFor!==a.id)closeDup();
   }
 
@@ -855,11 +796,11 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText, renderTwoStepMe
     renderSheet();
     // Held athletes get no DM (do not contact, email opt-out or a STOP).
     var dm=dmFor(a);
-    renderTwoStep(a);
+    var priorStages=Object.entries(a.dm2||{}).filter(function(entry){return entry[1]});
+    $('dmHistory').hidden=!priorStages.length;
+    $('dmHistory').textContent=priorStages.map(function(entry){return {msg1:'Message 1 sent',replied:'Replied',msg2:'Message 2 sent'}[entry[0]]+': '+String(entry[1]).slice(0,10)}).join(' · ');
     $('dmText').value=dm.text;
-    $('dmText').readOnly=!dm.ok;
     $('dmCopy').disabled=!dm.ok;
-    showFwDmTag(a);
     $('dmNoHandle').hidden=!!a.ig_handle;
     $('detailScrim').hidden=false;
   }
@@ -875,9 +816,6 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText, renderTwoStepMe
     if(navigator.clipboard&&navigator.clipboard.writeText)
       navigator.clipboard.writeText(detailName).then(function(){done(true)},function(){done(false)});
     else done(false);
-  });
-  $('dmReset').addEventListener('click',function(){
-    if(currentAthlete)$('dmText').value=dmFor(currentAthlete).text;
   });
   // Copy-time recheck (final sign-off Schedule 5): just before copying, ask
   // pw-hs-dashboard whether the athlete is still clear to contact, so a STOP
@@ -897,8 +835,13 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText, renderTwoStepMe
         a.offer_refused=true;a.member_tag=h.member_tag||a.member_tag;
         $('dmText').value=memberText(a);$('dmText').readOnly=true;btn.disabled=true;btn.textContent='HELD';rerenderList();return;
       }
+      if(currentAthlete!==a){done(false);return}
+      if(h.profile_unclaimed!==true || h.claim_reply_checked!==true || h.prior_claim_dm!==false){
+        $('dmText').value='Claim outreach is held. The profile or prior DM activity needs review.';
+        btn.disabled=true;btn.textContent='HELD';return;
+      }
       if(navigator.clipboard&&navigator.clipboard.writeText)
-        navigator.clipboard.writeText($('dmText').value).then(function(){done(true)},function(){done(false)});
+        navigator.clipboard.writeText(dmFor(a).text).then(function(){done(true)},function(){done(false)});
       else done(false);
     },function(){btn.textContent='HELD';btn.disabled=true;$('dmText').value=holdText(['unknown']);$('dmText').readOnly=true});
   });
@@ -1219,22 +1162,6 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText, renderTwoStepMe
     Array.prototype.forEach.call(searchedRow.querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
     clearTimeout(debounceT);runSearch();
   });
-  $('dm2CopyOne').addEventListener('click',function(){recheckThenCopy(this,'COPY MESSAGE 1',function(){return $('dm2One').value})});
-  $('dm2CopyTwo').addEventListener('click',function(){recheckThenCopy(this,'COPY MESSAGE 2',function(){return $('dm2Two').value})});
-  // Stage marks: Message 1 sent, Replied, Message 2 sent (pw-hs-dashboard
-  // /api/hs-athlete-offer-sent with a stage). Message 2 sent is the Offer sent mark.
-  $('dm2Stages').addEventListener('click',function(e){
-    var b=e.target.closest('.segBtn'),a=currentAthlete;
-    if(!b||!a)return;
-    var stage=b.getAttribute('data-stage');a.dm2=a.dm2||{};
-    var on=!a.dm2[stage];b.disabled=true;
-    postJSON(API_OFFER,{id:a.id,stage:stage,sent:on}).then(function(r){
-      a.dm2[stage]=r&&r.sent?(r.at||new Date().toISOString()):null;
-      if(stage==='msg2')a.offer_sent_at=a.dm2.msg2||a.offer_sent_at;
-      renderTwoStep(a);renderOffer();rerenderList();
-    }).catch(function(err){$('dm2Err').textContent=err&&err.message==='unauthorized'?'Sign in again to save.':(err&&/^Not sent:/.test(err.message||''))?err.message:'Could not save. Try again.';$('dm2Err').hidden=false})
-    .then(function(){b.disabled=false});
-  });
   $('memberFilterRow').addEventListener('click',function(e){
     var b=e.target.closest('.segBtn');
     if(!b)return;
@@ -1250,36 +1177,10 @@ import {buildClaimDm as buildFoundingDm, rankedDmRank, holdText, renderTwoStepMe
     clearTimeout(debounceT);runSearch();
   });
 
-  // Offer sent (CEO 2026-11-02): records that the Founding Athlete DM went out
-  // by hand (pw-hs-dashboard /api/hs-athlete-offer-sent, one row per athlete).
-  // Undo removes it. Nothing is sent from here.
-  var offerBusy=false, offerErr='';
-  function fmtDate(iso){try{return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric'})}catch(_){return ''}}
   function renderOffer(){
     var a=currentAthlete,row=$('offerRow');
-    if(!a){row.innerHTML='';return}
-    row.innerHTML=(a.offer_sent_at
-      ?'<span class="offerDone">✓ OFFER SENT'+(fmtDate(a.offer_sent_at)?' · '+esc(fmtDate(a.offer_sent_at)):'')+'</span>'
-        +'<button type="button" class="offerUndo" id="offerUndo"'+(offerBusy?' disabled':'')+'>Undo</button>'
-      :memberHeld(a)?'<p class="offerErr">'+esc(memberText(a))+'</p>'
-      :'<button class="btn btn-gold" id="offerMark" type="button"'+(offerBusy?' disabled':'')+'>'+(offerBusy?'SAVING…':'OFFER SENT')+'</button>')
-      +(offerErr?'<p class="offerErr">'+esc(offerErr)+'</p>':'');
+    row.textContent=a&&a.offer_sent_at?'Previous Founding offer sent · '+String(a.offer_sent_at).slice(0,10):'';
   }
-  function setOffer(sent){
-    var a=currentAthlete;
-    if(!a||offerBusy)return;
-    if(!sent&&!window.confirm('Mark this offer as not sent?'))return;
-    offerBusy=true;offerErr='';renderOffer();
-    postJSON(API_OFFER,{id:a.id,sent:sent}).then(function(r){
-      a.offer_sent_at=r&&r.sent?(r.sent_at||new Date().toISOString()):null;
-    }).catch(function(e){
-      offerErr=e&&e.message==='unauthorized'?'Sign in again to save.':(e&&/^Not sent:/.test(e.message||''))?e.message:'Could not save. Try again.';
-    }).then(function(){offerBusy=false;renderOffer();rerenderList()});
-  }
-  $('offerRow').addEventListener('click',function(e){
-    if(e.target.closest('#offerMark'))setOffer(true);
-    else if(e.target.closest('#offerUndo'))setOffer(false);
-  });
 
   $('retryBtn').addEventListener('click',function(){lastKey='';runSearch()});
 
