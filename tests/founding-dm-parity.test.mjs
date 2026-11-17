@@ -18,3 +18,16 @@ test('parity fixture: the enrichment DM is byte-identical to the Claim Desk and 
     assert.deepEqual(r.features, c.features, c.label);
   }
 });
+
+test('parity fixture: the two-step DM is byte-identical across the three apps', async () => {
+  const m = await import('../js/pw-founding-dm.mjs');
+  assert.equal(FIX.twoStep.version, m.TWO_STEP_DM_VERSION);
+  for (const c of FIX.twoStep.message1) {
+    const r = m.renderTwoStepMessage1Detailed(c.input);
+    assert.equal(r.text, c.text, c.label);
+    assert.equal(r.chars, c.chars, c.label);
+    assert.deepEqual(r.used, c.used, c.label);
+  }
+  for (const c of FIX.twoStep.message2) assert.equal(m.renderTwoStepMessage2({ shortLink: c.shortLink }), c.text);
+  assert.equal(m.twoStepShortLink('0f8fad5b-d9cb-469f-a165-70867728950e'), FIX.twoStep.message2[0].shortLink);
+});

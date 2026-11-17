@@ -253,3 +253,72 @@ export function buildClaimDmDetailed(a, sportLabel = (s) => s) {
 export function buildClaimDm(a, sportLabel = (s) => s) {
   return buildClaimDmDetailed(a, sportLabel).text || '';
 }
+
+// ---------------------------------------------------------------------------
+// Two-step Instagram DM (CEO GO 2026-11-17). Mirror of pw-hs-dashboard
+// lib/foundingDm.js renderTwoStepMessage1Detailed / renderTwoStepMessage2; the
+// parity fixture (tests/founding-dm-parity.json, twoStep) holds every case.
+// Message 1: personal, NO link, no price; built only from her record.
+export const TWO_STEP_DM_VERSION = 'pw-two-step-dm/2026-11-17.v1';
+export const TWO_STEP_MSG1_MAX = 450;
+const TWO_STEP_POSITION_WORDS = Object.freeze([
+  ['outside hitter', /^(oh|outside|outside hitter|lh|left side)$/],
+  ['middle blocker', /^(mb|mh|middle|middle blocker|middle hitter)$/],
+  ['setter', /^(s|setter)$/],
+  ['right side hitter', /^(rs|opp|opposite|right side|rh|right side hitter)$/],
+  ['libero', /^(l|lib|libero)$/],
+  ['defensive specialist', /^(ds|defensive specialist)$/],
+]);
+export function twoStepPositionWord(raw) {
+  for (const part of String(raw || '').toLowerCase().split(/[\/,;|&]+/)) {
+    const t = part.trim().replace(/\./g, '');
+    for (const [word, rx] of TWO_STEP_POSITION_WORDS) if (rx.test(t)) return word;
+  }
+  return '';
+}
+export function twoStepCleanName(raw) {
+  let t = String(raw || '').replace(/\s+/g, ' ').trim().replace(/\s*\([A-Z]{2}\)$/, '');
+  if (!t || t.length > 60 || /https?:|@|www\./i.test(t) || !/[A-Za-z]{2}/.test(t)) return '';
+  if (t === t.toUpperCase() && t.length > 4) t = t.toLowerCase().replace(/\b([a-z])/g, (m) => m.toUpperCase()).replace(/\b(Hs|Ms|Vbc|Vb|Usa)\b/g, (m) => m.toUpperCase());
+  return t;
+}
+const twoStepRank = (v) => {
+  if (v === null || v === undefined || String(v).trim() === '') return null;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 1 && n <= 100 ? n : null;
+};
+export function renderTwoStepMessage1Detailed({ firstName, grad, position, school, club, fwRank, state, stat } = {}) {
+  const first = String(firstName || '').trim().split(/\s+/)[0] || '';
+  const g = /^\d{4}$/.test(String(grad || '').trim()) ? String(grad).trim() : '';
+  const rank = twoStepRank(fwRank);
+  const stateName = stateNameOf(state);
+  const parts = { position: twoStepPositionWord(position), school: twoStepCleanName(school), club: twoStepCleanName(club), stat: String(stat || '').trim().replace(/[.]+$/, '') };
+  const build = (p) => {
+    const where = [p.position, p.school].filter(Boolean).join(' at ');
+    return `Hey ${first || 'there'}! Stephanie from Prospect Watch here.`
+      + (rank && stateName && g ? ` Congrats on being ranked #${rank} in ${stateName}'s Class of ${g} on our Future Watch list!` : '')
+      + ` Your ${g ? `Class of ${g} ` : ''}volleyball profile is live on our site`
+      + (where ? `: ${where}` : '')
+      + (p.club ? `, playing club for ${p.club}` : '')
+      + (p.stat ? `, with ${p.stat}` : '')
+      + '. You can claim it for free and update any of your information, add your photo, film and stats. Want me to send you the link?';
+  };
+  const p = { ...parts };
+  let text = build(p);
+  for (const k of ['stat', 'club', 'school', 'position']) {
+    if (text.length <= TWO_STEP_MSG1_MAX) break;
+    p[k] = '';
+    text = build(p);
+  }
+  const used = ['firstName', 'grad', 'fwRank', 'position', 'school', 'club', 'stat'].filter((k) => (
+    k === 'firstName' ? !!first : k === 'grad' ? !!g : k === 'fwRank' ? !!(rank && stateName && g) : !!p[k]));
+  return { text, version: TWO_STEP_DM_VERSION, chars: text.length, used };
+}
+export const renderTwoStepMessage1 = (args = {}) => renderTwoStepMessage1Detailed(args).text;
+export function renderTwoStepMessage2({ shortLink: link } = {}) {
+  const l = String(link || '').trim();
+  if (!/^https:\/\/\S+$/.test(l)) return null;
+  return `Here you go: ${l}\n\nClaim your profile to update your information, add your photo, film and stats, compare your high school season with D1 players at your position, and build your school list.\n\nYou're also invited as a Founding Athlete. Your parent can see the membership offer on the same page.\n\nQuestions? Reply here or email stephanie@prospect-watch.com`;
+}
+/** Message 2's short link: the same /c/<code> invite page, ?s=2 for the two-step campaign. */
+export const twoStepShortLink = (id) => { const l = shortLink(id); return l ? `${l}?s=2` : ''; };
