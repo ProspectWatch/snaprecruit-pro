@@ -5,6 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { render } from '../js/pw-claim-profile.mjs';
 
 const html = readFileSync(new URL('../pw-enrichment.html', import.meta.url), 'utf8');
 const fn = (name) => {
@@ -13,8 +14,8 @@ const fn = (name) => {
   return m[0];
 };
 // eslint-disable-next-line no-new-func
-const lib = new Function('holdText', 'buildClaimDm', `${fn('memberHeld')}\n${fn('memberText')}\n${fn('dmFor')}\nreturn { memberHeld, memberText, dmFor };`)(
-  (r) => 'HOLD ' + (r || []).join(','), () => 'THE OFFER DM');
+const lib = new Function('holdText', 'renderClaimProfile', `${fn('memberHeld')}\n${fn('memberText')}\n${fn('dmFor')}\nreturn { memberHeld, memberText, dmFor };`)(
+  (r) => 'HOLD ' + (r || []).join(','), render);
 
 test('Non-members only is ON by default and sent to the server', () => {
   assert.match(html, /memberFilter='non'/);
@@ -23,7 +24,15 @@ test('Non-members only is ON by default and sent to the server', () => {
 });
 
 test('the Founding offer is never drafted for a current member or an unchecked row', () => {
-  assert.equal(lib.dmFor({ contact_hold: false, offer_refused: false }).text, 'THE OFFER DM');
+  const eligible = { contact_hold: false, offer_refused: false, claim_reply_checked: true, profile_unclaimed: true, id: '00000000-0000-4000-8000-000000000001', sport: 'volleyball', name: 'Avery Sample', grad_year: 2029, fw_dm_rank: 14 };
+  const draft = lib.dmFor(eligible);
+  assert.equal(draft.ok, true);
+  assert.match(draft.text, /Class of 2029 volleyball profile is ready to claim for FREE/);
+  assert.match(draft.text, /claim\?id=00000000-0000-4000-8000-000000000001/);
+  assert.doesNotMatch(draft.text, /Founding|ranked/);
+  for (const hold of [{profile_unclaimed:false}, {claim_reply_checked:false}, {dm2:{replied:'2026-11-16'}}]) {
+    assert.equal(lib.dmFor({...eligible,...hold}).ok, false);
+  }
   const founding = lib.dmFor({ contact_hold: false, offer_refused: true, member_tag: 'Founding member' });
   assert.equal(founding.ok, false);
   assert.match(founding.text, /already a Founding member/);

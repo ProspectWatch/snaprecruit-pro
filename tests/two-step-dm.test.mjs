@@ -7,16 +7,18 @@ import { renderTwoStepMessage1, twoStepShortLink } from '../js/pw-founding-dm.mj
 
 const html = readFileSync(new URL('../pw-enrichment.html', import.meta.url), 'utf8');
 
-test('the sheet has both copy buttons and the three stage marks', () => {
-  for (const id of ['dm2One', 'dm2Two', 'dm2CopyOne', 'dm2CopyTwo', 'dm2Stages']) assert.match(html, new RegExp(`id="${id}"`));
-  for (const s of ['msg1', 'replied', 'msg2']) assert.match(html, new RegExp(`data-stage="${s}"`));
-  assert.match(html, /postJSON\(API_OFFER,\{id:a\.id,stage:stage,sent:on\}\)/);
+test('the sheet shows prior stages without the legacy two-step copy controls', () => {
+  assert.match(html, /id="dmHistory"/);
+  assert.doesNotMatch(html, /id="dm2Copy(?:One|Two)"/);
+  assert.match(html, /Message 1 sent.*Replied.*Message 2 sent/);
 });
 
-test('both copies recheck STOP and membership first; held rows get no message', () => {
-  assert.match(html, /function recheckThenCopy/);
-  assert.match(html, /if\(h\.member_hold!==false\)\{a\.offer_refused=true/);
-  assert.match(html, /var held=dmFor\(a\);\s*if\(!held\.ok\)return \{one:held\.text,two:'',ok:false\}/);
+test('the one-message copy rechecks contact, membership, claim and prior activity', () => {
+  assert.match(html, /h\.contact_hold!==false/);
+  assert.match(html, /h\.member_hold!==false/);
+  assert.match(html, /h\.profile_unclaimed!==true/);
+  assert.match(html, /h\.claim_reply_checked!==true/);
+  assert.match(html, /h\.prior_claim_dm!==false/);
 });
 
 test('message 1 has no link; message 2 uses the two-step short link', () => {
