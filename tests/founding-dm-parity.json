@@ -107,5 +107,117 @@
       ],
       "text": "Hey Maximiliana-Josephine, it's Stephanie from Prospect Watch.\n\nCongrats! You're ranked #100 in District of Columbia's Class of 2030 on our Future Watch list.\n\nYou're invited to join as a Founding Athlete. Paid membership includes these Athlete Center features:\n\n• Compare your high school season with D1 players' high school seasons at your position and grade\n• See the players listed at your position at each school, with public commitments shown separately\n• Research every D1 volleyball program, check which offer your majors and build your list\n• Get a Recruiting Roadmap with your next steps\n\nClaim your profile and view your Founding Athlete membership offer:\nhttps://verified.prospect-watch.com/invite?firstName=Maximiliana-Josephine&lastName=Featherstonehaugh-Castellanos&gradYear=2030&sport=volleyball&id=0f8fad5b-d9cb-469f-a165-70867728950e&utm_source=instagram&utm_medium=dm&utm_campaign=ac_launch_2026_11_enrichment\n\nQuestions? Reply here or email stephanie@prospect-watch.com"
     }
-  ]
+  ],
+  "twoStep": {
+    "version": "pw-two-step-dm/2026-11-17.v1",
+    "message1": [
+      {
+        "label": "full data",
+        "input": {
+          "firstName": "Brylee",
+          "grad": 2028,
+          "position": "OH/RS",
+          "school": "WESTLAKE HIGH SCHOOL",
+          "club": "Austin Skyline 17 Royal (TX)",
+          "state": "TX"
+        },
+        "text": "Hey Brylee! Stephanie from Prospect Watch here. Your Class of 2028 volleyball profile is live on our site: outside hitter at Westlake High School, playing club for Austin Skyline 17 Royal. You can claim it for free and update any of your information, add your photo, film and stats. Want me to send you the link?",
+        "chars": 312,
+        "used": [
+          "firstName",
+          "grad",
+          "position",
+          "school",
+          "club"
+        ]
+      },
+      {
+        "label": "ranked #12 TX",
+        "input": {
+          "firstName": "Brylee",
+          "grad": 2028,
+          "position": "OH",
+          "school": "Westlake High School",
+          "club": "Austin Skyline 17 Royal",
+          "state": "TX",
+          "fwRank": 12
+        },
+        "text": "Hey Brylee! Stephanie from Prospect Watch here. Congrats on being ranked #12 in Texas's Class of 2028 on our Future Watch list! Your Class of 2028 volleyball profile is live on our site: outside hitter at Westlake High School, playing club for Austin Skyline 17 Royal. You can claim it for free and update any of your information, add your photo, film and stats. Want me to send you the link?",
+        "chars": 392,
+        "used": [
+          "firstName",
+          "grad",
+          "fwRank",
+          "position",
+          "school",
+          "club"
+        ]
+      },
+      {
+        "label": "minimal (name and class)",
+        "input": {
+          "firstName": "Ava",
+          "grad": 2029
+        },
+        "text": "Hey Ava! Stephanie from Prospect Watch here. Your Class of 2029 volleyball profile is live on our site. You can claim it for free and update any of your information, add your photo, film and stats. Want me to send you the link?",
+        "chars": 227,
+        "used": [
+          "firstName",
+          "grad"
+        ]
+      },
+      {
+        "label": "no data",
+        "input": {},
+        "text": "Hey there! Stephanie from Prospect Watch here. Your volleyball profile is live on our site. You can claim it for free and update any of your information, add your photo, film and stats. Want me to send you the link?",
+        "chars": 215,
+        "used": []
+      },
+      {
+        "label": "school only, setter code",
+        "input": {
+          "firstName": "Mia",
+          "grad": 2030,
+          "position": "S",
+          "school": "Lake Travis HS"
+        },
+        "text": "Hey Mia! Stephanie from Prospect Watch here. Your Class of 2030 volleyball profile is live on our site: setter at Lake Travis HS. You can claim it for free and update any of your information, add your photo, film and stats. Want me to send you the link?",
+        "chars": 253,
+        "used": [
+          "firstName",
+          "grad",
+          "position",
+          "school"
+        ]
+      },
+      {
+        "label": "over the cap",
+        "input": {
+          "firstName": "Maximiliana",
+          "grad": 2027,
+          "position": "DS/L",
+          "school": "The Extremely Long Name Preparatory Academy Of Westlake",
+          "club": "A Very Long Club Name Volleyball Academy Elite 17 National",
+          "state": "DC",
+          "fwRank": 100,
+          "stat": "312 kills and 45 aces and 90 digs and 120 assists last season"
+        },
+        "text": "Hey Maximiliana! Stephanie from Prospect Watch here. Congrats on being ranked #100 in District of Columbia's Class of 2027 on our Future Watch list! Your Class of 2027 volleyball profile is live on our site: defensive specialist at The Extremely Long Name Preparatory Academy Of Westlake. You can claim it for free and update any of your information, add your photo, film and stats. Want me to send you the link?",
+        "chars": 412,
+        "used": [
+          "firstName",
+          "grad",
+          "fwRank",
+          "position",
+          "school"
+        ]
+      }
+    ],
+    "message2": [
+      {
+        "shortLink": "https://verified.prospect-watch.com/c/0f8fad5bd9?s=2",
+        "text": "Here you go: https://verified.prospect-watch.com/c/0f8fad5bd9?s=2\n\nClaim your profile to update your information, add your photo, film and stats, compare your high school season with D1 players at your position, and build your school list.\n\nYou're also invited as a Founding Athlete. Your parent can see the membership offer on the same page.\n\nQuestions? Reply here or email stephanie@prospect-watch.com"
+      }
+    ]
+  }
 }
