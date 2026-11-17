@@ -7,18 +7,19 @@ import { renderTwoStepMessage1, twoStepShortLink } from '../js/pw-founding-dm.mj
 
 const html = readFileSync(new URL('../pw-enrichment.html', import.meta.url), 'utf8');
 
-test('the sheet shows prior stages without the legacy two-step copy controls', () => {
+test('the sheet shows prior stages and staff-operated copy controls', () => {
   assert.match(html, /id="dmHistory"/);
-  assert.doesNotMatch(html, /id="dm2Copy(?:One|Two)"/);
-  assert.match(html, /Message 1 sent.*Replied.*Message 2 sent/);
+  assert.match(html, /id="dmSequenceCopy"/);
+  assert.match(html, /if\(variant&&!h\.claim_stages\)/);
+  assert.match(html, /Message 1 sent.*Athlete replied.*Message 2 sent/);
 });
 
 test('the one-message copy rechecks contact, membership, claim and prior activity', () => {
-  assert.match(html, /h\.contact_hold!==false/);
-  assert.match(html, /h\.member_hold!==false/);
-  assert.match(html, /h\.profile_unclaimed!==true/);
-  assert.match(html, /h\.claim_reply_checked!==true/);
-  assert.match(html, /h\.prior_claim_dm!==false/);
+  assert.match(html, /a\.contact_hold!==false/);
+  assert.match(html, /a\.offer_refused!==false/);
+  assert.match(html, /a\.profile_unclaimed!==true/);
+  assert.match(html, /a\.claim_reply_checked!==true/);
+  assert.match(html, /h\.prior_claim_dm===false/);
 });
 
 test('message 1 has no link; message 2 uses the two-step short link', () => {

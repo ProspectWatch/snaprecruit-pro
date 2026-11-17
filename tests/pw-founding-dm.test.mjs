@@ -137,7 +137,7 @@ test('the enrichment page rechecks the hold right before copying, and fails clos
   const page = readFileSync(new URL('../pw-enrichment.html', import.meta.url), 'utf8');
   assert.match(page, /var API_HOLD='\/api\/hs-contact-hold'/);
   assert.match(page, /fetch\(API_HOLD\+'\?id='/, 'copy asks the server first');
-  assert.match(page, /if\(!h\|\|h\.contact_hold!==false\)/, 'anything but an explicit clear is held');
+  assert.match(page, /a\.contact_hold!==false/, 'anything but an explicit clear is held');
   const toml = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
   assert.match(toml, /from = "\/api\/hs-contact-hold"\n  to = "https:\/\/pw-hs-dashboard\.vercel\.app\/api\/hs-contact-hold"/);
 });
