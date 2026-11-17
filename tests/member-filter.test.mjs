@@ -9,7 +9,7 @@ import { render } from '../js/pw-claim-profile.mjs';
 
 const html = readFileSync(new URL('../pw-enrichment.html', import.meta.url), 'utf8');
 const fn = (name) => {
-  const m = new RegExp(`function ${name}\\(a\\)\\{[\\s\\S]*?\\n  \\}`).exec(html) || new RegExp(`function ${name}\\(a\\)\\{[^\\n]*\\}`).exec(html);
+  const m = new RegExp(`function ${name}\\(a(?:,variant)?\\)\\{[\\s\\S]*?\\n  \\}`).exec(html) || new RegExp(`function ${name}\\(a(?:,variant)?\\)\\{[^\\n]*\\}`).exec(html);
   assert.ok(m, name);
   return m[0];
 };
@@ -23,11 +23,11 @@ test('Non-members only is ON by default and sent to the server', () => {
   assert.match(html, /<button class="segBtn on" type="button" data-v="non">NON-MEMBERS ONLY<\/button>/);
 });
 
-test('the Founding offer is never drafted for a current member or an unchecked row', () => {
+test('a free claim invitation is never drafted for a current member or an unchecked row', () => {
   const eligible = { contact_hold: false, offer_refused: false, claim_reply_checked: true, profile_unclaimed: true, id: '00000000-0000-4000-8000-000000000001', sport: 'volleyball', name: 'Avery Sample', grad_year: 2029, fw_dm_rank: 14 };
   const draft = lib.dmFor(eligible);
   assert.equal(draft.ok, true);
-  assert.match(draft.text, /Class of 2029 volleyball profile is ready to claim for FREE/);
+  assert.match(draft.text, /Class of 2029 volleyball profile and want to invite you to claim it/);
   assert.match(draft.text, /claim\?id=00000000-0000-4000-8000-000000000001/);
   assert.doesNotMatch(draft.text, /Founding|ranked/);
   for (const hold of [{profile_unclaimed:false}, {claim_reply_checked:false}, {dm2:{replied:'2026-11-16'}}]) {
@@ -44,7 +44,7 @@ test('the Founding offer is never drafted for a current member or an unchecked r
 });
 
 test('the copy-time recheck honours a membership recorded after the search loaded', () => {
-  assert.match(html, /if\(h\.member_hold!==false\)\{/);
+  assert.match(html, /a\.offer_refused=h\.member_hold/);
 });
 
 // The MainStage athlete list in this app (athletes.html) has the same filter:

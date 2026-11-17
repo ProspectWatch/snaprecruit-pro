@@ -353,6 +353,14 @@
 
     <div class="dSectHead"><span class="eyebrow gold">FREE PROFILE CLAIM DM</span></div>
     <p class="dmHint" id="dmHistory" hidden></p>
+    <div id="dmSequence" hidden>
+      <textarea class="dmBox" id="dmSequenceText" aria-label="Two-step DM preview" rows="8" readonly></textarea>
+      <div class="dcRow">
+        <button class="btn btn-gold" id="dmSequenceCopy" type="button">COPY MESSAGE 1</button>
+        <button class="btn btn-secondary" id="dmStage" type="button">RECORD MESSAGE 1 SENT</button>
+      </div>
+    </div>
+    <p class="dmHint" id="dmStageStatus" role="status"></p>
     <p class="dmHint" id="dmNoHandle" hidden>No Instagram handle on file yet. OPEN INSTAGRAM will search their name instead.</p>
     <textarea class="dmBox" id="dmText" rows="18" readonly></textarea>
     <div class="dcRow">
@@ -371,7 +379,7 @@ import {holdText} from '/js/pw-founding-dm.mjs';
 import {render as renderClaimProfile} from '/js/pw-claim-profile.mjs';
 (function(){
   var KEY='ms-hs-api-key';
-  var API_HOLD='/api/hs-contact-hold', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit', API_DUP='/api/hs-duplicate-tag';
+  var API_HOLD='/api/hs-contact-hold', API_DM_STAGE='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit', API_DUP='/api/hs-duplicate-tag';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -699,14 +707,34 @@ import {render as renderClaimProfile} from '/js/pw-claim-profile.mjs';
     if(tag==='Member')return 'Do not send the Founding offer: this athlete is already a current member.';
     return 'Do not send the Founding offer yet: membership could not be checked. Try again in a minute.';
   }
-  function dmFor(a){
+  function dmFor(a,variant){
     if(!a||a.contact_hold!==false)return {text:holdText(a&&a.contact_hold_reasons),ok:false};
     if(memberHeld(a))return {text:memberText(a),ok:false};
     if(String(a.sport||'').toLowerCase()!=='volleyball')return {text:'The approved claim invitation is for volleyball profiles.',ok:false};
-    if(a.claim_reply_checked!==true || Object.values(a.dm2||{}).some(Boolean))return {text:'Claim outreach is held because prior DM activity exists or could not be checked.',ok:false};
+    if(a.claim_reply_checked!==true || (!variant && Object.values(a.dm2||{}).some(Boolean)))return {text:'Claim outreach is held because prior DM activity exists or could not be checked.',ok:false};
     var draft=renderClaimProfile({athleteFirst:String(a.name||'').trim().split(/\s+/)[0],gradYear:a.grad_year,
-      athleteId:a.id,eligibilityChecked:true,suppressionChecked:true,profileUnclaimed:a.profile_unclaimed===true});
+      athleteId:a.id,eligibilityChecked:true,suppressionChecked:true,profileUnclaimed:a.profile_unclaimed===true,twoStep:a.dm2}, {variant:variant||'ranked'});
     return {text:draft.ok?draft.body:draft.reasons.join(' '),ok:draft.ok};
+  }
+
+  function renderClaimMessages(a){
+    var dm=dmFor(a), stages=a.dm2||{};
+    var prior=Object.entries(stages).filter(function(entry){return entry[1]});
+    $('dmHistory').hidden=!prior.length;
+    $('dmHistory').textContent=prior.map(function(entry){return {msg1:'Message 1 sent',replied:'Athlete replied',msg2:'Message 2 sent'}[entry[0]]+': '+String(entry[1]).slice(0,10)}).join(' · ');
+    $('dmText').value=dm.text;
+    $('dmCopy').disabled=!dm.ok;
+
+    var variant=stages.msg1?'reply':'intro';
+    var next=dmFor(a,variant);
+    var awaitingReply=stages.msg1&&!stages.replied&&!stages.msg2
+      && a.contact_hold===false && a.offer_refused===false && a.profile_unclaimed===true && a.claim_reply_checked===true;
+    $('dmSequence').hidden=!next.ok&&!awaitingReply;
+    $('dmSequenceText').hidden=!next.ok;
+    $('dmSequenceText').value=next.ok?next.text:'';
+    $('dmSequenceCopy').hidden=!next.ok;
+    $('dmSequenceCopy').textContent=variant==='intro'?'COPY MESSAGE 1':'COPY MESSAGE 2';
+    $('dmStage').textContent=awaitingReply?'RECORD ATHLETE REPLY':variant==='intro'?'RECORD MESSAGE 1 SENT':'RECORD MESSAGE 2 SENT';
   }
 
   function renderSheet(){
@@ -795,12 +823,8 @@ import {render as renderClaimProfile} from '/js/pw-claim-profile.mjs';
     renderMaxpreps();
     renderSheet();
     // Held athletes get no DM (do not contact, email opt-out or a STOP).
-    var dm=dmFor(a);
-    var priorStages=Object.entries(a.dm2||{}).filter(function(entry){return entry[1]});
-    $('dmHistory').hidden=!priorStages.length;
-    $('dmHistory').textContent=priorStages.map(function(entry){return {msg1:'Message 1 sent',replied:'Replied',msg2:'Message 2 sent'}[entry[0]]+': '+String(entry[1]).slice(0,10)}).join(' · ');
-    $('dmText').value=dm.text;
-    $('dmCopy').disabled=!dm.ok;
+    $('dmStageStatus').textContent='';
+    renderClaimMessages(a);
     $('dmNoHandle').hidden=!!a.ig_handle;
     $('detailScrim').hidden=false;
   }
@@ -820,30 +844,54 @@ import {render as renderClaimProfile} from '/js/pw-claim-profile.mjs';
   // Copy-time recheck (final sign-off Schedule 5): just before copying, ask
   // pw-hs-dashboard whether the athlete is still clear to contact, so a STOP
   // or opt-out recorded after the search loaded is honoured. Fails closed.
-  $('dmCopy').addEventListener('click',function(){
-    var btn=this,a=currentAthlete;
-    function done(ok){btn.textContent=ok?'COPIED ✓':'COPY FAILED';setTimeout(function(){btn.textContent='COPY DM'},1400)}
-    if(!dmFor(a).ok){done(false);return}
-    btn.textContent='CHECKING…';
-    fetch(API_HOLD+'?id='+encodeURIComponent(a.id),{headers:headers()}).then(function(res){return res.ok?res.json():{contact_hold:true,reasons:['unknown']}}).then(function(h){
-      if(!h||h.contact_hold!==false){
-        a.contact_hold=true;a.contact_hold_reasons=(h&&h.reasons)||['unknown'];
-        $('dmText').value=holdText(a.contact_hold_reasons);$('dmText').readOnly=true;btn.disabled=true;btn.textContent='HELD';return;
-      }
-      // Copy-time member re-check: a membership recorded after the search loaded is honoured.
-      if(h.member_hold!==false){
-        a.offer_refused=true;a.member_tag=h.member_tag||a.member_tag;
-        $('dmText').value=memberText(a);$('dmText').readOnly=true;btn.disabled=true;btn.textContent='HELD';rerenderList();return;
-      }
-      if(currentAthlete!==a){done(false);return}
-      if(h.profile_unclaimed!==true || h.claim_reply_checked!==true || h.prior_claim_dm!==false){
-        $('dmText').value='Claim outreach is held. The profile or prior DM activity needs review.';
-        btn.disabled=true;btn.textContent='HELD';return;
-      }
-      if(navigator.clipboard&&navigator.clipboard.writeText)
-        navigator.clipboard.writeText(dmFor(a).text).then(function(){done(true)},function(){done(false)});
-      else done(false);
-    },function(){btn.textContent='HELD';btn.disabled=true;$('dmText').value=holdText(['unknown']);$('dmText').readOnly=true});
+  async function recheckClaim(a){
+    var r=await fetch(API_HOLD+'?id='+encodeURIComponent(a.id),{headers:headers()});
+    if(!r.ok)throw new Error('Could not check contact eligibility.');
+    var h=await r.json();
+    if(h.id!==a.id || currentAthlete!==a)throw new Error('Open the athlete again.');
+    a.contact_hold=h.contact_hold;
+    a.contact_hold_reasons=h.reasons;
+    a.offer_refused=h.member_hold;
+    a.member_tag=h.member_tag;
+    a.profile_unclaimed=h.profile_unclaimed;
+    a.claim_reply_checked=h.claim_reply_checked;
+    // A two-step copy must have the server’s current recorded stages.
+    a.dm2=h.claim_stages||(h.prior_claim_dm===false?{}:{msg2:true});
+    return h;
+  }
+  async function copyClaim(btn,variant){
+    var a=currentAthlete,label=btn.textContent;
+    if(!a)return;
+    btn.disabled=true;btn.textContent='CHECKING…';
+    try {
+      var h=await recheckClaim(a);
+      if(variant&&!h.claim_stages)throw new Error('The two-step stages could not be checked.');
+      var draft=dmFor(a,variant);
+      if(!draft.ok)throw new Error(draft.text);
+      await navigator.clipboard.writeText(draft.text);
+      btn.textContent='COPIED ✓';
+    } catch(err) {
+      if(currentAthlete===a){$('dmStageStatus').textContent=err.message;btn.textContent='HELD';}
+    } finally {
+      if(currentAthlete===a)setTimeout(function(){btn.disabled=false;btn.textContent=label;renderClaimMessages(a)},1200);
+    }
+  }
+  $('dmCopy').addEventListener('click',function(){copyClaim(this)});
+  $('dmSequenceCopy').addEventListener('click',function(){copyClaim(this,currentAthlete?.dm2?.msg1?'reply':'intro')});
+  $('dmStage').addEventListener('click',async function(){
+    var a=currentAthlete,btn=this;
+    if(!a)return;
+    btn.disabled=true;
+    try {
+      var h=await recheckClaim(a),stages=h.claim_stages;
+      if(!stages || stages.msg2 || a.contact_hold!==false || a.offer_refused!==false || a.profile_unclaimed!==true)throw new Error('Two-step outreach is held.');
+      var stage=stages.replied?'msg2':stages.msg1?'replied':'msg1';
+      await postJSON(API_DM_STAGE,{id:a.id,sent:true,stage:stage});
+      await recheckClaim(a);
+      renderClaimMessages(a);
+      $('dmStageStatus').textContent='Stage recorded.';
+    } catch(err){if(currentAthlete===a)$('dmStageStatus').textContent=err.message}
+    finally{btn.disabled=false}
   });
   $('dmOpenIg').addEventListener('click',function(){
     var a=currentAthlete;if(!a)return;
