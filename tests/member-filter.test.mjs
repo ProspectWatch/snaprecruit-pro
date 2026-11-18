@@ -27,7 +27,7 @@ test('the Founding offer is never drafted for a current member or an unchecked r
   const eligible = { contact_hold: false, offer_refused: false, claim_reply_checked: true, profile_unclaimed: true, id: '00000000-0000-4000-8000-000000000001', sport: 'volleyball', name: 'Avery Sample', grad_year: 2029, fw_dm_rank: 14 };
   const draft = lib.dmFor(eligible);
   assert.equal(draft.ok, true);
-  assert.match(draft.text, /Class of 2029 volleyball profile is ready to claim for FREE/);
+  assert.match(draft.text, /Class of 2029 volleyball profile and want to invite you to claim it/);
   assert.match(draft.text, /claim\?id=00000000-0000-4000-8000-000000000001/);
   assert.doesNotMatch(draft.text, /Founding|ranked/);
   for (const hold of [{profile_unclaimed:false}, {claim_reply_checked:false}, {dm2:{replied:'2026-11-16'}}]) {

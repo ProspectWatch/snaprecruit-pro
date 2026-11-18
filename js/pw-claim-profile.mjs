@@ -1,11 +1,11 @@
-'use strict';
+// Mirror of ProspectWatch/pw-hs-dashboard lib/claimProfileOutreach.cjs. Update there first.
 /**
  * Prospect Watch free-profile outreach, 2026-11-17.
  * Pure renderer: no network, database, sending, tracking writes or storage.
  * Call only AFTER the application's existing recipient/consent/suppression gates.
  * This module adds validation; it does not replace or waive those gates.
  */
-const VERSION = 'pw-free-profile-claim/2026-11-17.v1';
+const VERSION = 'pw-free-profile-claim/2026-11-17.v2-messaging';
 const BASE = 'https://verified.prospect-watch.com';
 const CONTACT = 'stephanie@prospect-watch.com';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -90,6 +90,55 @@ function render(ctx = {}, opts = {}) {
     body = `${intro}\n\nJust following up with the link to claim ${possessive} free Prospect Watch profile:\n${link}\n\nNo purchase is required. Reply if you need help; otherwise, I'll leave it with you and won't send another claim reminder.`;
     if (channel === 'dm') body += `\n\n${CONTACT}`;
     else { subject = `The link to claim ${first}'s free Prospect Watch profile`; body += `\n\nStephanie\nProspect Watch\n${CONTACT}`; }
+  } else if (variant === 'general') {
+    const playerProfile = `${possessive}${grad ? ` Class of ${grad}` : ''} volleyball profile`;
+    if (channel === 'dm') {
+      const signoff = 'Questions? Just reply here!\n\nStephanie | Prospect Watch';
+      body = `${greeting.replace("it's", 'it’s')}
+
+We’ve built ${playerProfile} and want to invite ${toGuardian ? 'your family' : 'you'} to claim it.
+
+Prospect Watch is building a better way for athletes to showcase their game, explore college programs, and understand their recruiting opportunities.
+
+Claim ${possessive} profile for FREE to review ${toGuardian ? 'the' : 'your'} information, add ${toGuardian ? '' : 'your '}stats and highlights, and get started.
+
+${link}
+
+${signoff}`;
+    } else {
+      subject = toGuardian ? `${first}'s Prospect Watch volleyball profile is ready` : `${first}, your Prospect Watch volleyball profile is ready`;
+      body = `${greeting}
+
+${toGuardian ? `${first}’s` : 'Your'} volleyball recruiting journey deserves more than just another player profile.
+
+At Prospect Watch, we’re building a platform to help athletes take ownership of their recruiting information, showcase their development, and make more informed decisions about their future.
+
+We’ve created ${playerProfile}, and we’d like to invite ${toGuardian ? 'your family' : 'you'} to claim it.
+
+Your first step is completely FREE.
+
+Once you’ve claimed ${toGuardian ? 'the' : 'your'} profile, you can:
+
+Take ownership of ${toGuardian ? 'the' : 'your'} profile: Review ${toGuardian ? 'the' : 'your'} information and request corrections.
+
+Showcase ${toGuardian ? 'the' : 'your'} game: Add ${toGuardian ? '' : 'your '}stats, photos, and highlight film.
+
+Keep ${toGuardian ? '' : 'your '}recruiting information current: Update ${toGuardian ? 'the' : 'your'} playing profile as ${toGuardian ? 'the athlete develops' : 'you develop'}.
+
+Explore the Athlete Center: Discover the recruiting research, college intelligence, and comparison tools available through Prospect Watch.
+
+CLAIM YOUR FREE PROFILE
+
+${link}
+
+There is no purchase required to claim the profile. Optional PW Verified membership and additional Athlete Center features are available separately.
+
+We look forward to following ${toGuardian ? `${first}’s` : 'your'} journey.
+
+Stephanie
+Prospect Watch
+https://prospect-watch.com`;
+    }
   } else if (channel === 'dm') {
     const opener = pub
       ? `${toGuardian ? first + ' is' : "You're"} ranked #${pub.rank} on Prospect Watch's ${pub.state} Class of ${pub.grad} Future Watch list.`
