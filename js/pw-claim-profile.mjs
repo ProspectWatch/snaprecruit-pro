@@ -5,7 +5,7 @@
  * Call only AFTER the application's existing recipient/consent/suppression gates.
  * This module adds validation; it does not replace or waive those gates.
  */
-const VERSION = 'pw-free-profile-claim/2026-11-17.v2-messaging';
+const VERSION = 'pw-free-profile-claim/2026-11-18.v3-email';
 const BASE = 'https://verified.prospect-watch.com';
 const CONTACT = 'stephanie@prospect-watch.com';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -109,33 +109,35 @@ Questions? I'm happy to help!
 Stephanie | Prospect Watch`;
     } else {
       subject = toGuardian ? `${first}'s Prospect Watch volleyball profile is ready` : `${first}, your Prospect Watch volleyball profile is ready`;
+      // CEO final email correction, 2026-11-18. Free profile and paid
+      // membership are kept apart, and every line is checked against the
+      // production plan in lib/acFeatures.js: Playing Profile (stats, photos,
+      // video) and the Recruiting Roadmap are 'free'; School Intelligence,
+      // Athlete Intelligence and Find Schools (college research) are 'member'.
+      // No price here: pricing, renewal and eligibility live on the offer page.
+      const your = toGuardian ? `${first}'s` : 'your';
       body = `${greeting}
 
-${toGuardian ? `${first}’s` : 'Your'} volleyball recruiting journey deserves more than just another player profile.
+I'm Stephanie from Prospect Watch. We've created ${playerProfile}, and I'd like to invite ${toGuardian ? 'your family' : 'you'} to claim it.
 
-At Prospect Watch, we’re building a platform to help athletes take ownership of their recruiting information, showcase their development, and make more informed decisions about their future.
+Claiming the profile is FREE. With the free profile, ${toGuardian ? 'your family' : 'you'} can:
 
-We’ve created ${playerProfile}, and we’d like to invite ${toGuardian ? 'your family' : 'you'} to claim it.
+Review ${your} information: Check the playing details and request corrections.
 
-Your first step is completely FREE.
+Build ${your} recruiting profile: Add stats, player photos and highlight video.
 
-Once you’ve claimed ${toGuardian ? 'the' : 'your'} profile, you can:
+Follow the Recruiting Roadmap: See the next steps in ${your} recruiting.
 
-Take ownership of ${toGuardian ? 'the' : 'your'} profile: Review ${toGuardian ? 'the' : 'your'} information and request corrections.
-
-Showcase ${toGuardian ? 'the' : 'your'} game: Add ${toGuardian ? '' : 'your '}stats, photos, and highlight film.
-
-Keep ${toGuardian ? '' : 'your '}recruiting information current: Update ${toGuardian ? 'the' : 'your'} playing profile as ${toGuardian ? 'the athlete develops' : 'you develop'}.
-
-Explore the Athlete Center: Discover the recruiting research, college intelligence, and comparison tools available through Prospect Watch.
-
-CLAIM YOUR FREE PROFILE
-
+CLAIM ${toGuardian ? `${first.toUpperCase()}'S` : 'YOUR'} FREE PROFILE
 ${link}
 
-There is no purchase required to claim the profile. Optional PW Verified membership and additional Athlete Center features are available separately.
+There is no purchase required to claim the profile.
 
-We look forward to following ${toGuardian ? `${first}’s` : 'your'} journey.
+Optional paid Athlete Center membership
+College research, School Intelligence and Athlete Intelligence require a paid Athlete Center membership. They are not part of the free profile.
+
+${toGuardian ? `${first} is` : "You're"} also eligible to review our Founding Athlete membership offer. Pricing, renewal terms and eligibility are shown on the offer page:
+${BASE}/founding-athlete
 
 Stephanie
 Prospect Watch
