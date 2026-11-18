@@ -149,6 +149,7 @@
 .offerDone{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:12px;border:1px solid var(--ms-gold);color:var(--ms-gold-bright);font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
 .offerUndo{font-size:12px;font-weight:600;color:var(--ms-muted);background:none;border:0;padding:6px 2px;text-decoration:underline;text-underline-offset:2px}
 .offerErr{flex-basis:100%;margin:0;font-size:12px;color:var(--ms-danger,#E0554B)}
+.offerNote{flex-basis:100%;margin:0;font-size:12px;color:var(--ms-muted)}
 .dcRow .btn{height:46px;font-size:12px}
 /* photo slots */
 .photoGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:6px}
@@ -234,10 +235,10 @@
         <button class="segBtn on" type="button" data-v="non">NON-MEMBERS ONLY</button>
         <button class="segBtn" type="button" data-v="">ALL</button>
       </div>
-      <div class="segRow" id="offerFilterRow" role="group" aria-label="Filter by Founding Athlete DM">
+      <div class="segRow" id="offerFilterRow" role="group" aria-label="Filter by DM sent">
         <button class="segBtn on" type="button" data-v="">ALL</button>
-        <button class="segBtn" type="button" data-v="unsent">OFFER NOT SENT</button>
-        <button class="segBtn" type="button" data-v="sent">OFFER SENT</button>
+        <button class="segBtn" type="button" data-v="unsent">NOT SENT</button>
+        <button class="segBtn" type="button" data-v="sent">SENT</button>
       </div>
       <div class="bar indeterminate" id="loadBar"><div class="fill"></div></div>
     </div>
@@ -368,10 +369,10 @@
 <script type="module">
 import {buildSuggestions} from '/js/snaprecruit-core.mjs';
 import {holdText} from '/js/pw-founding-dm.mjs';
-import {render as renderClaimProfile} from '/js/pw-claim-profile.mjs';
+import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-claim-profile.mjs';
 (function(){
   var KEY='ms-hs-api-key';
-  var API_HOLD='/api/hs-contact-hold', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit', API_DUP='/api/hs-duplicate-tag';
+  var API_HOLD='/api/hs-contact-hold', API_OFFER='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit', API_DUP='/api/hs-duplicate-tag';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -627,7 +628,7 @@ import {render as renderClaimProfile} from '/js/pw-claim-profile.mjs';
     if(!append){
       if(!rows.length){
         var name=sport?sportLabel(sport):'';
-        var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',hasPhotoOn?'Has Photo':'',hasIgOn?'Has Instagram':'',hasCommittedOn?'Committed':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'',offerFilter==='unsent'?'Offer not sent':offerFilter==='sent'?'Offer sent':'']
+        var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',hasPhotoOn?'Has Photo':'',hasIgOn?'Has Instagram':'',hasCommittedOn?'Committed':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'',offerFilter==='unsent'?'Not sent':offerFilter==='sent'?'Sent':'']
           .filter(Boolean).join(', ');
         $('emptyMsg').textContent=term.length>=2
           ?('No athletes match “'+term+'”'+(extraBits?' ('+extraBits+')':'')+'.')
@@ -661,7 +662,8 @@ import {render as renderClaimProfile} from '/js/pw-claim-profile.mjs';
       var extra=[fwBit,a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.pw_score?'PW '+a.pw_score+(a.pw_score_label?' '+a.pw_score_label:''):null]
         .filter(Boolean).map(esc).join(' · ');
       var pill=(a.member_tag&&a.member_status!=='none')?'<span class="apill">'+esc(a.member_tag)+'</span>'
-        :a.offer_sent_at?'<span class="apill done mut">✓ Offer sent</span>'
+        :a.claim_dm&&a.claim_dm.at?'<span class="apill done mut">'+esc(dmSentLabel(a.claim_dm.at))+'</span>'
+        :a.offer_sent_at?'<span class="apill done mut">✓ Sent</span>'
         :a.ig_handle?'<span class="apill done">✓ @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>'
         :a.snap_handle?'<span class="apill done">✓ snap:'+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>'
         :a.socials_searched_at?'<span class="apill done mut">✓ Searched</span>'
@@ -1177,10 +1179,43 @@ import {render as renderClaimProfile} from '/js/pw-claim-profile.mjs';
     clearTimeout(debounceT);runSearch();
   });
 
+  // DM sent (CEO 2026-11-18): restores the sent button under COPY DM. Records
+  // the free-profile claim DM through pw-hs-dashboard /api/hs-athlete-offer-sent
+  // (kind claim_dm, this claim-DM version), the same record MainStage, the
+  // Claim Desk and Stephanie's Office read. Undo removes it. Nothing is sent.
+  var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function shortDay(iso){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||''));return m?MONTHS[+m[2]-1]+' '+(+m[3]):''}
+  function dmSentLabel(iso){var d=shortDay(iso);return '\u2713 DM sent'+(d?' \u00b7 '+d:'')}
+  var dmBusy=false, dmErr='';
   function renderOffer(){
     var a=currentAthlete,row=$('offerRow');
-    row.textContent=a&&a.offer_sent_at?'Previous Founding offer sent · '+String(a.offer_sent_at).slice(0,10):'';
+    if(!a){row.innerHTML='';return}
+    var rec=a.claim_dm&&a.claim_dm.at?a.claim_dm:null;
+    var prior=!rec&&a.offer_sent_at?'<p class="offerNote">Earlier DM marked sent · '+esc(String(a.offer_sent_at).slice(0,10))+'</p>':'';
+    row.innerHTML=(rec
+      ?'<span class="offerDone">'+esc(dmSentLabel(rec.at))+'</span>'
+        +'<button type="button" class="offerUndo" id="dmUndo"'+(dmBusy?' disabled':'')+'>Undo</button>'
+        +(rec.by?'<p class="offerNote">Marked by '+esc(rec.by)+'</p>':'')
+      :memberHeld(a)?'<p class="offerErr">'+esc(memberText(a))+'</p>'
+      :prior+'<button class="btn btn-gold" id="dmMark" type="button"'+(dmBusy?' disabled':'')+'>'+(dmBusy?'SAVING\u2026':'MARK DM SENT')+'</button>')
+      +(dmErr?'<p class="offerErr">'+esc(dmErr)+'</p>':'');
   }
+  function setDmSent(sent){
+    var a=currentAthlete;
+    if(!a||dmBusy)return;
+    if(!sent&&!window.confirm('Mark this DM as not sent?'))return;
+    dmBusy=true;dmErr='';renderOffer();
+    postJSON(API_OFFER,{id:a.id,kind:'claim_dm',sent:sent,version:CLAIM_DM_VERSION,via:'enrichment'}).then(function(r){
+      a.claim_dm=r&&r.sent?{at:r.at||new Date().toISOString(),by:r.by||null,version:r.version||CLAIM_DM_VERSION}:null;
+      if(r&&r.sent&&!a.offer_sent_at)a.offer_sent_at=r.at;
+    },function(e){
+      dmErr=e&&e.message==='unauthorized'?'Sign in again to save.':(e&&/^Not sent:/.test(e.message||''))?e.message:'Could not save. Try again.';
+    }).then(function(){dmBusy=false;if(currentAthlete===a)renderOffer();rerenderList()});
+  }
+  $('offerRow').addEventListener('click',function(e){
+    if(e.target.closest('#dmMark'))setDmSent(true);
+    else if(e.target.closest('#dmUndo'))setDmSent(false);
+  });
 
   $('retryBtn').addEventListener('click',function(){lastKey='';runSearch()});
 
