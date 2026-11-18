@@ -93,18 +93,20 @@ function render(ctx = {}, opts = {}) {
   } else if (variant === 'general') {
     const playerProfile = `${possessive}${grad ? ` Class of ${grad}` : ''} volleyball profile`;
     if (channel === 'dm') {
-      const signoff = 'Questions? Just reply here!\n\nStephanie | Prospect Watch';
-      body = `${greeting.replace("it's", 'it’s')}
+      body = `${greeting}
 
-We’ve built ${playerProfile} and want to invite ${toGuardian ? 'your family' : 'you'} to claim it.
+We've built ${playerProfile}, and I'd love to invite ${toGuardian ? 'your family' : 'you'} to claim it!
 
-Prospect Watch is building a better way for athletes to showcase their game, explore college programs, and understand their recruiting opportunities.
+Claim ${possessive} profile for FREE to review ${toGuardian ? 'the' : 'your'} information and add stats and highlights.
 
-Claim ${possessive} profile for FREE to review ${toGuardian ? 'the' : 'your'} information, add ${toGuardian ? '' : 'your '}stats and highlights, and get started.
+Optional Athlete Center membership includes advanced recruiting tools, such as research on D1 volleyball programs.
 
+${toGuardian ? 'Claim the profile here:' : 'Claim yours here:'}
 ${link}
 
-${signoff}`;
+Questions? I'm happy to help!
+
+Stephanie | Prospect Watch`;
     } else {
       subject = toGuardian ? `${first}'s Prospect Watch volleyball profile is ready` : `${first}, your Prospect Watch volleyball profile is ready`;
       body = `${greeting}
