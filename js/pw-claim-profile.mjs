@@ -1,11 +1,11 @@
-'use strict';
+// Mirror of ProspectWatch/pw-hs-dashboard lib/claimProfileOutreach.cjs. Update there first.
 /**
  * Prospect Watch free-profile outreach, 2026-11-17.
  * Pure renderer: no network, database, sending, tracking writes or storage.
  * Call only AFTER the application's existing recipient/consent/suppression gates.
  * This module adds validation; it does not replace or waive those gates.
  */
-const VERSION = 'pw-free-profile-claim/2026-11-17.v1';
+const VERSION = 'pw-free-profile-claim/2026-11-18.v3-email';
 const BASE = 'https://verified.prospect-watch.com';
 const CONTACT = 'stephanie@prospect-watch.com';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -90,6 +90,59 @@ function render(ctx = {}, opts = {}) {
     body = `${intro}\n\nJust following up with the link to claim ${possessive} free Prospect Watch profile:\n${link}\n\nNo purchase is required. Reply if you need help; otherwise, I'll leave it with you and won't send another claim reminder.`;
     if (channel === 'dm') body += `\n\n${CONTACT}`;
     else { subject = `The link to claim ${first}'s free Prospect Watch profile`; body += `\n\nStephanie\nProspect Watch\n${CONTACT}`; }
+  } else if (variant === 'general') {
+    const playerProfile = `${possessive}${grad ? ` Class of ${grad}` : ''} volleyball profile`;
+    if (channel === 'dm') {
+      body = `${greeting}
+
+We've built ${playerProfile}, and I'd love to invite ${toGuardian ? 'your family' : 'you'} to claim it!
+
+Claim ${possessive} profile for FREE to review ${toGuardian ? 'the' : 'your'} information and add stats and highlights.
+
+Optional Athlete Center membership includes advanced recruiting tools, such as research on D1 volleyball programs.
+
+${toGuardian ? 'Claim the profile here:' : 'Claim yours here:'}
+${link}
+
+Questions? I'm happy to help!
+
+Stephanie | Prospect Watch`;
+    } else {
+      subject = toGuardian ? `${first}'s Prospect Watch volleyball profile is ready` : `${first}, your Prospect Watch volleyball profile is ready`;
+      // CEO final email correction, 2026-11-18. Free profile and paid
+      // membership are kept apart, and every line is checked against the
+      // production plan in lib/acFeatures.js: Playing Profile (stats, photos,
+      // video) and the Recruiting Roadmap are 'free'; School Intelligence,
+      // Athlete Intelligence and Find Schools (college research) are 'member'.
+      // No price here: pricing, renewal and eligibility live on the offer page.
+      const your = toGuardian ? `${first}'s` : 'your';
+      body = `${greeting}
+
+I'm Stephanie from Prospect Watch. We've created ${playerProfile}, and I'd like to invite ${toGuardian ? 'your family' : 'you'} to claim it.
+
+Claiming the profile is FREE. With the free profile, ${toGuardian ? 'your family' : 'you'} can:
+
+Review ${your} information: Check the playing details and request corrections.
+
+Build ${your} recruiting profile: Add stats, player photos and highlight video.
+
+Follow the Recruiting Roadmap: See the next steps in ${your} recruiting.
+
+CLAIM ${toGuardian ? `${first.toUpperCase()}'S` : 'YOUR'} FREE PROFILE
+${link}
+
+There is no purchase required to claim the profile.
+
+Optional paid Athlete Center membership
+College research, School Intelligence and Athlete Intelligence require a paid Athlete Center membership. They are not part of the free profile.
+
+${toGuardian ? `${first} is` : "You're"} also eligible to review our Founding Athlete membership offer. Pricing, renewal terms and eligibility are shown on the offer page:
+${BASE}/founding-athlete
+
+Stephanie
+Prospect Watch
+https://prospect-watch.com`;
+    }
   } else if (channel === 'dm') {
     const opener = pub
       ? `${toGuardian ? first + ' is' : "You're"} ranked #${pub.rank} on Prospect Watch's ${pub.state} Class of ${pub.grad} Future Watch list.`
