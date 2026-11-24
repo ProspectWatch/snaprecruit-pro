@@ -92,6 +92,9 @@
 .aloc{font-size:11px;color:var(--ms-muted);margin-top:2px}
 .apill{flex:0 1 132px;max-width:132px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-text-2);font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border-radius:999px;padding:5px 10px}
 .apill.done{border-color:var(--ms-gold);color:var(--ms-gold-bright);font-family:var(--f-mono);letter-spacing:.04em;text-transform:none}
+.apills{flex:0 1 132px;max-width:132px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0}
+.apills .apill{flex:none;max-width:132px;letter-spacing:.06em;padding:5px 8px}
+.apill.claimed{border-color:var(--ms-success);color:var(--ms-success)}
 .apill.done.mut{border-color:var(--ms-border);color:var(--ms-success);font-family:var(--f-ui);letter-spacing:.16em;text-transform:uppercase}
 .stateBox{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:44px 20px;color:var(--ms-muted)}
 .stateBox .chip{width:52px;height:52px;border-radius:15px;background:var(--ms-surface-2);border:1px solid var(--ms-border);color:var(--ms-gold);display:flex;align-items:center;justify-content:center}
@@ -234,6 +237,12 @@
       <div class="segRow" id="memberFilterRow" role="group" aria-label="Filter by membership">
         <button class="segBtn on" type="button" data-v="non">NON-MEMBERS ONLY</button>
         <button class="segBtn" type="button" data-v="">ALL</button>
+        <button class="segBtn" type="button" data-v="only">MEMBERS</button>
+      </div>
+      <div class="segRow" id="claimedFilterRow" role="group" aria-label="Filter by claimed">
+        <button class="segBtn on" type="button" data-v="">ALL</button>
+        <button class="segBtn" type="button" data-v="yes">CLAIMED</button>
+        <button class="segBtn" type="button" data-v="no">NOT CLAIMED</button>
       </div>
       <div class="segRow" id="offerFilterRow" role="group" aria-label="Filter by DM sent">
         <button class="segBtn on" type="button" data-v="">ALL</button>
@@ -384,7 +393,7 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
   var stateSel=$('state'), schoolInput=$('school'), missingInfoSel=$('missingInfo'), gradYearSel=$('gradYear'), fwToggle=$('fwToggle'), searchedRow=$('searchedRow');
   var photoToggle=$('photoToggle'), igToggle=$('igToggle'), committedToggle=$('committedToggle'), moreBtn=$('moreBtn');
   var uncommittedSortToggle=$('uncommittedSortToggle');
-  var offerFilter='', memberFilter='non', fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false, uncommittedSortOn=false;
+  var offerFilter='', memberFilter='non', claimedFilter='', fwOn=false, searchedFilter='', hasPhotoOn=false, hasIgOn=false, hasCommittedOn=false, uncommittedSortOn=false;
   // "Load next 100" state; every request here (name term or not) is one
   // paginated PostgREST query, so pagination applies uniformly, unlike
   // Athlete Search where it's browse-mode only.
@@ -508,6 +517,7 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
       +(searchedFilter?'&searched='+searchedFilter:'')
       +(offerFilter?'&offer='+offerFilter:'')
       +(memberFilter?'&members='+memberFilter:'')
+      +(claimedFilter?'&claimed='+claimedFilter:'')
       +(missingInfo?'&missing='+encodeURIComponent(missingInfo):'')
       +(off?'&offset='+off:'');
   }
@@ -523,12 +533,12 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
     schoolInput.classList.toggle('filtering',!!school);
     missingInfoSel.classList.toggle('filtering',!!missingInfo);
     gradYearSel.classList.toggle('filtering',!!gradYear);
-    var key=term+' '+sport+' '+st+' '+school+' '+missingInfo+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+uncommittedSortOn+' '+searchedFilter+' '+offerFilter+' '+memberFilter;
+    var key=term+' '+sport+' '+st+' '+school+' '+missingInfo+' '+gradYear+' '+fwOn+' '+hasPhotoOn+' '+hasIgOn+' '+hasCommittedOn+' '+uncommittedSortOn+' '+searchedFilter+' '+offerFilter+' '+memberFilter+' '+claimedFilter;
     if(key===lastKey)return;
     lastKey=key;
     offset=0;hasMore=false;
     if(inflight)inflight.abort();
-    if(term.length<2&&!sport&&!st&&!school&&!missingInfo&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!uncommittedSortOn&&!searchedFilter&&!offerFilter){setState('idle');return}
+    if(term.length<2&&!sport&&!st&&!school&&!missingInfo&&!gradYear&&!fwOn&&!hasPhotoOn&&!hasIgOn&&!hasCommittedOn&&!uncommittedSortOn&&!searchedFilter&&!offerFilter&&!claimedFilter&&memberFilter!=='only'){setState('idle');return}
     var ctl=new AbortController();inflight=ctl;
     // A generation counter, not just AbortController: abort() only cancels a
     // fetch that's still pending; it has no effect once the response has
@@ -605,12 +615,13 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
     if(!parts.length)return '?';
     return (parts[0][0]+(parts.length>1?parts[parts.length-1][0]:'')).toUpperCase();
   }
-  // Prefer the posed cover shot, then the action shot, then the IG-post
-  // screenshot last, since a screenshot usually has UI chrome around the face
-  // rather than being a clean photo, so it's the weakest thumbnail choice.
+  // The posed cover shot, then the action shot. Never the Screenshot slot
+  // (CEO 2026-11-24): it holds a phone screenshot of the athlete's Instagram
+  // page, which is not a photo of her; with no photo the card shows initials.
+  // The screenshot stays visible in its own slot in the detail sheet.
   function primaryPhoto(a){
     var p=a.photos||{};
-    return p.cover||p.action||p.screenshot||null;
+    return p.cover||p.action||null;
   }
   function cardPhoto(url,name){
     return '<div class="acardPhoto">'+(url
@@ -661,8 +672,9 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
         :(a.future_watch?'★ Future Watch':null);
       var extra=[fwBit,a.club_team,a.national_rank?'#'+a.national_rank+' Natl':null,a.regional_rank?'#'+a.regional_rank+' Reg':null,a.pw_score?'PW '+a.pw_score+(a.pw_score_label?' '+a.pw_score_label:''):null]
         .filter(Boolean).map(esc).join(' · ');
-      var pill=(a.member_tag&&a.member_status!=='none')?'<span class="apill">'+esc(a.member_tag)+'</span>'
-        :a.claim_dm&&a.claim_dm.at?'<span class="apill done mut">'+esc(dmSentLabel(a.claim_dm.at))+'</span>'
+      // CLAIMED and MEMBER sit above the status pill (CEO 2026-11-24). Both come from the server, read live.
+      var tags=cardTags(a);
+      var pill=a.claim_dm&&a.claim_dm.at?'<span class="apill done mut">'+esc(dmSentLabel(a.claim_dm.at))+'</span>'
         :a.offer_sent_at?'<span class="apill done mut">✓ Sent</span>'
         :a.ig_handle?'<span class="apill done">✓ @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>'
         :a.snap_handle?'<span class="apill done">✓ snap:'+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>'
@@ -674,7 +686,7 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
         +'<div class="aname">'+esc(a.name)+'</div>'
         +(meta?'<div class="aline">'+meta+'</div>':'')
         +(extra?'<div class="aloc">'+extra+'</div>':'')
-        +'</div>'+pill+'</button>';
+        +'</div>'+(tags?'<span class="apills">'+tags+pill+'</span>':pill)+'</button>';
     }).join('');
     if(append)list.insertAdjacentHTML('beforeend',html);else list.innerHTML=html;
     updateMoreBtn();
@@ -694,6 +706,12 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
   function socialsFromRow(a){return {instagram:a.ig_handle||'',snapchat:a.snap_handle||''}}
   function openLink(href){var el=document.createElement('a');el.href=href;el.target='_blank';el.rel='noopener noreferrer';document.body.appendChild(el);el.click();el.remove()}
 
+  function cardTags(a){
+    var t='';
+    if(a&&a.claimed===true)t+='<span class="apill claimed">CLAIMED</span>';
+    if(a&&a.member_status==='member')t+='<span class="apill">'+esc(a.member_founding?'FOUNDING MEMBER':'MEMBER')+'</span>';
+    return t;
+  }
   function memberHeld(a){return !a||a.offer_refused!==false}
   function memberText(a){
     var tag=a&&a.member_tag;
@@ -1169,6 +1187,13 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
     if(!b)return;
     memberFilter=b.getAttribute('data-v');
     Array.prototype.forEach.call($('memberFilterRow').querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
+    clearTimeout(debounceT);runSearch();
+  });
+  $('claimedFilterRow').addEventListener('click',function(e){
+    var b=e.target.closest('.segBtn');
+    if(!b)return;
+    claimedFilter=b.getAttribute('data-v');
+    Array.prototype.forEach.call($('claimedFilterRow').querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x===b)});
     clearTimeout(debounceT);runSearch();
   });
   $('offerFilterRow').addEventListener('click',function(e){

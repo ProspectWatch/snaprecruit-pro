@@ -34,7 +34,8 @@ test('records through the existing route with kind claim_dm and the current clai
 
 test('the sent state comes back on reload (claim_dm from the search) and shows on the list', () => {
   assert.match(html, /var rec=a\.claim_dm&&a\.claim_dm\.at\?a\.claim_dm:null;/);
-  assert.match(html, /:a\.claim_dm&&a\.claim_dm\.at\?'<span class="apill done mut">'\+esc\(dmSentLabel\(a\.claim_dm\.at\)\)\+'<\/span>'/);
+  // The member tag moved to cardTags (CEO 2026-11-24), so the DM-sent pill can lead the status pill.
+  assert.match(html, /[:=]a\.claim_dm&&a\.claim_dm\.at\?'<span class="apill done mut">'\+esc\(dmSentLabel\(a\.claim_dm\.at\)\)\+'<\/span>'/);
 });
 
 test('the list filter reads SENT / NOT SENT', () => {
