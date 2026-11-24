@@ -60,3 +60,37 @@ test('athletes.html: Non-members only is ON by default, sent to MainStage, and r
   assert.match(athletes, /<button class="segBtn on" type="button" data-v="non">NON-MEMBERS ONLY<\/button>/);
   assert.match(athletes, /a\.pw_member_tag&&a\.pw_member_status!=='none'/);
 });
+
+test('CLAIMED and MEMBER tags come from the server and sit with the status pill (CEO 2026-11-24)', () => {
+  const m = /function cardTags\(a\)\{[\s\S]*?\n  \}/.exec(html);
+  assert.ok(m, 'cardTags');
+  // eslint-disable-next-line no-new-func
+  const cardTags = new Function('esc', `${m[0]}\nreturn cardTags;`)((x) => String(x));
+  assert.equal(cardTags({ claimed: true }), '<span class="apill claimed">CLAIMED</span>');
+  assert.equal(cardTags({ member_status: 'member' }), '<span class="apill">MEMBER</span>');
+  assert.equal(cardTags({ member_status: 'member', member_founding: true, claimed: true }), '<span class="apill claimed">CLAIMED</span><span class="apill">FOUNDING MEMBER</span>');
+  assert.equal(cardTags({ member_status: 'former', claimed: false }), '', 'a former member is not tagged MEMBER');
+  assert.equal(cardTags({ claimed: 'yes' }), '', 'only a real true counts');
+  assert.match(html, /\(tags\?'<span class="apills">'\+tags\+pill\+'<\/span>':pill\)/);
+});
+
+test('Claimed and Members filters are sent to the server', () => {
+  assert.match(html, /<button class="segBtn" type="button" data-v="only">MEMBERS<\/button>/);
+  assert.match(html, /id="claimedFilterRow"[\s\S]*?data-v="yes">CLAIMED<[\s\S]*?data-v="no">NOT CLAIMED</);
+  assert.match(html, /'&claimed='\+claimedFilter/);
+  assert.match(html, /claimedFilter=b\.getAttribute\('data-v'\);/);
+});
+
+test('the card photo never falls back to the Instagram screenshot slot (CEO 2026-11-24)', () => {
+  const m = /function primaryPhoto\(a\)\{[\s\S]*?\n  \}/.exec(html);
+  assert.ok(m);
+  // eslint-disable-next-line no-new-func
+  const primaryPhoto = new Function(`${m[0]}\nreturn primaryPhoto;`)();
+  assert.equal(primaryPhoto({ photos: { screenshot: 's.jpg' } }), null, 'initials, not the screenshot');
+  assert.equal(primaryPhoto({ photos: { cover: 'c.jpg', screenshot: 's.jpg' } }), 'c.jpg');
+  assert.equal(primaryPhoto({ photos: { action: 'a.jpg', screenshot: 's.jpg' } }), 'a.jpg');
+});
+
+test('Claimed or Members alone is enough to browse (no name typed)', () => {
+  assert.match(html, /&&!claimedFilter&&memberFilter!=='only'\)\{setState\('idle'\);return\}/);
+});
