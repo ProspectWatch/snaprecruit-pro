@@ -262,7 +262,7 @@
 
       <div class="stateBox" id="stateIdle">
         <span class="chip"><svg width="20" height="20" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="m11 11 3.4 3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
-        <h3>Search 130,000+ HS athletes</h3>
+        <h3>Search 600,000+ HS athletes</h3>
         <p>Type at least two letters of a name, or pick a sport to browse it A–Z.</p>
       </div>
       <div class="stateBox" id="stateEmpty" hidden>
@@ -430,7 +430,17 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
     ['UT','Utah'],['VT','Vermont'],['VA','Virginia'],['WA','Washington'],['WV','West Virginia'],
     ['WI','Wisconsin'],['WY','Wyoming']
   ];
-  STATES.forEach(function(s){var o=document.createElement('option');o.value=s[0];o.textContent=s[1];stateSel.appendChild(o)});
+  // Canadian provinces and territories (CEO 2026-11-25): about 42,000 athletes carry one.
+  var PROVINCES=[
+    ['AB','Alberta'],['BC','British Columbia'],['MB','Manitoba'],['NB','New Brunswick'],['NL','Newfoundland and Labrador'],
+    ['NS','Nova Scotia'],['NT','Northwest Territories'],['NU','Nunavut'],['ON','Ontario'],['PE','Prince Edward Island'],
+    ['QC','Quebec'],['SK','Saskatchewan'],['YT','Yukon']
+  ];
+  [['United States',STATES],['Canada',PROVINCES]].forEach(function(g){
+    var grp=document.createElement('optgroup');grp.label=g[0];
+    g[1].forEach(function(s){var o=document.createElement('option');o.value=s[0];o.textContent=s[1];grp.appendChild(o)});
+    stateSel.appendChild(grp);
+  });
 
   var GRAD_YEARS=['2025','2026','2027','2028','2029','2030'];
   GRAD_YEARS.forEach(function(y){
