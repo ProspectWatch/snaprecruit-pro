@@ -48,3 +48,10 @@ test('no em dash added', () => {
   const block = html.slice(html.indexOf('// DM sent (CEO 2026-11-18)'), html.indexOf("$('retryBtn')"));
   assert.doesNotMatch(block, /—/);
 });
+
+test('OPEN DM opens the Instagram DM thread (ig.me/m/<handle>), like the Office (CEO 2026-11-27)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../pw-enrichment.html', import.meta.url), 'utf8');
+  assert.match(html, /id="dmOpenIg" type="button">OPEN DM</);
+  assert.match(html, /if\(ig\)openLink\('https:\/\/ig\.me\/m\/'\+encodeURIComponent\(ig\)\)/);
+});
