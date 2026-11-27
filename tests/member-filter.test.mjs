@@ -14,7 +14,7 @@ const fn = (name) => {
   return m[0];
 };
 // eslint-disable-next-line no-new-func
-const lib = new Function('holdText', 'renderClaimProfile', `${fn('memberHeld')}\n${fn('memberText')}\n${fn('dmFor')}\nreturn { memberHeld, memberText, dmFor };`)(
+const lib = new Function('holdText', 'renderClaimProfile', `var dmStyle='standard';function shortDay(){return ''}\n${fn('seqOf')}\n${fn('modeOf')}\n${fn('memberHeld')}\n${fn('memberText')}\n${fn('dmFor')}\nreturn { memberHeld, memberText, dmFor };`)(
   (r) => 'HOLD ' + (r || []).join(','), render);
 
 test('Non-members only is ON by default and sent to the server', () => {

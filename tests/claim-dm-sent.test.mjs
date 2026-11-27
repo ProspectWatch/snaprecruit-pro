@@ -18,7 +18,8 @@ test('the sent row sits under COPY DM, before CLOSE', () => {
 });
 
 test('MARK DM SENT, then "✓ DM sent · <date>" with Undo; a current member gets the member note, no button', () => {
-  assert.match(html, /\(dmBusy\?'SAVING\\u2026':'MARK DM SENT'\)/);
+  assert.match(html, /\(saving\|\|'MARK DM SENT'\)/);
+  assert.match(html, /saving=dmBusy\?'SAVING\\u2026':null/);
   assert.match(html, /function dmSentLabel\(iso\)\{var d=shortDay\(iso\);return '\\u2713 DM sent'\+\(d\?' \\u00b7 '\+d:''\)\}/);
   assert.match(html, /id="dmUndo"/);
   assert.match(html, /memberHeld\(a\)\?'<p class="offerErr">'\+esc\(memberText\(a\)\)/);
@@ -27,7 +28,7 @@ test('MARK DM SENT, then "✓ DM sent · <date>" with Undo; a current member get
 
 test('records through the existing route with kind claim_dm and the current claim-DM version', () => {
   assert.match(html, /import \{render as renderClaimProfile, VERSION as CLAIM_DM_VERSION\} from '\/js\/pw-claim-profile\.mjs';/);
-  assert.match(html, /postJSON\(API_OFFER,\{id:a\.id,kind:'claim_dm',sent:sent,version:CLAIM_DM_VERSION,via:'enrichment'\}\)/);
+  assert.match(html, /postJSON\(API_OFFER,\{id:a\.id,kind:'claim_dm',sent:sent,version:CLAIM_DM_VERSION,style:dmStyle,via:'enrichment'\}\)/);
   assert.match(html, /API_OFFER='\/api\/hs-athlete-offer-sent'/);
   assert.match(VERSION, /^pw-free-profile-claim\/\d{4}-\d{2}-\d{2}\./);
 });

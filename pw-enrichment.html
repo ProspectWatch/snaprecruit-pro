@@ -366,7 +366,12 @@
     <div id="dOptions"></div>
     <button class="btn btn-gold" id="dCopy" type="button">COPY NAME</button>
 
-    <div class="dSectHead"><span class="eyebrow gold">FREE PROFILE CLAIM DM</span></div>
+    <div class="dSectHead"><span class="eyebrow gold" id="dmHead">FREE PROFILE CLAIM DM</span></div>
+    <p class="dmHint" id="dmSeqLine" hidden></p>
+    <div class="segRow" id="dmStyleRow" role="group" aria-label="Who the DM is to" hidden>
+      <button class="segBtn on" type="button" data-style="standard">TO ATHLETE</button>
+      <button class="segBtn" type="button" data-style="guardian">TO PARENT</button>
+    </div>
     <p class="dmHint" id="dmHistory" hidden></p>
     <p class="dmHint" id="dmNoHandle" hidden>No Instagram handle on file yet. OPEN DM will search their name on Instagram instead.</p>
     <textarea class="dmBox" id="dmText" rows="18" readonly></textarea>
@@ -386,7 +391,7 @@ import {holdText} from '/js/pw-founding-dm.mjs';
 import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-claim-profile.mjs';
 (function(){
   var KEY='ms-hs-api-key';
-  var API_HOLD='/api/hs-contact-hold', API_OFFER='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit', API_DUP='/api/hs-duplicate-tag';
+  var API_HOLD='/api/hs-contact-hold', API_SALES='/api/hs-sales-dm', API_OFFER='/api/hs-athlete-offer-sent', API_ATHLETES='/api/hs-athletes', API_SOCIALS='/api/hs-athlete-socials', API_PHOTO='/api/hs-athlete-photo', API_EDIT='/api/hs-athlete-edit', API_DUP='/api/hs-duplicate-tag';
   var pwStored=null;
   try{pwStored=localStorage.getItem(KEY)}catch(e){}
 
@@ -735,15 +740,77 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
     if(tag==='Member')return 'Do not send the Founding offer: this athlete is already a current member.';
     return 'Do not send the Founding offer yet: membership could not be checked. Try again in a minute.';
   }
+  // DM sequence (CEO 2026-11-27: "multiple dm copy and pastes. Sequencing and tracking what has been sent
+  // already, and pipeline claimed profiles into the sales pipeline"). Unclaimed: the approved claim DM 1,
+  // then the one approved follow-up once it is due (the follow-up says no more reminders, so that ends it).
+  // Claimed and not a member: the sales DM, the same message and record as the PW Office window 12.
+  // Only approved copy (pw-claim-profile.mjs, and the server's sales DM); each to the athlete or the parent.
+  var dmStyle='standard';
+  function seqOf(a){
+    var d=(a&&a.dm_seq)||{};
+    var last=d.last||(a&&a.claim_dm&&a.claim_dm.at?{step:1,at:a.claim_dm.at,style:null}:null);
+    return {last:last,step:last?Number(last.step)||1:0,due:d.due===true,dueOn:d.dueOn||null};
+  }
+  function modeOf(a){
+    if(a&&a.claimed===true)return 'sales';
+    var q=seqOf(a);
+    if(q.step>=2)return 'done';
+    if(q.step===1)return q.due?'followup':'wait';
+    return 'dm1';
+  }
+  var STEP_NAME={1:'DM 1',2:'Follow-up'};
+  function seqLine(a){
+    var m=modeOf(a),q=seqOf(a),bits=[];
+    if(m==='sales')return a.sales_dm_at?'Claimed. Sales DM sent '+shortDay(a.sales_dm_at)+'.':'Claimed: this athlete is now in the sales pipeline.';
+    if(q.last)bits.push('Last sent: '+STEP_NAME[q.step]+(shortDay(q.last.at)?' \u00b7 '+shortDay(q.last.at):'')+(q.last.style==='guardian'?' (to parent)':q.last.style==='standard'?' (to athlete)':''));
+    if(m==='wait')bits.push('Follow-up opens '+(shortDay(q.dueOn)||'in 3 days')+'.');
+    if(m==='followup')bits.push('Next: the follow-up.');
+    if(m==='done')bits.push('Claim sequence complete.');
+    return bits.join(' ');
+  }
   function dmFor(a){
     if(!a||a.contact_hold!==false)return {text:holdText(a&&a.contact_hold_reasons),ok:false};
     if(memberHeld(a))return {text:memberText(a),ok:false};
-    if(String(a.sport||'').toLowerCase()!=='volleyball')return {text:'The approved claim invitation is for volleyball profiles.',ok:false};
+    var m=modeOf(a);
+    // Every sport we cover gets the approved claim DM with its own sport word (CEO pop-up 2026-11-27). The sales
+    // DM names volleyball features, so it stays volleyball-only until other sports have approved wording.
+    if(m==='sales'&&!/^volleyball$/i.test(String(a.sport||'')))return {text:'The sales DM is for volleyball. Other sports need approved sales wording first.',ok:false};
+    if(m==='sales'){
+      if(!a._sales)return {text:'Loading the sales DM\u2026',ok:false};
+      if(a._sales.error)return {text:a._sales.error,ok:false};
+      if(a._sales.held)return {text:a._sales.held,ok:false};
+      return {text:a._sales.message||'',ok:!!a._sales.message&&!a.sales_dm_at};
+    }
+    if(m==='done')return {text:'Claim sequence complete: DM 1 and the follow-up were both sent. No more claim DMs to this athlete.',ok:false};
+    if(m==='wait')return {text:'DM 1 was sent. The follow-up opens '+(shortDay(seqOf(a).dueOn)||'3 days after DM 1')+'.',ok:false};
     if(a.claim_reply_checked!==true || Object.values(a.dm2||{}).some(Boolean))return {text:'Claim outreach is held because prior DM activity exists or could not be checked.',ok:false};
-    var draft=renderClaimProfile({athleteFirst:String(a.name||'').trim().split(/\s+/)[0],gradYear:a.grad_year,
-      athleteId:a.id,eligibilityChecked:true,suppressionChecked:true,profileUnclaimed:a.profile_unclaimed===true});
+    var first=String(a.name||'').trim().split(/\s+/)[0];
+    var ctx={athleteFirst:first,gradYear:a.grad_year,sport:a.sport,gender:a.gender,athleteId:a.id,eligibilityChecked:true,suppressionChecked:true,profileUnclaimed:a.profile_unclaimed===true};
+    if(m==='followup'){ctx.priorClaimMessageSent=true;ctx.followupCount=0}
+    var draft=renderClaimProfile(ctx,{channel:'dm',audience:dmStyle==='guardian'?'guardian':'athlete',variant:m==='followup'?'followup':'general'});
     return {text:draft.ok?draft.body:draft.reasons.join(' '),ok:draft.ok};
   }
+  function refreshDm(a){
+    if(!a||currentAthlete!==a)return;
+    var m=modeOf(a),dm=dmFor(a);
+    $('dmHead').textContent=m==='sales'?'SALES DM \u00b7 CLAIMED':m==='followup'?'FREE PROFILE CLAIM DM \u00b7 FOLLOW-UP':'FREE PROFILE CLAIM DM'+(m==='dm1'?' \u00b7 DM 1':'');
+    var line=seqLine(a);$('dmSeqLine').textContent=line;$('dmSeqLine').hidden=!line;
+    $('dmStyleRow').hidden=!(m==='dm1'||m==='followup');
+    Array.prototype.forEach.call($('dmStyleRow').querySelectorAll('.segBtn'),function(x){x.classList.toggle('on',x.getAttribute('data-style')===dmStyle)});
+    $('dmText').value=dm.text;
+    $('dmCopy').disabled=!dm.ok;$('dmCopy').textContent='COPY DM';
+    renderOffer();
+  }
+  function loadSales(a){
+    if(!a||modeOf(a)!=='sales'||a._sales)return;
+    fetch(API_SALES+'?id='+encodeURIComponent(a.id),{headers:headers()}).then(function(res){return res.json().then(function(j){return res.ok?j:{error:j.error||'The sales DM could not be loaded.'}})})
+      .then(function(j){a._sales=j||{error:'The sales DM could not be loaded.'};if(j&&j.sentAt&&!a.sales_dm_at)a.sales_dm_at=j.sentAt;refreshDm(a)},
+            function(){a._sales={error:'The sales DM could not be loaded. Try again.'};refreshDm(a)});
+  }
+  $('dmStyleRow').addEventListener('click',function(e){
+    var b=e.target.closest('.segBtn');if(!b)return;
+    dmStyle=b.getAttribute('data-style')==='guardian'?'guardian':'standard';refreshDm(currentAthlete);
+  });
 
   function renderSheet(){
     var a=currentAthlete;
@@ -831,13 +898,12 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
     renderMaxpreps();
     renderSheet();
     // Held athletes get no DM (do not contact, email opt-out or a STOP).
-    var dm=dmFor(a);
     var priorStages=Object.entries(a.dm2||{}).filter(function(entry){return entry[1]});
     $('dmHistory').hidden=!priorStages.length;
     $('dmHistory').textContent=priorStages.map(function(entry){return {msg1:'Message 1 sent',replied:'Replied',msg2:'Message 2 sent'}[entry[0]]+': '+String(entry[1]).slice(0,10)}).join(' · ');
-    $('dmText').value=dm.text;
-    $('dmCopy').disabled=!dm.ok;
     $('dmNoHandle').hidden=!!a.ig_handle;
+    dmStyle='standard';
+    refreshDm(a);loadSales(a);
     $('detailScrim').hidden=false;
   }
   list.addEventListener('click',function(e){
@@ -872,7 +938,8 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
         $('dmText').value=memberText(a);$('dmText').readOnly=true;btn.disabled=true;btn.textContent='HELD';rerenderList();return;
       }
       if(currentAthlete!==a){done(false);return}
-      if(h.profile_unclaimed!==true || h.claim_reply_checked!==true || h.prior_claim_dm!==false){
+      var cm=modeOf(a);
+      if(cm!=='sales' && (h.profile_unclaimed!==true || h.claim_reply_checked!==true || (cm==='dm1'?h.prior_claim_dm!==false:h.prior_claim_dm!==true))){
         $('dmText').value='Claim outreach is held. The profile or prior DM activity needs review.';
         btn.disabled=true;btn.textContent='HELD';return;
       }
@@ -1235,12 +1302,16 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
     if(!a){row.innerHTML='';return}
     var rec=a.claim_dm&&a.claim_dm.at?a.claim_dm:null;
     var prior=!rec&&a.offer_sent_at?'<p class="offerNote">Earlier DM marked sent · '+esc(String(a.offer_sent_at).slice(0,10))+'</p>':'';
-    row.innerHTML=(rec
-      ?'<span class="offerDone">'+esc(dmSentLabel(rec.at))+'</span>'
+    var mode=modeOf(a),saving=dmBusy?'SAVING\u2026':null;
+    row.innerHTML=(memberHeld(a)?'<p class="offerErr">'+esc(memberText(a))+'</p>'
+      :mode==='sales'?(a.sales_dm_at?'<span class="offerDone">'+esc('\u2713 Sales DM sent'+(shortDay(a.sales_dm_at)?' \u00b7 '+shortDay(a.sales_dm_at):''))+'</span>'
+          :(a._sales&&a._sales.message?'<button class="btn btn-gold" id="dmMarkSales" type="button"'+(dmBusy?' disabled':'')+'>'+(saving||'MARK SALES DM SENT')+'</button>':''))
+      :mode==='followup'?'<button class="btn btn-gold" id="dmMarkFu" type="button"'+(dmBusy?' disabled':'')+'>'+(saving||'MARK FOLLOW-UP SENT')+'</button>'
+      :mode==='done'?'<span class="offerDone">\u2713 DM 1 and follow-up sent</span>'
+      :rec?'<span class="offerDone">'+esc(dmSentLabel(rec.at))+'</span>'
         +'<button type="button" class="offerUndo" id="dmUndo"'+(dmBusy?' disabled':'')+'>Undo</button>'
         +(rec.by?'<p class="offerNote">Marked by '+esc(rec.by)+'</p>':'')
-      :memberHeld(a)?'<p class="offerErr">'+esc(memberText(a))+'</p>'
-      :prior+'<button class="btn btn-gold" id="dmMark" type="button"'+(dmBusy?' disabled':'')+'>'+(dmBusy?'SAVING\u2026':'MARK DM SENT')+'</button>')
+      :prior+'<button class="btn btn-gold" id="dmMark" type="button"'+(dmBusy?' disabled':'')+'>'+(saving||'MARK DM SENT')+'</button>')
       +(dmErr?'<p class="offerErr">'+esc(dmErr)+'</p>':'')
       +blockHtml(a);
   }
@@ -1272,15 +1343,31 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
     if(!a||dmBusy)return;
     if(!sent&&!window.confirm('Mark this DM as not sent?'))return;
     dmBusy=true;dmErr='';renderOffer();
-    postJSON(API_OFFER,{id:a.id,kind:'claim_dm',sent:sent,version:CLAIM_DM_VERSION,via:'enrichment'}).then(function(r){
+    postJSON(API_OFFER,{id:a.id,kind:'claim_dm',sent:sent,version:CLAIM_DM_VERSION,style:dmStyle,via:'enrichment'}).then(function(r){
+      var at=r&&r.sent?(r.at||new Date().toISOString()):null;
+      a.dm_seq=Object.assign({},a.dm_seq||{},at?{last:{step:1,at:at,style:dmStyle},due:false,dueOn:new Date(Date.parse(at)+3*86400000).toISOString()}:{last:null,due:false,dueOn:null});
       a.claim_dm=r&&r.sent?{at:r.at||new Date().toISOString(),by:r.by||null,version:r.version||CLAIM_DM_VERSION}:null;
       if(r&&r.sent&&!a.offer_sent_at)a.offer_sent_at=r.at;
     },function(e){
       dmErr=e&&e.message==='unauthorized'?'Sign in again to save.':(e&&/^Not sent:/.test(e.message||''))?e.message:'Could not save. Try again.';
-    }).then(function(){dmBusy=false;if(currentAthlete===a)renderOffer();rerenderList()});
+    }).then(function(){dmBusy=false;if(currentAthlete===a)refreshDm(a);rerenderList()});
+  }
+  // The follow-up (claim DM 2) and the sales DM: recorded in the same places the PW Office reads.
+  function markStep(kind){
+    var a=currentAthlete;if(!a||dmBusy)return;
+    dmBusy=true;dmErr='';renderOffer();
+    var body=kind==='sales_dm'?{id:a.id,kind:'sales_dm',sent:true,via:'enrichment'}:{id:a.id,kind:'dm_sent',sent:true,step:2,style:dmStyle,via:'enrichment'};
+    postJSON(API_OFFER,body).then(function(r){
+      var at=(r&&r.at)||new Date().toISOString();
+      if(kind==='sales_dm')a.sales_dm_at=at;
+      else a.dm_seq=Object.assign({},a.dm_seq||{},{last:{step:2,at:at,style:dmStyle},due:false,dueOn:null,next:null});
+    },function(e){dmErr=e&&e.message==='unauthorized'?'Sign in again to save.':(e&&e.message)||'Could not save. Try again.'})
+      .then(function(){dmBusy=false;if(currentAthlete===a)refreshDm(a);rerenderList()});
   }
   $('offerRow').addEventListener('click',function(e){
     if(e.target.closest('#dmMark'))setDmSent(true);
+    else if(e.target.closest('#dmMarkFu'))markStep('dm_sent');
+    else if(e.target.closest('#dmMarkSales'))markStep('sales_dm');
     else if(e.target.closest('#dmUndo'))setDmSent(false);
     else if(e.target.closest('#dmBlockOpen')){blockOpen=true;renderOffer()}
     else if(e.target.closest('#dmUnblock'))setBlocked(null);

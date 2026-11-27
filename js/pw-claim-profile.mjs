@@ -13,6 +13,17 @@ const clean = (s) => typeof s === 'string' ? s.replace(/\s+/g, ' ').trim() : '';
 const bad = (s) => /\[|\]|\{|\}|<|>|\u2014|[\r\n]/.test(s);
 const name = (s) => { const t = clean(s); return t && t.length <= 50 && !bad(t) ? t : ''; };
 const year = (v) => /^20\d{2}$/.test(String(v || '')) ? String(v) : '';
+// The sport word in the claim DM (CEO pop-up 2026-11-27 "Yes, same text, swap sport"). Unknown sports are refused,
+// never guessed. The membership line is true only for volleyball today (Find Schools covers Division I volleyball;
+// lacrosse School Intelligence is staff-only), so other sports get the same DM without that line.
+const SPORT_WORD = Object.freeze({
+  volleyball: 'volleyball', 'boys-volleyball': 'volleyball', softball: 'softball', basketball: 'basketball',
+  soccer: 'soccer', 'girls-soccer': 'soccer', 'boys-soccer': 'soccer', lacrosse: 'lacrosse', 'girls-lacrosse': 'lacrosse',
+  'boys-lacrosse': 'lacrosse', 'girls-hockey': 'hockey', 'field-hockey': 'field hockey', 'field hockey': 'field hockey',
+  'girls-gymnastics': 'gymnastics', 'gymnastics-tt': 'trampoline and tumbling', football: 'football', baseball: 'baseball',
+  'girls-track': 'track and field', 'girls-swimming': 'swimming', 'water-polo': 'water polo',
+});
+const sportWord = (v) => (v == null || v === '' ? 'volleyball' : SPORT_WORD[String(v).trim().toLowerCase()] || null);
 
 function safeClaimUrl(raw) {
   try {
@@ -72,6 +83,10 @@ function render(ctx = {}, opts = {}) {
   const first = name(ctx.athleteFirst), parent = name(ctx.recipientFirst), grad = year(ctx.gradYear);
   if (!first) reasons.push('A verified athlete first name is required.');
   const link = ctx.athleteId ? buildClaimUrl(ctx.athleteId) : safeClaimUrl(ctx.claimUrl);
+  const sport = sportWord(ctx.sport);
+  if (!sport) reasons.push('This sport has no approved claim wording yet.');
+  // The membership line names Division I volleyball research, which covers women's programs only.
+  const memberLine = sport === 'volleyball' && String(ctx.sport || 'volleyball').toLowerCase() !== 'boys-volleyball' && String(ctx.gender || 'F').toUpperCase() !== 'M';
   if (!link) reasons.push('Use the app\'s verified personal claim/invite link or canonical athlete UUID, not a checkout link.');
   const pub = variant === 'ranked' ? publication(ctx) : null;
   if (variant === 'ranked' && !pub) reasons.push('Ranked copy needs a verified published FINAL rank, state, class and accessible publication link.');
@@ -91,16 +106,16 @@ function render(ctx = {}, opts = {}) {
     if (channel === 'dm') body += `\n\n${CONTACT}`;
     else { subject = `The link to claim ${first}'s free Prospect Watch profile`; body += `\n\nStephanie\nProspect Watch\n${CONTACT}`; }
   } else if (variant === 'general') {
-    const playerProfile = `${possessive}${grad ? ` Class of ${grad}` : ''} volleyball profile`;
+    const playerProfile = `${possessive}${grad ? ` Class of ${grad}` : ''} ${channel === 'dm' ? sport : 'volleyball'} profile`;
     if (channel === 'dm') {
       body = `${greeting}
 
 We've built ${playerProfile}, and I'd love to invite ${toGuardian ? 'your family' : 'you'} to claim it!
 
 Claim ${possessive} profile for FREE to review ${toGuardian ? 'the' : 'your'} information and add stats and highlights.
-
+${memberLine ? `
 Optional Athlete Center membership includes advanced recruiting tools, such as research on D1 volleyball programs.
-
+` : ''}
 ${toGuardian ? 'Claim the profile here:' : 'Claim yours here:'}
 ${link}
 
@@ -165,4 +180,4 @@ https://prospect-watch.com`;
   return result(subject, body);
 }
 
-export { VERSION, buildClaimUrl, safeClaimUrl, safeRankingUrl, render };
+export { VERSION, SPORT_WORD, sportWord, buildClaimUrl, safeClaimUrl, safeRankingUrl, render };
