@@ -368,11 +368,11 @@
 
     <div class="dSectHead"><span class="eyebrow gold">FREE PROFILE CLAIM DM</span></div>
     <p class="dmHint" id="dmHistory" hidden></p>
-    <p class="dmHint" id="dmNoHandle" hidden>No Instagram handle on file yet. OPEN INSTAGRAM will search their name instead.</p>
+    <p class="dmHint" id="dmNoHandle" hidden>No Instagram handle on file yet. OPEN DM will search their name on Instagram instead.</p>
     <textarea class="dmBox" id="dmText" rows="18" readonly></textarea>
     <div class="dcRow">
       <button class="btn btn-gold" id="dmCopy" type="button">COPY DM</button>
-      <button class="btn btn-secondary" id="dmOpenIg" type="button">OPEN INSTAGRAM</button>
+      <button class="btn btn-secondary" id="dmOpenIg" type="button">OPEN DM</button>
     </div>
     <div class="offerRow" id="offerRow"></div>
 
@@ -884,7 +884,9 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
   $('dmOpenIg').addEventListener('click',function(){
     var a=currentAthlete;if(!a)return;
     var ig=displayHandle(a.ig_handle,'instagram');
-    if(ig)openLink('https://www.instagram.com/'+encodeURIComponent(ig)+'/');
+    // Opens the DM thread itself, the same link the Office uses (CEO 2026-11-27: "opening the IG dm
+    // inbox ... like the office version"). No handle: search the name on Instagram instead.
+    if(ig)openLink('https://ig.me/m/'+encodeURIComponent(ig));
     else openLink('https://www.instagram.com/explore/search/keyword/?q='+encodeURIComponent(a.name));
   });
 
