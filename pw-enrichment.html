@@ -153,6 +153,10 @@
 .offerUndo{font-size:12px;font-weight:600;color:var(--ms-muted);background:none;border:0;padding:6px 2px;text-decoration:underline;text-underline-offset:2px}
 .offerErr{flex-basis:100%;margin:0;font-size:12px;color:var(--ms-danger,#E0554B)}
 .offerNote{flex-basis:100%;margin:0;font-size:12px;color:var(--ms-muted)}
+.apill.blk{color:var(--ms-danger,#E0554B);border-color:var(--ms-danger,#E0554B)}
+.dmBlockBtn{flex:1 1 100%;min-height:44px;border-radius:12px;border:1px solid rgba(224,85,75,.55);background:none;color:var(--ms-danger,#E0554B);font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.dmReasons{flex-basis:100%;display:flex;flex-wrap:wrap;gap:8px}
+.dmReasons button{flex:1 1 30%;min-height:44px;border-radius:12px;border:1px solid var(--ms-line,#3a3a3a);background:none;color:#fff;font-size:12px;font-weight:600}
 .dcRow .btn{height:46px;font-size:12px}
 /* photo slots */
 .photoGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:6px}
@@ -248,6 +252,7 @@
         <button class="segBtn on" type="button" data-v="">ALL</button>
         <button class="segBtn" type="button" data-v="unsent">NOT SENT</button>
         <button class="segBtn" type="button" data-v="sent">SENT</button>
+        <button class="segBtn" type="button" data-v="blocked">CAN'T DM</button>
       </div>
       <div class="bar indeterminate" id="loadBar"><div class="fill"></div></div>
     </div>
@@ -649,7 +654,7 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
     if(!append){
       if(!rows.length){
         var name=sport?sportLabel(sport):'';
-        var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',hasPhotoOn?'Has Photo':'',hasIgOn?'Has Instagram':'',hasCommittedOn?'Committed':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'',offerFilter==='unsent'?'Not sent':offerFilter==='sent'?'Sent':'']
+        var extraBits=[name,stateSel.value,gradYearSel.value?'Class of '+gradYearSel.value:'',fwOn?'Future Watch':'',hasPhotoOn?'Has Photo':'',hasIgOn?'Has Instagram':'',hasCommittedOn?'Committed':'',searchedFilter==='no'?'Unsearched':searchedFilter==='yes'?'Searched':'',offerFilter==='unsent'?'Not sent':offerFilter==='sent'?'Sent':offerFilter==='blocked'?"Can't DM":'']
           .filter(Boolean).join(', ');
         $('emptyMsg').textContent=term.length>=2
           ?('No athletes match “'+term+'”'+(extraBits?' ('+extraBits+')':'')+'.')
@@ -684,7 +689,8 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
         .filter(Boolean).map(esc).join(' · ');
       // CLAIMED and MEMBER sit above the status pill (CEO 2026-11-24). Both come from the server, read live.
       var tags=cardTags(a);
-      var pill=a.claim_dm&&a.claim_dm.at?'<span class="apill done mut">'+esc(dmSentLabel(a.claim_dm.at))+'</span>'
+      var pill=a.dm_seq&&a.dm_seq.blocked?'<span class="apill blk">'+esc(a.dm_seq.label)+'</span>'
+        :a.claim_dm&&a.claim_dm.at?'<span class="apill done mut">'+esc(dmSentLabel(a.claim_dm.at))+'</span>'
         :a.offer_sent_at?'<span class="apill done mut">✓ Sent</span>'
         :a.ig_handle?'<span class="apill done">✓ @'+esc(displayHandle(a.ig_handle,'instagram'))+'</span>'
         :a.snap_handle?'<span class="apill done">✓ snap:'+esc(displayHandle(a.snap_handle,'snapchat'))+'</span>'
@@ -815,7 +821,7 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
 
   function openDetail(a){
     if(!a)return;
-    currentAthlete=a;pendingTry=null;pendingScan=null;
+    currentAthlete=a;blockOpen=false;pendingTry=null;pendingScan=null;
     $('dConfirm').hidden=true;
     $('dScanConfirm').hidden=true;
     $('dEditForm').hidden=true;$('dFields').hidden=false;$('editSaved').classList.remove('show');
@@ -1233,7 +1239,31 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
         +(rec.by?'<p class="offerNote">Marked by '+esc(rec.by)+'</p>':'')
       :memberHeld(a)?'<p class="offerErr">'+esc(memberText(a))+'</p>'
       :prior+'<button class="btn btn-gold" id="dmMark" type="button"'+(dmBusy?' disabled':'')+'>'+(dmBusy?'SAVING\u2026':'MARK DM SENT')+'</button>')
-      +(dmErr?'<p class="offerErr">'+esc(dmErr)+'</p>':'');
+      +(dmErr?'<p class="offerErr">'+esc(dmErr)+'</p>':'')
+      +blockHtml(a);
+  }
+  // Can't DM (CEO 2026-11-27, lib/igDmSequence.js in pw-hs-dashboard): note that this account could not be
+  // messaged, with the reason, so it drops out of DM work and shows in the CAN'T DM filter. Undo puts it back.
+  var DM_REASONS=[['must_follow','Must follow first'],['no_dm_button','No Message button'],['account_not_found','Account not found']];
+  var blockOpen=false;
+  function blockHtml(a){
+    if(!a.ig_handle)return '';
+    var b=a.dm_seq&&a.dm_seq.blocked;
+    if(b)return '<p class="offerErr">'+esc(a.dm_seq.label)+'</p><button type="button" class="offerUndo" id="dmUnblock"'+(dmBusy?' disabled':'')+'>Undo: DM again</button>';
+    if(!blockOpen)return '<button type="button" class="dmBlockBtn" id="dmBlockOpen"'+(dmBusy?' disabled':'')+">CAN'T DM</button>";
+    return '<div class="dmReasons" role="group" aria-label="Why the DM could not be sent">'+DM_REASONS.map(function(r){return '<button type="button" data-reason="'+r[0]+'"'+(dmBusy?' disabled':'')+'>'+esc(r[1])+'</button>'}).join('')+'</div>';
+  }
+  function setBlocked(reason){
+    var a=currentAthlete;
+    if(!a||dmBusy)return;
+    dmBusy=true;dmErr='';renderOffer();
+    postJSON(API_OFFER,{id:a.id,kind:'dm_blocked',sent:!!reason,reason:reason||undefined,handle:a.ig_handle||'',via:'enrichment'}).then(function(r){
+      var lab=reason?DM_REASONS.filter(function(x){return x[0]===reason})[0][1]:'';
+      a.dm_seq=Object.assign({},a.dm_seq||{},reason?{blocked:{reason:reason,at:r&&r.at},label:"Can't DM: "+lab+(shortDay(r&&r.at)?' \u00b7 '+shortDay(r&&r.at):'')}:{blocked:null,label:''});
+      blockOpen=false;
+    },function(e){
+      dmErr=e&&e.message==='unauthorized'?'Sign in again to save.':'Could not save. Try again.';
+    }).then(function(){dmBusy=false;if(currentAthlete===a)renderOffer();rerenderList()});
   }
   function setDmSent(sent){
     var a=currentAthlete;
@@ -1250,6 +1280,9 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
   $('offerRow').addEventListener('click',function(e){
     if(e.target.closest('#dmMark'))setDmSent(true);
     else if(e.target.closest('#dmUndo'))setDmSent(false);
+    else if(e.target.closest('#dmBlockOpen')){blockOpen=true;renderOffer()}
+    else if(e.target.closest('#dmUnblock'))setBlocked(null);
+    else{var rb=e.target.closest('[data-reason]');if(rb)setBlocked(rb.getAttribute('data-reason'))}
   });
 
   $('retryBtn').addEventListener('click',function(){lastKey='';runSearch()});
