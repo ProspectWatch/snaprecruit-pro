@@ -771,8 +771,10 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
   function dmFor(a){
     if(!a||a.contact_hold!==false)return {text:holdText(a&&a.contact_hold_reasons),ok:false};
     if(memberHeld(a))return {text:memberText(a),ok:false};
-    if(String(a.sport||'').toLowerCase()!=='volleyball')return {text:'The approved claim invitation is for volleyball profiles.',ok:false};
     var m=modeOf(a);
+    // Every sport we cover gets the approved claim DM with its own sport word (CEO pop-up 2026-11-27). The sales
+    // DM names volleyball features, so it stays volleyball-only until other sports have approved wording.
+    if(m==='sales'&&!/^volleyball$/i.test(String(a.sport||'')))return {text:'The sales DM is for volleyball. Other sports need approved sales wording first.',ok:false};
     if(m==='sales'){
       if(!a._sales)return {text:'Loading the sales DM\u2026',ok:false};
       if(a._sales.error)return {text:a._sales.error,ok:false};
@@ -783,7 +785,7 @@ import {render as renderClaimProfile, VERSION as CLAIM_DM_VERSION} from '/js/pw-
     if(m==='wait')return {text:'DM 1 was sent. The follow-up opens '+(shortDay(seqOf(a).dueOn)||'3 days after DM 1')+'.',ok:false};
     if(a.claim_reply_checked!==true || Object.values(a.dm2||{}).some(Boolean))return {text:'Claim outreach is held because prior DM activity exists or could not be checked.',ok:false};
     var first=String(a.name||'').trim().split(/\s+/)[0];
-    var ctx={athleteFirst:first,gradYear:a.grad_year,athleteId:a.id,eligibilityChecked:true,suppressionChecked:true,profileUnclaimed:a.profile_unclaimed===true};
+    var ctx={athleteFirst:first,gradYear:a.grad_year,sport:a.sport,gender:a.gender,athleteId:a.id,eligibilityChecked:true,suppressionChecked:true,profileUnclaimed:a.profile_unclaimed===true};
     if(m==='followup'){ctx.priorClaimMessageSent=true;ctx.followupCount=0}
     var draft=renderClaimProfile(ctx,{channel:'dm',audience:dmStyle==='guardian'?'guardian':'athlete',variant:m==='followup'?'followup':'general'});
     return {text:draft.ok?draft.body:draft.reasons.join(' '),ok:draft.ok};
