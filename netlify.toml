@@ -89,6 +89,12 @@
   to = "https://pw-hs-dashboard.vercel.app/api/hs-athlete-offer-sent"
   status = 200
 
+# The sales DM for a claimed athlete (pw-hs-dashboard lib/followupDmServer.js salesDmFor), CEO 2026-11-27.
+[[redirects]]
+  from = "/api/hs-sales-dm"
+  to = "https://pw-hs-dashboard.vercel.app/api/hs-sales-dm"
+  status = 200
+
 [[redirects]]
   from = "/snaprecruit"
   to = "/snaprecruit.html"
